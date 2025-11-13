@@ -89,7 +89,7 @@ The code should be TypeScript and use Promise.all for parallel LLM calls.
 	});
 
 	console.log('\n📊 Result:');
-	console.log(JSON.stringify(result.messages[result.messages.length - 1].content, null, 2));
+	console.log(JSON.stringify(result.messages[result.messages.length - 1]?.content, null, 2));
 }
 
 main().catch(console.error);

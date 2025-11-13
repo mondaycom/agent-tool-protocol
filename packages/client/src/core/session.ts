@@ -21,10 +21,12 @@ export class ClientSession {
 	 * The server generates and returns a unique client ID and token.
 	 * @param clientInfo - Optional client information
 	 * @param tools - Optional client tool definitions to register with the server
+	 * @param services - Optional client service capabilities (LLM, approval, embedding)
 	 */
 	async init(
 		clientInfo?: { name?: string; version?: string; [key: string]: unknown },
-		tools?: ClientToolDefinition[]
+		tools?: ClientToolDefinition[],
+		services?: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean }
 	): Promise<{
 		clientId: string;
 		token: string;
@@ -46,6 +48,7 @@ export class ClientSession {
 			const body = JSON.stringify({
 				clientInfo,
 				tools: tools || [],
+				services,
 			});
 			const headers = await this.prepareHeaders('POST', url, body);
 

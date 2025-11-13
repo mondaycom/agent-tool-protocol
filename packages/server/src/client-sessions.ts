@@ -4,7 +4,11 @@
 import { randomBytes } from 'node:crypto';
 import { nanoid } from 'nanoid';
 import jwt from 'jsonwebtoken';
-import type { CacheProvider, ClientToolDefinition } from '@mondaydotcomorg/atp-protocol';
+import type {
+	CacheProvider,
+	ClientToolDefinition,
+	ClientServices,
+} from '@mondaydotcomorg/atp-protocol';
 
 export interface ClientSession {
 	clientId: string;
@@ -18,6 +22,8 @@ export interface ClientSession {
 	guidance?: string;
 	/** Client-provided tool definitions */
 	tools?: ClientToolDefinition[];
+	/** Client-provided services (LLM, approval, embedding) */
+	services?: ClientServices;
 }
 
 export interface ClientInitRequest {
@@ -29,6 +35,8 @@ export interface ClientInitRequest {
 	guidance?: string;
 	/** Client tool definitions to register */
 	tools?: ClientToolDefinition[];
+	/** Client-provided services (LLM, approval, embedding) */
+	services?: ClientServices;
 }
 
 export interface ClientInitResponse {
@@ -81,6 +89,7 @@ export class ClientSessionManager {
 			clientInfo: request.clientInfo,
 			guidance: request.guidance,
 			tools: request.tools || [],
+			services: request.services,
 		};
 
 		if (this.cache) {

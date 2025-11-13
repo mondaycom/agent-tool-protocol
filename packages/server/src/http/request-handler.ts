@@ -52,11 +52,12 @@ export async function handleHTTPRequest(
 				} catch (error) {}
 			}
 
+			const isStringResponse = typeof ctx.responseBody === 'string';
 			res.writeHead(ctx.status, {
-				'Content-Type': 'application/json',
+				'Content-Type': isStringResponse ? 'text/plain; charset=utf-8' : 'application/json',
 				...Object.fromEntries(headers),
 			});
-			res.end(JSON.stringify(ctx.responseBody));
+			res.end(isStringResponse ? ctx.responseBody : JSON.stringify(ctx.responseBody));
 		} catch (writeError) {}
 	} catch (error) {
 		try {

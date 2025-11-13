@@ -13,12 +13,14 @@ A minimal ATP server for testing and development, particularly useful for testin
 
 ```bash
 # Start the test server
-npx tsx server.ts
+NODE_OPTIONS='--no-node-snapshot' npx tsx server.ts
 
 # Server will start on http://localhost:3333
 ```
 
 **Note**: The server uses a default JWT secret (`test-key`) for development. Set the `ATP_JWT_SECRET` environment variable for production use.
+
+**Important**: Use `NODE_OPTIONS='--no-node-snapshot'` to avoid segmentation faults with tsx.
 
 ## Test APIs
 
@@ -47,12 +49,12 @@ This server is perfect for testing the LangChain integration:
 ```bash
 # Terminal 1: Start test server
 cd examples/test-server
-npx tsx server.ts
+NODE_OPTIONS='--no-node-snapshot' npx tsx server.ts
 
 # Terminal 2: Run LangChain examples
 cd examples/langchain-react-agent
 export OPENAI_API_KEY=sk-...
-npx tsx simple-test.ts
+yarn discover
 ```
 
 ## Client Services

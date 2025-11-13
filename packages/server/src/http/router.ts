@@ -9,6 +9,8 @@ export async function handleRoute(
 		ctx.responseBody = server.getInfo();
 	} else if (ctx.path === '/api/definitions' && ctx.method === 'GET') {
 		ctx.responseBody = await server.getDefinitions(ctx);
+	} else if (ctx.path === '/api/runtime' && ctx.method === 'GET') {
+		ctx.responseBody = await server.getRuntimeDefinitions(ctx);
 	} else if (ctx.path === '/api/init' && ctx.method === 'POST') {
 		ctx.responseBody = await server.handleInit(ctx);
 	} else if (ctx.path === '/api/search' && ctx.method === 'POST') {

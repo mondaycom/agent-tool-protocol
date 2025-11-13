@@ -28,7 +28,49 @@ This demonstrates:
 - Running code that calls APIs and makes LLM calls
 - Getting all 3 ATP tools automatically (search_api, fetch_all_apis, execute_code)
 
-### 1. Simple Agent (`simple-agent.ts`)
+### 1. Runtime Discovery (`simple-runtime-discovery.ts`) 🆕
+
+**LangChain React Agent** with runtime discovery:
+
+```bash
+npm run discover
+# Requires: OPENAI_API_KEY and ATP server running
+```
+
+This agent:
+
+- **Embeds runtime APIs** in system prompt (atp.llm.*, atp.cache.*, etc.)
+- **Has ONLY 2 tools**: `explore_api` and `execute_code`
+- **Discovers** available server APIs dynamically
+- **Executes code** using discovered runtime APIs
+- **Real task**: Explores APIs, generates content with atp.llm, caches with atp.cache
+
+Perfect for understanding how agents discover and use ATP capabilities!
+
+Complete example showing a React agent with runtime discovery:
+
+```bash
+npm run discover:full
+```
+
+This demonstrates:
+
+- **Static runtime embedding** - Fetch runtime APIs once and embed in system prompt
+- **Single tool approach** - Agent uses ONLY `execute_code` tool
+- **Intelligent workflow** - Build multi-step workflows using runtime APIs
+- **Real-world scenario** - Content recommendation with user analysis
+- **Full runtime usage** - atp.llm, atp.cache, atp.approval in code
+- **Human-in-the-loop** - Approval flow within code execution
+- **Best practices** - Production-ready patterns
+
+The agent:
+1. Fetches ATP runtime definitions (atp.llm.*, atp.cache.*, etc.)
+2. Embeds them in system prompt with full documentation
+3. Uses ONLY execute_code tool to run TypeScript
+4. Writes code that uses atp.llm.call(), atp.cache.set/get(), atp.approval.request()
+5. Handles approvals seamlessly within execution
+
+### 2. Simple Agent (`simple-agent.ts`)
 
 Basic React agent without approval handling. **Demonstrates token refresh using preRequest hooks.**
 
@@ -43,7 +85,7 @@ Features:
 - Shows how to integrate short-lived tokens (e.g., 3-minute TTL)
 - Auto-approval for demo purposes
 
-### 2. Production Agent (`agent.ts`)
+### 4. Production Agent (`agent.ts`)
 
 Full production setup with:
 
@@ -81,6 +123,59 @@ npm install
 ```
 
 ## How It Works
+
+### Runtime Discovery
+
+ATP provides a dedicated endpoint to discover available runtime APIs:
+
+```typescript
+import { AgentToolProtocolClient } from '@mondaydotcomorg/atp-client';
+
+const client = new AgentToolProtocolClient({
+	baseUrl: 'http://localhost:3333',
+	headers: { Authorization: 'Bearer token' },
+});
+
+await client.init();
+
+// Fetch ATP runtime definitions ONCE
+const runtime = await client.getRuntimeDefinitions();
+console.log(runtime.runtimeAPIs);
+// [
+//   { name: 'llm', description: '...', methods: [...] },
+//   { name: 'cache', description: '...', methods: [...] },
+//   { name: 'embedding', description: '...', methods: [...] },
+//   { name: 'approval', description: '...', methods: [...] },
+//   { name: 'progress', description: '...', methods: [...] }
+// ]
+
+// Build system prompt with full documentation
+let runtimeDocs = '';
+for (const api of runtime.runtimeAPIs) {
+	runtimeDocs += `atp.${api.name} - ${api.description}\n`;
+	for (const method of api.methods) {
+		runtimeDocs += `  ${method.name}(...) - ${method.description}\n`;
+	}
+}
+
+// Embed in system prompt (NOT as a tool!)
+const systemPrompt = `You can execute TypeScript code with these runtime APIs:
+${runtimeDocs}
+Use execute_code tool to run your code.`;
+
+// Create agent with ONLY execute_code tool
+const agent = createReactAgent({
+	llm,
+	tools: [executeCodeTool],
+	messageModifier: systemPrompt,
+});
+```
+
+This enables agents to:
+- Know about all runtime capabilities from system prompt
+- Use ONLY execute_code tool - simple and clean
+- Write TypeScript code using atp.* APIs
+- No need for extra tools to "discover" APIs
 
 ### Token Refresh with Hooks
 

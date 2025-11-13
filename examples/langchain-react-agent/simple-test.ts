@@ -53,7 +53,7 @@ return { sum: sum.result, joke };`,
 		});
 
 		const lastMsg = result.messages[result.messages.length - 1];
-		console.log('\n✅ Result:', lastMsg.content);
+		console.log('\n✅ Result:', lastMsg?.content);
 
 		console.log('\n🎉 SUCCESS - ATP + LangChain works!\n');
 	} catch (error: any) {

@@ -70,7 +70,7 @@ export class AgentToolProtocolClient {
 
 	/**
 	 * Initializes the client session with the server.
-	 * Automatically registers any client-provided tools with the server.
+	 * Automatically registers any client-provided tools and services with the server.
 	 */
 	async init(clientInfo?: { name?: string; version?: string; [key: string]: unknown }): Promise<{
 		clientId: string;
@@ -79,7 +79,13 @@ export class AgentToolProtocolClient {
 		tokenRotateAt: number;
 	}> {
 		const toolDefinitions = this.serviceProviders.getToolDefinitions();
-		return await this.session.init(clientInfo, toolDefinitions);
+		const services = {
+			hasLLM: !!this.serviceProviders.getLLM(),
+			hasApproval: !!this.serviceProviders.getApproval(),
+			hasEmbedding: !!this.serviceProviders.getEmbedding(),
+			hasTools: this.serviceProviders.hasTools(),
+		};
+		return await this.session.init(clientInfo, toolDefinitions, services);
 	}
 
 	/**
@@ -190,5 +196,14 @@ export class AgentToolProtocolClient {
 		capabilities: Record<string, boolean>;
 	}> {
 		return await this.apiOps.getServerInfo();
+	}
+
+	/**
+	 * Gets ATP runtime API definitions as TypeScript declarations.
+	 * Returns the full TypeScript definitions for atp.llm.*, atp.cache.*, etc.
+	 * These are the APIs available during code execution.
+	 */
+	async getRuntimeDefinitions(): Promise<string> {
+		return await this.apiOps.getRuntimeDefinitions();
 	}
 }

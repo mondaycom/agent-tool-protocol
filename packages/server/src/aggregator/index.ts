@@ -1,5 +1,8 @@
 import type { APIGroupConfig, CustomFunctionDef } from '@mondaydotcomorg/atp-protocol';
-import { generateRuntimeTypes } from '../utils/runtime-types.js';
+import {
+	GENERATED_METADATA,
+	generateRuntimeTypes,
+} from '@mondaydotcomorg/atp-runtime';
 
 /**
  * APIAggregator generates TypeScript type definitions from API configurations.
@@ -46,10 +49,16 @@ export class APIAggregator {
 
 	/**
 	 * Generates TypeScript definitions for the runtime SDK.
+	 * @param clientServices - Optional client service capabilities to filter APIs
 	 * @returns TypeScript definition string
 	 */
-	private generateRuntimeTypes(): string {
-		return generateRuntimeTypes();
+	public generateRuntimeTypes(clientServices?: {
+		hasLLM: boolean;
+		hasApproval: boolean;
+		hasEmbedding: boolean;
+		hasTools: boolean;
+	}): string {
+		return generateRuntimeTypes(GENERATED_METADATA, clientServices);
 	}
 
 	/**

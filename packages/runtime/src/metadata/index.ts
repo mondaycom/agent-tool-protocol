@@ -6,14 +6,46 @@ export type { RuntimeAPIParam, RuntimeAPIMethod, RuntimeAPIMetadata } from './ty
 export { RuntimeAPI, RuntimeMethod } from './decorators.js';
 
 import type { RuntimeAPIMetadata } from './types.js';
+import { TYPE_REGISTRY } from './generated.js';
+import { CallbackType } from '../pause/types.js';
+
+interface ClientServices {
+	hasLLM: boolean;
+	hasApproval: boolean;
+	hasEmbedding: boolean;
+	hasTools: boolean;
+}
 
 /**
  * Generates TypeScript definitions from runtime API metadata
+ * @param apis - Runtime API metadata
+ * @param clientServices - Optional client service capabilities to filter APIs
  */
-export function generateRuntimeTypes(apis: RuntimeAPIMetadata[]): string {
-	let typescript = '// Runtime SDK\ndeclare const atp: {\n';
+export function generateRuntimeTypes(
+	apis: RuntimeAPIMetadata[],
+	clientServices?: ClientServices
+): string {
+	// Filter APIs based on client capabilities
+	let filteredApis = apis;
+	if (clientServices) {
+		filteredApis = apis.filter((api) => {
+			if (api.name === CallbackType.LLM && !clientServices.hasLLM) return false;
+			if (api.name === CallbackType.APPROVAL && !clientServices.hasApproval) return false;
+			if (api.name === CallbackType.EMBEDDING && !clientServices.hasEmbedding) return false;
+			return true;
+		});
+	}
 
-	for (const api of apis) {
+	let typescript = '// Runtime SDK Type Definitions\n\n';
+
+	// Add type definitions first
+	for (const type of TYPE_REGISTRY) {
+		typescript += `${type.definition}\n\n`;
+	}
+
+	typescript += '// Runtime SDK\ndeclare const atp: {\n';
+
+	for (const api of filteredApis) {
 		typescript += `  /**\n`;
 		for (const line of api.description.split('\n')) {
 			typescript += `   * ${line}\n`;

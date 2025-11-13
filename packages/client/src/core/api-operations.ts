@@ -1,4 +1,8 @@
-import type { SearchOptions, SearchResult, ExploreResult } from '@mondaydotcomorg/atp-protocol';
+import type {
+	SearchOptions,
+	SearchResult,
+	ExploreResult,
+} from '@mondaydotcomorg/atp-protocol';
 import type { ClientSession } from './session.js';
 
 export class APIOperations {
@@ -126,5 +130,25 @@ export class APIOperations {
 			version: string;
 			capabilities: Record<string, boolean>;
 		};
+	}
+
+	/**
+	 * Gets ATP runtime API definitions as TypeScript declarations.
+	 * Returns the full TypeScript definitions for atp.llm.*, atp.cache.*, etc.
+	 * These are the APIs available during code execution.
+	 */
+	async getRuntimeDefinitions(): Promise<string> {
+		await this.session.ensureInitialized();
+
+		const url = `${this.session.getBaseUrl()}/api/runtime`;
+		const headers = await this.session.prepareHeaders('GET', url);
+
+		const response = await fetch(url, { headers });
+
+		if (!response.ok) {
+			throw new Error(`Failed to get runtime definitions: ${response.status}`);
+		}
+
+		return await response.text();
 	}
 }

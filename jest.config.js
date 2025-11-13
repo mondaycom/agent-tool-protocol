@@ -45,8 +45,6 @@ module.exports = {
 				useESM: false,
 			},
 		],
-		// DO NOT transform @babel packages - use their compiled code
-		'^.+\\.js$': '<rootDir>/node_modules/babel-jest',
 	},
 	testTimeout: 30000,
 	verbose: true,

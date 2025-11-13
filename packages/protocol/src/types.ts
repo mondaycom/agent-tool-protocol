@@ -545,3 +545,30 @@ export interface ClientConfig {
 		maxResults?: number;
 	};
 }
+
+export interface RuntimeMethodParam {
+	name: string;
+	type: string;
+	description: string;
+	optional: boolean;
+}
+
+export interface RuntimeMethod {
+	name: string;
+	description: string;
+	params: RuntimeMethodParam[];
+	returns: string;
+}
+
+export interface RuntimeAPI {
+	name: string;
+	description: string;
+	methods: RuntimeMethod[];
+}
+
+export interface RuntimeDefinitions {
+	version: string;
+	runtimeAPIs: RuntimeAPI[];
+	description: string;
+	usage: { example: string };
+}

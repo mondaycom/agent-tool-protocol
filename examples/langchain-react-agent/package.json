@@ -5,8 +5,9 @@
 	"description": "Production-ready LangChain React Agent with ATP integration",
 	"type": "module",
 	"scripts": {
-		"start": "tsx agent.ts",
-		"start:simple": "tsx simple-agent.ts"
+		"start": "NODE_OPTIONS='--no-node-snapshot' tsx agent.ts",
+		"start:simple": "NODE_OPTIONS='--no-node-snapshot' tsx simple-agent.ts",
+		"discover": "NODE_OPTIONS='--no-node-snapshot' tsx runtime-discovery.ts"
 	},
 	"dependencies": {
 		"@langchain/core": "^0.3.78",
