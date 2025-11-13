@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-runtime",
-	"version": "0.17.15",
+	"version": "0.17.16",
 	"description": "Runtime SDK injected into sandbox for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -15,6 +15,14 @@
 		"dist",
 		"src"
 	],
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mondaycom/agent-tool-protocol",
+		"directory": "packages/runtime"
+	},
 	"scripts": {
 		"build": "npm run generate:metadata && tsc -p tsconfig.json",
 		"generate:metadata": "tsx scripts/generate-metadata.ts",

@@ -1,13 +1,9 @@
 name: Publish
 
 on:
-  # TODO: After testing, change this to only trigger on tags for production releases
-  # push:
-  #   tags:
-  #     - v*.*.*
   push:
-    branches:
-      - feat/odedgo/release-pipeline  # Testing branch - remove after testing
+    tags:
+      - v*.*.*
   workflow_dispatch:  # Allows manual triggering for testing
 
 jobs:
@@ -68,18 +64,9 @@ jobs:
         run: yarn nx release version --dry-run
         shell: bash
 
-      - name: Publish packages (DRY RUN)
-        run: yarn nx release publish --dry-run
+      - name: Publish packages
+        run: yarn nx release publish
         shell: bash
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
-
-      # TODO: After testing, uncomment this for actual publishing on tags
-      # - name: Publish packages (PRODUCTION)
-      #   if: startsWith(github.ref, 'refs/tags/')
-      #   run: yarn nx release publish
-      #   shell: bash
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
-      #     NPM_CONFIG_PROVENANCE: true

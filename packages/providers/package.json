@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-providers",
-	"version": "0.17.15",
+	"version": "0.17.16",
 	"description": "Built-in providers for Agent Tool Protocol (cache, auth, audit)",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -17,8 +17,16 @@
 		"lint": "tsc --noEmit",
 		"test": "vitest run"
 	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mondaycom/agent-tool-protocol",
+		"directory": "packages/providers"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
 	"dependencies": {
-		"@mondaydotcomorg/atp-protocol": "0.17.15",
+		"@mondaydotcomorg/atp-protocol": "0.17.16",
 		"@opentelemetry/api": "^1.9.0"
 	},
 	"devDependencies": {

@@ -23,6 +23,11 @@
 		"test": "vitest run",
 		"lint": "tsc --noEmit"
 	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mondaycom/agent-tool-protocol",
+		"directory": "packages/server"
+	},
 	"keywords": [
 		"agent",
 		"protocol",
@@ -31,16 +36,19 @@
 		"llm"
 	],
 	"license": "MIT",
+	"publishConfig": {
+		"access": "public"
+	},
 	"dependencies": {
 		"@babel/generator": "^7.26.0",
 		"@babel/parser": "^7.26.0",
 		"@babel/traverse": "^7.26.0",
 		"@babel/types": "^7.26.0",
-		"@mondaydotcomorg/atp-compiler": "0.17.15",
-		"@mondaydotcomorg/atp-protocol": "0.17.15",
-		"@mondaydotcomorg/atp-provenance": "0.17.15",
-		"@mondaydotcomorg/atp-providers": "0.17.15",
-		"@mondaydotcomorg/atp-runtime": "0.17.15",
+		"@mondaydotcomorg/atp-compiler": "0.17.16",
+		"@mondaydotcomorg/atp-protocol": "0.17.16",
+		"@mondaydotcomorg/atp-provenance": "0.17.16",
+		"@mondaydotcomorg/atp-providers": "0.17.16",
+		"@mondaydotcomorg/atp-runtime": "0.17.16",
 		"@opentelemetry/api": "^1.9.0",
 		"@opentelemetry/auto-instrumentations-node": "^0.66.0",
 		"@opentelemetry/core": "^2.2.0",

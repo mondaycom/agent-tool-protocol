@@ -15,6 +15,14 @@
 		"dist",
 		"src"
 	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mondaycom/agent-tool-protocol",
+		"directory": "packages/langchain"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
 		"build": "tsc -p tsconfig.json",
 		"dev": "tsc -p tsconfig.json --watch",
@@ -32,8 +40,8 @@
 	"license": "MIT",
 	"dependencies": {
 		"@langchain/core": "^0.3.78",
-		"@mondaydotcomorg/atp-client": "0.17.15",
-		"@mondaydotcomorg/atp-protocol": "0.17.15",
+		"@mondaydotcomorg/atp-client": "0.17.16",
+		"@mondaydotcomorg/atp-protocol": "0.17.16",
 		"json-schema-to-zod": "^2.6.1",
 		"langchain": "^0.3.35",
 		"zod": "^4.1.11"

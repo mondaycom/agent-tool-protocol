@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-compiler",
-	"version": "0.17.15",
+	"version": "0.17.16",
 	"description": "Production-ready compiler for transforming async iteration patterns into resumable operations with checkpoint-based state management",
 	"type": "module",
 	"main": "dist/atp-compiler/src/index.js",
@@ -14,6 +14,14 @@
 			"types": "./dist/atp-compiler/src/*.d.ts",
 			"import": "./dist/atp-compiler/src/*.js"
 		}
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mondaycom/agent-tool-protocol",
+		"directory": "packages/atp-compiler"
 	},
 	"scripts": {
 		"build": "tsc",
@@ -38,15 +46,15 @@
 		"@babel/parser": "^7.26.0",
 		"@babel/traverse": "^7.26.0",
 		"@babel/types": "^7.26.0",
-		"@mondaydotcomorg/atp-protocol": "0.17.15",
-		"@mondaydotcomorg/atp-runtime": "0.17.15",
+		"@mondaydotcomorg/atp-protocol": "0.17.16",
+		"@mondaydotcomorg/atp-runtime": "0.17.16",
 		"@types/babel__generator": "^7.6.0",
 		"@types/babel__traverse": "^7.20.0",
 		"nanoid": "^5.0.0"
 	},
 	"peerDependencies": {
-		"@mondaydotcomorg/atp-protocol": "0.17.15",
-		"@mondaydotcomorg/atp-runtime": "0.17.15"
+		"@mondaydotcomorg/atp-protocol": "0.17.16",
+		"@mondaydotcomorg/atp-runtime": "0.17.16"
 	},
 	"devDependencies": {
 		"@stryker-mutator/core": "^8.0.0",

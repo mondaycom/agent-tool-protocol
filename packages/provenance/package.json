@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-provenance",
-	"version": "0.17.15",
+	"version": "0.17.16",
 	"description": "CAMEL-inspired provenance security for LLM applications - track data origin and enforce security policies",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -10,6 +10,9 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		}
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"files": [
 		"dist",
@@ -45,7 +48,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/your-org/agent-tool-protocol.git",
+		"url": "https://github.com/mondaycom/agent-tool-protocol",
 		"directory": "packages/provenance"
 	}
 }
