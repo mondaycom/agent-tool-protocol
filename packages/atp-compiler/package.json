@@ -20,7 +20,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/your-org/agent-tool-protocol.git",
+		"url": "https://github.com/mondaycom/agent-tool-protocol",
 		"directory": "packages/atp-compiler"
 	},
 	"scripts": {
