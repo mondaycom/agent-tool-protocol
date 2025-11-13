@@ -3,6 +3,8 @@
  * Each runtime module exports its metadata for the type generator
  */
 
+import { RuntimeAPIName } from "./generated";
+
 export interface RuntimeAPIParam {
 	name: string;
 	type: string;
@@ -18,7 +20,7 @@ export interface RuntimeAPIMethod {
 }
 
 export interface RuntimeAPIMetadata {
-	name: string;
+	name: RuntimeAPIName;
 	description: string;
 	methods: RuntimeAPIMethod[];
 }

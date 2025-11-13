@@ -3,6 +3,7 @@ import {
 	GENERATED_METADATA,
 	generateRuntimeTypes,
 } from '@mondaydotcomorg/atp-runtime';
+import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
 
 /**
  * APIAggregator generates TypeScript type definitions from API configurations.
@@ -49,16 +50,19 @@ export class APIAggregator {
 
 	/**
 	 * Generates TypeScript definitions for the runtime SDK.
-	 * @param clientServices - Optional client service capabilities to filter APIs
+	 * @param options - Optional filtering options
 	 * @returns TypeScript definition string
 	 */
-	public generateRuntimeTypes(clientServices?: {
-		hasLLM: boolean;
-		hasApproval: boolean;
-		hasEmbedding: boolean;
-		hasTools: boolean;
+	public generateRuntimeTypes(options?: {
+		clientServices?: {
+			hasLLM: boolean;
+			hasApproval: boolean;
+			hasEmbedding: boolean;
+			hasTools: boolean;
+		};
+		requestedApis?: RuntimeAPIName[];
 	}): string {
-		return generateRuntimeTypes(GENERATED_METADATA, clientServices);
+		return generateRuntimeTypes(GENERATED_METADATA, options);
 	}
 
 	/**

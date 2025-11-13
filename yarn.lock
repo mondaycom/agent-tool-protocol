@@ -3590,6 +3590,7 @@ __metadata:
   resolution: "@mondaydotcomorg/atp-client@workspace:packages/client"
   dependencies:
     "@mondaydotcomorg/atp-protocol": "npm:0.17.15"
+    "@mondaydotcomorg/atp-runtime": "npm:0.17.15"
     typescript: "npm:^5.3.3"
     undici: "npm:*"
     vitest: "npm:^1.2.1"

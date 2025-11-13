@@ -22,10 +22,14 @@ export function createContext(options: CreateContextOptions): RequestContext {
 	const clientId = (req.headers['x-client-id'] as string) || undefined;
 	const userId = (req.headers['x-user-id'] as string) || undefined;
 
+	const url = req.url || '/';
+	const queryIndex = url.indexOf('?');
+	const path = queryIndex === -1 ? url : url.substring(0, queryIndex);
+
 	return {
 		method: req.method || 'GET',
-		path: req.url || '/',
-		query: parseQuery(req.url || '/'),
+		path,
+		query: parseQuery(url),
 		headers: req.headers as Record<string, string>,
 		body: null,
 		status: 200,

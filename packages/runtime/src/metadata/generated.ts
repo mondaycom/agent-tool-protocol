@@ -259,6 +259,11 @@ export const GENERATED_METADATA: RuntimeAPIMetadata[] = [
 ];
 
 /**
+ * Runtime API names - specific literal types for type-safe API filtering
+ */
+export type RuntimeAPIName = 'approval' | 'cache' | 'embedding' | 'llm' | 'progress';
+
+/**
  * Type definitions extracted using ts-json-schema-generator
  */
 export const TYPE_REGISTRY = [

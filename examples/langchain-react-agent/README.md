@@ -28,7 +28,7 @@ This demonstrates:
 - Running code that calls APIs and makes LLM calls
 - Getting all 3 ATP tools automatically (search_api, fetch_all_apis, execute_code)
 
-### 1. Runtime Discovery (`simple-runtime-discovery.ts`) 🆕
+### 1. Runtime Discovery (`runtime-discovery.ts`) 🆕
 
 **LangChain React Agent** with runtime discovery:
 
@@ -126,56 +126,80 @@ npm install
 
 ### Runtime Discovery
 
-ATP provides a dedicated endpoint to discover available runtime APIs:
+ATP provides a dedicated endpoint to fetch runtime API definitions as TypeScript:
 
 ```typescript
-import { AgentToolProtocolClient } from '@mondaydotcomorg/atp-client';
+import { ChatOpenAI } from '@langchain/openai';
+import { createATPTools } from '@mondaydotcomorg/atp-langchain';
 
-const client = new AgentToolProtocolClient({
-	baseUrl: 'http://localhost:3333',
+const llm = new ChatOpenAI({ modelName: 'gpt-4.1' });
+
+// Create ATP tools (this initializes the client WITH your LLM)
+const { client, tools } = await createATPTools({
+	serverUrl: 'http://localhost:3333',
 	headers: { Authorization: 'Bearer token' },
+	llm, // Important: register LLM first!
 });
 
-await client.init();
+// Fetch complete TypeScript definitions
+const runtimeTypescript = await client.getUnderlyingClient().getRuntimeDefinitions();
 
-// Fetch ATP runtime definitions ONCE
-const runtime = await client.getRuntimeDefinitions();
-console.log(runtime.runtimeAPIs);
-// [
-//   { name: 'llm', description: '...', methods: [...] },
-//   { name: 'cache', description: '...', methods: [...] },
-//   { name: 'embedding', description: '...', methods: [...] },
-//   { name: 'approval', description: '...', methods: [...] },
-//   { name: 'progress', description: '...', methods: [...] }
-// ]
+console.log(runtimeTypescript);
+// Output: Complete TypeScript declarations (3500+ chars)
+// 
+// // Runtime SDK Type Definitions
+// 
+// export interface ApprovalResponse<T = unknown> { ... }
+// interface SearchOptions { ... }
+// interface LLMCallOptions { ... }
+// 
+// declare const atp: {
+//   llm: {
+//     call(options: LLMCallOptions): Promise<string>;
+//     extract(options: LLMExtractOptions): Promise<T>;
+//     classify(options: LLMClassifyOptions): Promise<string>;
+//   };
+//   cache: {
+//     get(key: string): Promise<T | null>;
+//     set(key: string, value: unknown, ttl?: number): Promise<void>;
+//     ...
+//   };
+//   // ... (automatically filtered based on client capabilities!)
+// };
 
-// Build system prompt with full documentation
-let runtimeDocs = '';
-for (const api of runtime.runtimeAPIs) {
-	runtimeDocs += `atp.${api.name} - ${api.description}\n`;
-	for (const method of api.methods) {
-		runtimeDocs += `  ${method.name}(...) - ${method.description}\n`;
-	}
-}
-
-// Embed in system prompt (NOT as a tool!)
+// Embed directly in system prompt
 const systemPrompt = `You can execute TypeScript code with these runtime APIs:
-${runtimeDocs}
+
+${runtimeTypescript}
+
 Use execute_code tool to run your code.`;
 
-// Create agent with ONLY execute_code tool
+// Create agent with filtered tools
+const filteredTools = tools.filter(
+	tool => tool.name === 'atp_execute_code' || tool.name === 'atp_explore_api'
+);
+
 const agent = createReactAgent({
 	llm,
-	tools: [executeCodeTool],
+	tools: filteredTools,
 	messageModifier: systemPrompt,
 });
 ```
 
+**Key Features:**
+
+- **TypeScript Format**: Returns complete `.ts` declarations with all types
+- **Auto-Filtered**: Only includes APIs the client supports (no `atp.embedding` if no embedding provider)
+- **Type Safety**: Includes all supporting types (`LLMCallOptions`, `ApprovalResponse`, etc.)
+- **Ready to Use**: Complete documentation embedded in system prompt
+- **3500+ chars**: Full API documentation with JSDoc comments
+
 This enables agents to:
 - Know about all runtime capabilities from system prompt
 - Use ONLY execute_code tool - simple and clean
-- Write TypeScript code using atp.* APIs
+- Write TypeScript code using atp.* APIs with full type information
 - No need for extra tools to "discover" APIs
+- Only see APIs they can actually use
 
 ### Token Refresh with Hooks
 

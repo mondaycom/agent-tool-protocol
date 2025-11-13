@@ -18,5 +18,8 @@
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist", "**/*.test.ts"],
-	"references": [{ "path": "../protocol" }]
+	"references": [
+		{ "path": "../protocol" },
+		{ "path": "../runtime" }
+	]
 }

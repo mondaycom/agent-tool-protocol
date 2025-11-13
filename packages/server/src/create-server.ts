@@ -10,6 +10,7 @@ import type {
 import { ProvenanceMode } from '@mondaydotcomorg/atp-protocol';
 import { log, initializeLogger } from '@mondaydotcomorg/atp-runtime';
 import { shutdownLogger } from '@mondaydotcomorg/atp-runtime';
+import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
 import type {
 	ServerConfig,
 	Middleware,
@@ -402,7 +403,15 @@ export class AgentToolProtocolServer {
 	async getRuntimeDefinitions(ctx?: RequestContext): Promise<string> {
 		const aggregator = new APIAggregator(this.apiGroups);
 		
-		let clientServices = { hasLLM: true, hasApproval: true, hasEmbedding: true, hasTools: true };
+		let requestedApis: RuntimeAPIName[] | undefined;
+		if (ctx?.query?.apis) {
+			requestedApis = ctx.query.apis
+				.split(',')
+				.map((s) => s.trim())
+				.filter(Boolean) as RuntimeAPIName[];
+		}
+		
+		let clientServices: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean } | undefined;
 		
 		if (ctx?.clientId && this.sessionManager) {
 			try {
@@ -413,7 +422,10 @@ export class AgentToolProtocolServer {
 			} catch (error) {}
 		}
 		
-		return aggregator.generateRuntimeTypes(clientServices);
+		return aggregator.generateRuntimeTypes({
+			clientServices,
+			requestedApis,
+		});
 	}
 
 	async handleInit(ctx: RequestContext): Promise<unknown> {
