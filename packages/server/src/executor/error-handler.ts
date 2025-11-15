@@ -109,6 +109,16 @@ export function categorizeError(error: Error): ErrorCategory {
 		};
 	}
 
+	if (message.includes('could not be cloned') || message.includes('not cloneable')) {
+		return {
+			status: ExecutionStatus.FAILED,
+			code: ExecutionErrorCode.EXECUTION_FAILED,
+			retryable: false,
+			suggestion:
+				'Cannot return functions or non-serializable values. Return only plain objects, arrays, primitives, or await promises before returning results.',
+		};
+	}
+
 	return {
 		status: ExecutionStatus.FAILED,
 		code: ExecutionErrorCode.EXECUTION_FAILED,

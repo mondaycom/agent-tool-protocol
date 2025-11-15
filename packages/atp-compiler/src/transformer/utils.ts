@@ -145,3 +145,17 @@ export function isArrayMethod(node: t.Node, methodName: string): boolean {
 
 	return t.isIdentifier(callee.property) && callee.property.name === methodName;
 }
+
+/**
+ * Extract parameter name from ForOfStatement left side
+ */
+export function extractForOfParamName(left: t.VariableDeclaration | t.LVal): string {
+	if (t.isVariableDeclaration(left)) {
+		const id = left.declarations[0]?.id;
+		return t.isIdentifier(id) ? id.name : 'item';
+	} else if (t.isIdentifier(left)) {
+		return left.name;
+	} else {
+		return 'item';
+	}
+}

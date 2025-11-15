@@ -1,58 +1,57 @@
 import ivm from 'isolated-vm';
 import type {
-	ExecutionConfig,
-	ExecutionResult,
 	APIGroupConfig,
 	ClientToolDefinition,
+	ExecutionConfig,
+	ExecutionResult,
 } from '@mondaydotcomorg/atp-protocol';
 import { ExecutionStatus, ProvenanceMode } from '@mondaydotcomorg/atp-protocol';
 import {
-	log,
-	setPauseForClient,
-	setReplayMode,
-	setProgressCallback,
-	initializeVectorStore,
-	runInExecutionContext,
-	setVectorStoreExecutionId,
 	clearVectorStoreExecutionId,
 	initializeApproval,
+	initializeVectorStore,
+	log,
+	runInExecutionContext,
+	setPauseForClient,
+	setProgressCallback,
+	setReplayMode,
+	setVectorStoreExecutionId,
 } from '@mondaydotcomorg/atp-runtime';
 import { nanoid } from 'nanoid';
 import type { CallbackRecord } from '../execution-state/index.js';
 import type { ClientSessionManager } from '../client-sessions.js';
 import { BOOTSTRAP_CODE } from './bootstrap-generated.js';
-import type { RuntimeContext, ExecutorConfig } from './types.js';
+import type { ExecutorConfig, RuntimeContext } from './types.js';
 import { SandboxBuilder } from './sandbox-builder.js';
-import { StateManager, CodeInstrumentor } from '../instrumentation/index.js';
+import { CodeInstrumentor, StateManager } from '../instrumentation/index.js';
 import { ATP_COMPILER_ENABLED } from './constants.js';
-import { transformCodeWithCompiler, getCompilerRuntime } from './compiler-config.js';
+import { getCompilerRuntime, transformCodeWithCompiler } from './compiler-config.js';
 import { setupResumeExecution } from './resume-handler.js';
 import {
-	injectTimerPolyfills,
 	injectSandbox,
+	injectTimerPolyfills,
 	setupAPINamespace,
 	setupRuntimeNamespace,
 } from './sandbox-injector.js';
 import { handleExecutionError } from './execution-error-handler.js';
 import {
-	SecurityPolicyEngine,
-	instrumentCode as astInstrumentCode,
-	createTrackingRuntime,
-	setProvenanceExecutionId,
-	clearProvenanceExecutionId,
-	cleanupProvenanceForExecution,
-	captureProvenanceState,
-	restoreProvenanceState,
 	captureProvenanceSnapshot,
+	cleanupProvenanceForExecution,
+	clearProvenanceExecutionId,
+	createTrackingRuntime,
+	instrumentCode as astInstrumentCode,
 	registerProvenanceMetadata,
+	SecurityPolicyEngine,
+	setProvenanceExecutionId,
 } from '@mondaydotcomorg/atp-provenance';
 import {
+	createASTProvenanceChecker,
 	registerIsolateContext,
 	unregisterIsolateContext,
-	createASTProvenanceChecker,
 } from './ast-provenance-bridge.js';
 import { instrumentLiteralsFromHints } from '../utils/hint-based-instrumentation.js';
-import { getHintMap, reattachProvenanceFromHints } from '../utils/provenance-reattachment.js';
+import { getHintMap } from '../utils/provenance-reattachment.js';
+
 export class SandboxExecutor {
 	private config: ExecutorConfig;
 	private sandboxBuilder: SandboxBuilder;
@@ -127,8 +126,7 @@ export class SandboxExecutor {
 		if (this.approvalHandler) {
 			initializeApproval(async (request: { message: any }) => {
 				executionLogger.debug('Approval requested', { message: request.message });
-				const response = await this.approvalHandler!(request);
-				return response;
+				return await this.approvalHandler!(request);
 			});
 			executionLogger.debug('Approval handler initialized');
 		}
@@ -427,7 +425,14 @@ export class SandboxExecutor {
 					});
 				} catch (error) {
 					executionLogger.warn('Failed to instrument code, executing without state capture', {
-						error,
+						error:
+							error instanceof Error
+								? {
+										message: error.message,
+										stack: error.stack,
+										name: error.name,
+									}
+								: String(error),
 					});
 				}
 			}

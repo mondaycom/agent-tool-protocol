@@ -172,7 +172,7 @@ export class StateManager {
 			const persisted = await this.cache.get<ExecutionState>(key);
 
 			if (!persisted) {
-				this.logger.warn('No persisted state found', { executionId });
+				this.logger.debug('No persisted state found (expected for new executions)', { executionId });
 				return false;
 			}
 

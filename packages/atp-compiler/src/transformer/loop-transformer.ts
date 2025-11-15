@@ -1,8 +1,9 @@
 import * as t from '@babel/types';
 import { generateUniqueId } from '../runtime/context.js';
-import { containsAwait } from './utils.js';
+import { containsAwait, extractForOfParamName } from './utils.js';
 import { BatchOptimizer } from './batch-optimizer.js';
 import { BatchParallelDetector } from './batch-detector.js';
+import { findLLMCallExpression } from './array-transformer-utils.js';
 
 export class LoopTransformer {
 	private transformCount = 0;
@@ -46,27 +47,10 @@ export class LoopTransformer {
 	 */
 	private transformForOfToBatch(path: any, node: t.ForOfStatement): boolean {
 		const loopId = generateUniqueId('for_of_batch');
-		const left = node.left;
 		const right = node.right;
+		const paramName = extractForOfParamName(node.left);
 
-		let paramName: string;
-		if (t.isVariableDeclaration(left)) {
-			const id = left.declarations[0]?.id;
-			paramName = t.isIdentifier(id) ? id.name : 'item';
-		} else if (t.isIdentifier(left)) {
-			paramName = left.name;
-		} else {
-			paramName = 'item';
-		}
-
-		const bodyStatements = t.isBlockStatement(node.body) ? node.body.body : [node.body];
-		const callback = t.arrowFunctionExpression(
-			[t.identifier(paramName)],
-			t.blockStatement(bodyStatements),
-			true
-		);
-
-		const llmCall = this.findLLMCallInBody(node.body);
+		const llmCall = findLLMCallExpression(node.body);
 		if (!llmCall) {
 			return this.transformForOfToSequential(path, node);
 		}
@@ -109,18 +93,8 @@ export class LoopTransformer {
 	 */
 	private transformForOfToSequential(path: any, node: t.ForOfStatement): boolean {
 		const loopId = generateUniqueId('for_of');
-		const left = node.left;
 		const right = node.right;
-
-		let paramName: string;
-		if (t.isVariableDeclaration(left)) {
-			const id = left.declarations[0]?.id;
-			paramName = t.isIdentifier(id) ? id.name : 'item';
-		} else if (t.isIdentifier(left)) {
-			paramName = left.name;
-		} else {
-			paramName = 'item';
-		}
+		const paramName = extractForOfParamName(node.left);
 
 		const bodyStatements = t.isBlockStatement(node.body) ? node.body.body : [node.body];
 
@@ -142,40 +116,6 @@ export class LoopTransformer {
 		return true;
 	}
 
-	/**
-	 * Find LLM call in loop body
-	 */
-	private findLLMCallInBody(body: t.Statement | t.BlockStatement): t.CallExpression | null {
-		let found: t.CallExpression | null = null;
-
-		const visit = (node: t.Node) => {
-			if (found) return;
-
-			if (t.isAwaitExpression(node) && t.isCallExpression(node.argument)) {
-				const call = node.argument;
-				if (t.isMemberExpression(call.callee)) {
-					found = call;
-					return;
-				}
-			}
-
-			Object.keys(node).forEach((key) => {
-				const value = (node as any)[key];
-				if (Array.isArray(value)) {
-					value.forEach((item) => {
-						if (item && typeof item === 'object' && item.type) {
-							visit(item);
-						}
-					});
-				} else if (value && typeof value === 'object' && value.type) {
-					visit(value);
-				}
-			});
-		};
-
-		visit(body);
-		return found;
-	}
 
 	transformWhileLoop(path: any): boolean {
 		const node = path.node as t.WhileStatement;
