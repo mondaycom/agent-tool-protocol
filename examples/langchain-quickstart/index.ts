@@ -8,10 +8,10 @@ process.env.ATP_JWT_SECRET = process.env.ATP_JWT_SECRET || 'test-secret-key';
 async function startServer() {
 	const server = createServer({});
 
-	const petstore = await loadOpenAPI(
-		'https://petstore.swagger.io/v2/swagger.json',
-		{ name: 'petstore', filter: { methods: ['GET'] } }
-	);
+	const petstore = await loadOpenAPI('https://petstore.swagger.io/v2/swagger.json', {
+		name: 'petstore',
+		filter: { methods: ['GET'] },
+	});
 
 	server.use([petstore]);
 	await server.listen(3333);
@@ -23,7 +23,7 @@ async function runAgent() {
 
 	const { tools } = await createATPTools({
 		serverUrl: 'http://localhost:3333',
-		llm,        
+		llm,
 	});
 
 	const agent = createReactAgent({ llm, tools });
@@ -51,4 +51,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

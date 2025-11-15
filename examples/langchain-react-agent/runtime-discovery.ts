@@ -18,10 +18,10 @@ import { MemorySaver } from '@langchain/langgraph';
 
 async function main() {
 	console.log('🔍 Simple Runtime Discovery Agent\n');
-	console.log('=' .repeat(80));
+	console.log('='.repeat(80));
 	console.log('React Agent with ONLY 2 tools: explore_api + execute_code');
 	console.log('Runtime APIs embedded in system prompt');
-	console.log('=' .repeat(80) + '\n');
+	console.log('='.repeat(80) + '\n');
 
 	if (!process.env.OPENAI_API_KEY) {
 		console.error('❌ Error: OPENAI_API_KEY environment variable not set');
@@ -56,11 +56,12 @@ async function main() {
 	// Filter to only explore_api and execute_code (tools are prefixed with 'atp_')
 	const langChainTools = allTools.filter(
 		(tool) =>
-			tool.name === `atp_${ToolNames.EXPLORE_API}` ||
-			tool.name === `atp_${ToolNames.EXECUTE_CODE}`
+			tool.name === `atp_${ToolNames.EXPLORE_API}` || tool.name === `atp_${ToolNames.EXECUTE_CODE}`
 	);
 
-	console.log(`✅ Filtered to ${langChainTools.length} tools: ${langChainTools.map(t => t.name).join(', ')}\n`);
+	console.log(
+		`✅ Filtered to ${langChainTools.length} tools: ${langChainTools.map((t) => t.name).join(', ')}\n`
+	);
 
 	// Create React agent with runtime knowledge (reuse same LLM)
 

@@ -8,10 +8,10 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 async function main() {
 	const server = createServer({});
 
-	const petstore = await loadOpenAPI(
-		'https://petstore.swagger.io/v2/swagger.json',
-		{ name: 'petstore', filter: { methods: ['GET'] } }
-	);
+	const petstore = await loadOpenAPI('https://petstore.swagger.io/v2/swagger.json', {
+		name: 'petstore',
+		filter: { methods: ['GET'] },
+	});
 
 	const mcpConnector = new MCPConnector();
 	const playwright = await mcpConnector.connectToMCPServer({
@@ -51,4 +51,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

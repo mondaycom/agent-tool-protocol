@@ -203,12 +203,12 @@ export class AgentToolProtocolClient {
 	 * Gets ATP runtime API definitions as TypeScript declarations.
 	 * Returns the full TypeScript definitions for atp.llm.*, atp.cache.*, etc.
 	 * These are the APIs available during code execution.
-	 * 
+	 *
 	 * Behavior:
 	 * - No options: Returns APIs based on client capabilities (default filtering)
 	 * - apis: ['llm', 'cache']: Returns only specified APIs (intersection with client capabilities)
 	 * - apis: []: Returns all APIs regardless of client capabilities
-	 * 
+	 *
 	 * @param options - Optional filtering options
 	 * @param options.apis - Specific APIs to include (e.g., ['llm', 'cache', 'approval'])
 	 */

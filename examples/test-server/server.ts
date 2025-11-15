@@ -7,7 +7,9 @@ config({ path: '../../.env' });
 // Set default JWT secret for development/testing if not provided
 if (!process.env.ATP_JWT_SECRET) {
 	process.env.ATP_JWT_SECRET = 'test-key';
-	console.log('⚠️  Using default JWT secret "test-key" for development. Set ATP_JWT_SECRET for production.');
+	console.log(
+		'⚠️  Using default JWT secret "test-key" for development. Set ATP_JWT_SECRET for production.'
+	);
 }
 
 import { AgentToolProtocolServer, loadOpenAPI } from '@mondaydotcomorg/atp-server';

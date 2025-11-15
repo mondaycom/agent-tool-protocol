@@ -244,7 +244,6 @@ describe('Runtime API Definitions', () => {
 		});
 	});
 
-
 	describe('TypeScript type definitions', () => {
 		it('should include supporting type definitions', async () => {
 			const client = new AgentToolProtocolClient({
@@ -342,4 +341,3 @@ describe('Runtime API Definitions', () => {
 		});
 	});
 });
-

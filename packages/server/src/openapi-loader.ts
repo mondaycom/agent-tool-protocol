@@ -180,8 +180,7 @@ export async function loadOpenAPI(
 	if (!baseURL) {
 		if (isOpenAPI3(spec) && spec.servers && spec.servers[0]) {
 			baseURL = spec.servers[0].url;
-		}
-		else if (isSwagger2(spec) && spec.host) {
+		} else if (isSwagger2(spec) && spec.host) {
 			const scheme = spec.schemes?.[0] || 'https';
 			const host = spec.host;
 			const basePath = spec.basePath || '';
@@ -462,7 +461,7 @@ function convertOperation(
 		const basePath = baseUrlObj.pathname.replace(/\/$/, '');
 		const fullPath = basePath + requestPath;
 		const url = new URL(fullPath, baseUrlObj.origin);
-		
+
 		for (const [key, value] of Object.entries(queryParams)) {
 			url.searchParams.append(key, value);
 		}

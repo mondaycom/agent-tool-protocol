@@ -34,6 +34,6 @@ npm start
 ## Output
 
 The agent will respond with information about available pets, including:
+
 - Total count of available pets
 - Example pet names from the API
-

@@ -25,7 +25,5 @@
 			}
 		}
 	},
-	"tags": [
-		"atp-core"
-	]
+	"tags": ["atp-core"]
 }

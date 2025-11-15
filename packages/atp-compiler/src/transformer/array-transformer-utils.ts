@@ -4,9 +4,7 @@ import { isArrayMethod } from './utils.js';
 /**
  * Find LLM call expression in AST node
  */
-export function findLLMCallExpression(
-	body: t.Node
-): t.CallExpression | null {
+export function findLLMCallExpression(body: t.Node): t.CallExpression | null {
 	let found: t.CallExpression | null = null;
 
 	const visit = (node: t.Node) => {

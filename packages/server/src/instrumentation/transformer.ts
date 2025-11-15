@@ -32,10 +32,11 @@ export class CodeInstrumentor {
 		} catch (parseError) {
 			const error = parseError as Error;
 			const positionMatch = error.message.match(/\((\d+):(\d+)\)/);
-			const position = positionMatch && positionMatch[1] && positionMatch[2]
-				? { line: parseInt(positionMatch[1], 10), column: parseInt(positionMatch[2], 10) }
-				: null;
-			
+			const position =
+				positionMatch && positionMatch[1] && positionMatch[2]
+					? { line: parseInt(positionMatch[1], 10), column: parseInt(positionMatch[2], 10) }
+					: null;
+
 			throw new SyntaxError(
 				`Failed to parse code for instrumentation: ${error.message}${position ? ` at line ${position.line}, column ${position.column}` : ''}`
 			);

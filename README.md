@@ -7,6 +7,7 @@ A production-ready, code-first protocol for AI agents to interact with external 
 Agent Tool Protocol (ATP) is a next-generation protocol that enables AI agents to interact with external systems by generating and executing TypeScript/JavaScript code in a secure, sandboxed environment. Unlike traditional function-calling protocols, ATP allows LLMs to write code that can execute multiple operations in parallel, filter and transform data, chain operations together, and use familiar programming patterns.
 
 ATP provides a complete ecosystem for building production-ready AI agents with:
+
 - **Secure code execution** in isolated V8 VMs with memory limits and timeouts
 - **Runtime SDK** (`atp.*`) for LLM calls, embeddings, approvals, caching, and logging
 - **Stateless architecture** with optional caching for scalability
@@ -28,7 +29,7 @@ Traditional function-calling protocols like Model Context Protocol (MCP) have fu
 
 ### ATP Advantages
 
-- ✅ **OpenAPI Integration**: Built in open api integration allowing to connect a single server to multiple mcps & openapis 
+- ✅ **OpenAPI Integration**: Built in open api integration allowing to connect a single server to multiple mcps & openapis
 - ✅ **Parallel Execution**: Execute multiple operations simultaneously
 - ✅ **Data Processing**: Filter, map, reduce, and transform data inline
 - ✅ **Code Flexibility**: Use familiar programming patterns (loops, conditionals, async/await)
@@ -98,12 +99,10 @@ This architecture allows ATP servers to scale horizontally while maintaining exe
 
 ATP provides the ability to execute code in the client side:
 
-
 - **LLM Callbacks**: Client-side LLM execution with automatic pause/resume
 - **Approval Workflows**: Approvals for human-in-the-loop
 - **Client tools**: Support executing tools defined in the client side
 - **Embedding Capabilities**: Execute embedding request using the client embedding model
-
 
 ### Provenance Security
 
@@ -152,10 +151,10 @@ async function main() {
 	const server = createServer({});
 
 	// Load OpenAPI spec (supports OpenAPI 3.0+ and Swagger 2.0)
-	const petstore = await loadOpenAPI(
-		'https://petstore.swagger.io/v2/swagger.json',
-		{ name: 'petstore', filter: { methods: ['GET'] } }
-	);
+	const petstore = await loadOpenAPI('https://petstore.swagger.io/v2/swagger.json', {
+		name: 'petstore',
+		filter: { methods: ['GET'] },
+	});
 
 	// Connect to MCP server
 	const mcpConnector = new MCPConnector();
@@ -219,10 +218,10 @@ import { createATPTools } from '@mondaydotcomorg/atp-langchain';
 async function main() {
 	// Start ATP server with OpenAPI
 	const server = createServer({});
-	const petstore = await loadOpenAPI(
-		'https://petstore.swagger.io/v2/swagger.json',
-		{ name: 'petstore', filter: { methods: ['GET'] } }
-	);
+	const petstore = await loadOpenAPI('https://petstore.swagger.io/v2/swagger.json', {
+		name: 'petstore',
+		filter: { methods: ['GET'] },
+	});
 	server.use([petstore]);
 	await server.listen(3333);
 
@@ -513,6 +512,7 @@ NODE_OPTIONS='--no-node-snapshot' npm start
 ```
 
 **Environment variables:**
+
 - `ATP_JWT_SECRET` - Optional (defaults to `test-secret-key` in code)
 
 ### 2. LangChain Agent
@@ -522,10 +522,11 @@ Autonomous LangChain agent using ATP to interact with APIs.
 ```bash
 cd examples/langchain-quickstart
 export OPENAI_API_KEY=sk-...
-NODE_OPTIONS='--no-node-snapshot' npm start 
+NODE_OPTIONS='--no-node-snapshot' npm start
 ```
 
 **Environment variables:**
+
 - `OPENAI_API_KEY` - **Required**: Your OpenAI API key
 - `ATP_JWT_SECRET` - Optional (defaults to `test-secret-key` in code)
 
@@ -545,11 +546,13 @@ npm start
 ```
 
 **Environment variables:**
+
 - `OPENAI_API_KEY` - Required: Your OpenAI API key
 
 ### 4. Additional Examples
 
 Other examples in the `examples/` directory:
+
 - `openapi-example` - OpenAPI integration examples
 - `oauth-example` - OAuth flow examples
 - `production-example` - Production configuration examples

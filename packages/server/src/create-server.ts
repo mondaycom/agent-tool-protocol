@@ -402,7 +402,7 @@ export class AgentToolProtocolServer {
 
 	async getRuntimeDefinitions(ctx?: RequestContext): Promise<string> {
 		const aggregator = new APIAggregator(this.apiGroups);
-		
+
 		let requestedApis: RuntimeAPIName[] | undefined;
 		if (ctx?.query?.apis) {
 			requestedApis = ctx.query.apis
@@ -410,9 +410,11 @@ export class AgentToolProtocolServer {
 				.map((s) => s.trim())
 				.filter(Boolean) as RuntimeAPIName[];
 		}
-		
-		let clientServices: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean } | undefined;
-		
+
+		let clientServices:
+			| { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean }
+			| undefined;
+
 		if (ctx?.clientId && this.sessionManager) {
 			try {
 				const session = await this.sessionManager.getSession(ctx.clientId);
@@ -421,7 +423,7 @@ export class AgentToolProtocolServer {
 				}
 			} catch (error) {}
 		}
-		
+
 		return aggregator.generateRuntimeTypes({
 			clientServices,
 			requestedApis,

@@ -190,9 +190,7 @@ export async function cleanupAll(tracker: CleanupTracker): Promise<void> {
 		try {
 			const stopPromise = new Promise<void>((resolve, reject) => {
 				if (httpServer.stop) {
-					httpServer.stop()
-						.then(resolve)
-						.catch(reject);
+					httpServer.stop().then(resolve).catch(reject);
 				} else if (httpServer.close) {
 					httpServer.close((err: any) => {
 						if (err) reject(err);

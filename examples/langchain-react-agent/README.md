@@ -39,7 +39,7 @@ npm run discover
 
 This agent:
 
-- **Embeds runtime APIs** in system prompt (atp.llm.*, atp.cache.*, etc.)
+- **Embeds runtime APIs** in system prompt (atp.llm._, atp.cache._, etc.)
 - **Has ONLY 2 tools**: `explore_api` and `execute_code`
 - **Discovers** available server APIs dynamically
 - **Executes code** using discovered runtime APIs
@@ -64,7 +64,8 @@ This demonstrates:
 - **Best practices** - Production-ready patterns
 
 The agent:
-1. Fetches ATP runtime definitions (atp.llm.*, atp.cache.*, etc.)
+
+1. Fetches ATP runtime definitions (atp.llm._, atp.cache._, etc.)
 2. Embeds them in system prompt with full documentation
 3. Uses ONLY execute_code tool to run TypeScript
 4. Writes code that uses atp.llm.call(), atp.cache.set/get(), atp.approval.request()
@@ -146,13 +147,13 @@ const runtimeTypescript = await client.getUnderlyingClient().getRuntimeDefinitio
 
 console.log(runtimeTypescript);
 // Output: Complete TypeScript declarations (3500+ chars)
-// 
+//
 // // Runtime SDK Type Definitions
-// 
+//
 // export interface ApprovalResponse<T = unknown> { ... }
 // interface SearchOptions { ... }
 // interface LLMCallOptions { ... }
-// 
+//
 // declare const atp: {
 //   llm: {
 //     call(options: LLMCallOptions): Promise<string>;
@@ -176,7 +177,7 @@ Use execute_code tool to run your code.`;
 
 // Create agent with filtered tools
 const filteredTools = tools.filter(
-	tool => tool.name === 'atp_execute_code' || tool.name === 'atp_explore_api'
+	(tool) => tool.name === 'atp_execute_code' || tool.name === 'atp_explore_api'
 );
 
 const agent = createReactAgent({
@@ -195,9 +196,10 @@ const agent = createReactAgent({
 - **3500+ chars**: Full API documentation with JSDoc comments
 
 This enables agents to:
+
 - Know about all runtime capabilities from system prompt
 - Use ONLY execute_code tool - simple and clean
-- Write TypeScript code using atp.* APIs with full type information
+- Write TypeScript code using atp.\* APIs with full type information
 - No need for extra tools to "discover" APIs
 - Only see APIs they can actually use
 

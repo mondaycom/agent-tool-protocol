@@ -51,10 +51,10 @@ export function generateRuntimeTypes(
 	const usedTypes = new Set<string>();
 	for (const api of filteredApis) {
 		for (const method of api.methods) {
-			const allTypes = [method.returns, ...method.params.map(p => p.type)].join(' ');
+			const allTypes = [method.returns, ...method.params.map((p) => p.type)].join(' ');
 			const typeMatches = allTypes.match(/\b[A-Z][a-zA-Z]+\b/g);
 			if (typeMatches) {
-				typeMatches.forEach(t => usedTypes.add(t));
+				typeMatches.forEach((t) => usedTypes.add(t));
 			}
 		}
 	}

@@ -116,7 +116,6 @@ export class LoopTransformer {
 		return true;
 	}
 
-
 	transformWhileLoop(path: any): boolean {
 		const node = path.node as t.WhileStatement;
 
