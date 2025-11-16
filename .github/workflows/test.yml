@@ -8,6 +8,7 @@ on:
 
 jobs:
   test:
+    if: ${{ github.actor != 'atp-release[bot]' }}
     runs-on: ubuntu-latest
 
     strategy:

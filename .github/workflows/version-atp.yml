@@ -6,6 +6,7 @@ on:
 
 jobs:
   version:
+    if: ${{ github.actor != 'atp-release[bot]' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write   # needed to push commit + tags

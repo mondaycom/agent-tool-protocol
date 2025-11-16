@@ -41,7 +41,7 @@
 			"conventionalCommits": true,
 			"git": {
 				"commit": true,
-				"commitMessage": "chore(release): {projectName}@{version} [skip ci]",
+				"commitMessage": "chore(release): atp-publish [skip ci]",
 				"tag": true,
 				"tagMessage": "{projectName}@{version}",
 				"push": true
