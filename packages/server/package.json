@@ -33,6 +33,7 @@
 		"protocol",
 		"atp",
 		"server",
+		"api",
 		"ai",
 		"llm"
 	],
