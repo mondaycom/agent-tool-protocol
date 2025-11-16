@@ -25,6 +25,12 @@
 	"publishConfig": {
 		"access": "public"
 	},
+	"keywords": [
+		"providers",
+		"atp",
+		"api",
+		"agent"
+	],
 	"dependencies": {
 		"@mondaydotcomorg/atp-protocol": "0.17.16",
 		"@opentelemetry/api": "^1.9.0"

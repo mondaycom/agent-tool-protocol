@@ -34,6 +34,7 @@
 	},
 	"keywords": [
 		"agent-tool-protocol",
+		"atp",
 		"compiler",
 		"resumable",
 		"async",
