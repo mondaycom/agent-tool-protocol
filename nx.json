@@ -38,7 +38,14 @@
 		"projects": ["packages/*"],
 		"projectsRelationship": "independent",
 		"version": {
-			"conventionalCommits": true
+			"conventionalCommits": true,
+			"git": {
+				"commit": true,
+				"commitMessage": "chore(release): {projectName}@{version} [skip ci]",
+				"tag": true,
+				"tagMessage": "{projectName}@{version}",
+				"push": true
+			}
 		}
 	},
 	"plugins": [
