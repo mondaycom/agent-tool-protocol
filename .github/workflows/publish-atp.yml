@@ -3,7 +3,9 @@ name: Publish
 on:
   push:
     tags:
-      - v*.*.*
+      - 'v*.*.*'
+      - '*@*.*.*'
+      - '@*/*@*.*.*'
   workflow_dispatch:  # Allows manual triggering for testing
 
 jobs:
