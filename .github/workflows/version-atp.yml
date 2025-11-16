@@ -50,7 +50,10 @@ jobs:
 
       # Create version commits and tags (non-interactive)
       - name: Version packages
-        run: yarn nx release version
+        run: |
+          git config user.name "atp-release[bot]"
+          git config user.email "atp+github-actions[bot]@noreply.github.com"
+          yarn nx release version
 
       # Push the version commit and tags so the tag-triggered publish workflow runs (config is controlled in nx.json)
       - name: Push commit and tags
