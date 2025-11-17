@@ -2266,6 +2266,12 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@examples/runtime-openapi-loading@workspace:examples/runtime-openapi-loading":
+  version: 0.0.0-use.local
+  resolution: "@examples/runtime-openapi-loading@workspace:examples/runtime-openapi-loading"
+  languageName: unknown
+  linkType: soft
+
 "@fastify/ajv-compiler@npm:^3.5.0":
   version: 3.6.0
   resolution: "@fastify/ajv-compiler@npm:3.6.0"
