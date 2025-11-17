@@ -19,14 +19,27 @@ export type {
 } from './types';
 export { setClientLLMCallback, getClientLLMCallback } from './callback.js';
 export {
+	initializeExecutionState,
 	setPauseForClient,
+	shouldPauseForClient,
 	setReplayMode,
 	getCallSequenceNumber,
 	nextSequenceNumber,
 	getCachedResult,
+	isReplayMode,
 	runInExecutionContext,
 	setCurrentExecutionId,
 	clearCurrentExecutionId,
+	storeAPICallResult,
+	getAPICallResults,
+	clearAPICallResults,
+	setAPIResultCache,
+	getAPIResultFromCache,
+	storeAPIResultInCache,
+	cleanupExecutionState,
+	cleanupOldExecutionStates,
+	resetAllExecutionState,
+	getExecutionStateStats,
 } from './replay.js';
 
 /**

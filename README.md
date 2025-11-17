@@ -601,7 +601,7 @@ This project is licensed under the MIT License - see the [License](./LICENSE) fi
 ## 🙏 Acknowledgments
 
 - Inspired by [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol)
-- Provenance security based on Google Research's [CAMEL paper](https://arxiv.org/abs/2410.02904)
+- Provenance security based on Google Research's [CAMEL paper](https://arxiv.org/abs/2503.18813)
 - Sandboxing powered by [isolated-vm](https://github.com/laverdet/isolated-vm)
 - LangChain integration via [@langchain/core](https://github.com/langchain-ai/langchainjs)
 

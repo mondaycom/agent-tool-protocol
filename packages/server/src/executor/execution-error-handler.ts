@@ -7,6 +7,10 @@ import {
 	getCallSequenceNumber,
 	setPauseForClient,
 	setReplayMode,
+	getAPICallResults,
+	clearAPICallResults,
+	setCurrentExecutionId,
+	clearCurrentExecutionId,
 	type PauseExecutionError,
 } from '@mondaydotcomorg/atp-runtime';
 import { isBatchPauseError, type BatchPauseExecutionError } from '@mondaydotcomorg/atp-compiler';
@@ -33,6 +37,10 @@ export function handleExecutionError(
 		error = pauseError;
 	}
 
+	setCurrentExecutionId(executionId);
+	
+	const apiResults = getAPICallResults();
+
 	if (isBatchPauseError(error)) {
 		const batchErr = error as BatchPauseExecutionError;
 
@@ -41,6 +49,21 @@ export function handleExecutionError(
 			callCount: batchErr.calls.length,
 			sequenceNumber: batchErr.sequenceNumber,
 		});
+
+		// Add any API call results to callback history FIRST (already retrieved above)
+		for (const apiRecord of apiResults) {
+			callbackHistory.push(apiRecord as CallbackRecord);
+		}
+		if (apiResults.length > 0) {
+			executionLogger.debug('Added API results to callback history', {
+				apiCallCount: apiResults.length,
+			});
+		}
+		try {
+			clearAPICallResults();
+		} catch (e) {
+			// Context might not be set
+		}
 
 		const batchCallbackRecord: CallbackRecord = {
 			type: (batchErr.calls[0]?.type as any) || 'llm',
@@ -88,7 +111,28 @@ export function handleExecutionError(
 	if (isPauseError(error)) {
 		const pauseErr = error as PauseExecutionError;
 
-		const currentSequence = getCallSequenceNumber() - 1;
+		for (const apiRecord of apiResults) {
+			callbackHistory.push(apiRecord as CallbackRecord);
+		}
+		if (apiResults.length > 0) {
+			executionLogger.debug('Added API results to callback history', {
+				apiCallCount: apiResults.length,
+			});
+		}
+		clearAPICallResults();
+
+		let currentSequence: number;
+		const payloadSequence =
+			typeof pauseErr.payload?.sequenceNumber === 'number'
+				? (pauseErr.payload.sequenceNumber as number)
+				: undefined;
+
+		if (payloadSequence !== undefined) {
+			currentSequence = payloadSequence;
+		} else {
+			currentSequence = getCallSequenceNumber() - 1;
+		}
+
 		const callbackRecord: CallbackRecord = {
 			type: pauseErr.type,
 			operation: pauseErr.operation,

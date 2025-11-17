@@ -13,10 +13,23 @@ export type { LogLevel, LoggerConfig, Logger } from './log/index.js';
 export { GENERATED_METADATA } from './metadata/generated.js';
 
 export {
+	initializeExecutionState,
 	setClientLLMCallback,
 	setPauseForClient,
+	shouldPauseForClient,
 	setReplayMode,
 	getCallSequenceNumber,
+	isReplayMode,
+	storeAPICallResult,
+	getAPICallResults,
+	clearAPICallResults,
+	setAPIResultCache,
+	getAPIResultFromCache,
+	storeAPIResultInCache,
+	cleanupExecutionState,
+	cleanupOldExecutionStates,
+	resetAllExecutionState,
+	getExecutionStateStats,
 } from './llm/index.js';
 export { initializeCache } from './cache/index.js';
 export { initializeApproval } from './approval/index.js';

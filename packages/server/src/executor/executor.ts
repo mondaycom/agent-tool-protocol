@@ -8,8 +8,10 @@ import type {
 import { ExecutionStatus, ProvenanceMode } from '@mondaydotcomorg/atp-protocol';
 import type { ICompiler } from '@mondaydotcomorg/atp-compiler';
 import {
+	cleanupExecutionState,
 	clearVectorStoreExecutionId,
 	initializeApproval,
+	initializeExecutionState,
 	initializeVectorStore,
 	log,
 	runInExecutionContext,
@@ -159,25 +161,28 @@ export class SandboxExecutor {
 			setProgressCallback(config.progressCallback);
 		}
 
+		const shouldPause =
+			config.clientServices &&
+			(config.clientServices.hasLLM ||
+				config.clientServices.hasApproval ||
+				config.clientServices.hasEmbedding ||
+				config.clientServices.hasTools);
+
+		initializeExecutionState(!!shouldPause);
+
 		const callbackHistory: CallbackRecord[] = [];
 
 		if (resumeData) {
 			setupResumeExecution(resumeData, callbackHistory, executionLogger);
 		}
 
-		if (
-			config.clientServices &&
-			(config.clientServices.hasLLM ||
-				config.clientServices.hasApproval ||
-				config.clientServices.hasEmbedding ||
-				config.clientServices.hasTools)
-		) {
+		if (shouldPause) {
 			setPauseForClient(true);
 			executionLogger.debug('Client services detected, pause mode enabled', {
-				hasLLM: config.clientServices.hasLLM,
-				hasApproval: config.clientServices.hasApproval,
-				hasEmbedding: config.clientServices.hasEmbedding,
-				hasTools: config.clientServices.hasTools,
+				hasLLM: config.clientServices!.hasLLM,
+				hasApproval: config.clientServices!.hasApproval,
+				hasEmbedding: config.clientServices!.hasEmbedding,
+				hasTools: config.clientServices!.hasTools,
 			});
 		}
 
@@ -637,5 +642,11 @@ export class SandboxExecutor {
 		setProgressCallback(null);
 
 		clearVectorStoreExecutionId();
+		
+		if (executionId) {
+			try {
+				cleanupExecutionState(executionId);
+			} catch (e) {}
+		}
 	}
 }

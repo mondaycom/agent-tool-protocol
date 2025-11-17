@@ -12,6 +12,7 @@ module.exports = {
 		'!**/packages/atp-compiler/__tests__/**',
 	],
 	testPathIgnorePatterns: ['/node_modules/', '/dist/'],
+	setupFilesAfterEnv: ['<rootDir>/__tests__/setup.ts'],
 	collectCoverageFrom: [
 		'packages/*/src/**/*.ts',
 		'!packages/*/src/**/*.d.ts',
