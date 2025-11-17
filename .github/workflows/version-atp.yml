@@ -1,21 +1,15 @@
-name: Publish
+name: ATP Version & Tag
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
-      - '*@*.*.*'
-      - '@*/*@*.*.*'
-  workflow_dispatch:  # Allows manual triggering for testing
+    branches: [master]
 
 jobs:
-  publish:
-    name: Publish ATP Ecosystem to NPM
+  version:
+    if: ${{ github.actor != 'atp-release[bot]' }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      id-token: write # needed for provenance data generation
-    timeout-minutes: 20
+      contents: write   # needed to push commit + tags
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,21 +49,17 @@ jobs:
         run: yarn install --immutable
         shell: bash
 
-      - name: Print Environment Info
-        run: yarn nx report
-        shell: bash
+      # Create version commits and tags (non-interactive)
+      - name: Version packages
+        run: |
+          git config user.name "atp-release[bot]"
+          git config user.email "atp+github-actions[bot]@noreply.github.com"
+          yarn nx release version
 
-      - name: Build affected packages
-        run: yarn build
-        shell: bash
-
-      - name: Check for publishable changes
-        run: yarn nx release version --dry-run
-        shell: bash
-
-      - name: Publish packages
-        run: yarn nx release publish
-        shell: bash
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+      # Push the version commit and tags so the tag-triggered publish workflow runs (config is controlled in nx.json)
+      - name: Push commit and tags
+        run: |
+          git config user.name "atp-release[bot]"
+          git config user.email "atp+github-actions[bot]@noreply.github.com"
+          git push origin HEAD
+          git push --tags
