@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-provenance",
-	"version": "0.18.2",
+	"version": "0.18.3",
 	"description": "CAMEL-inspired provenance security for LLM applications - track data origin and enforce security policies",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",

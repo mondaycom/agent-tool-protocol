@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-providers",
-	"version": "0.18.2",
+	"version": "0.18.3",
 	"description": "Built-in providers for Agent Tool Protocol (cache, auth, audit)",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -32,7 +32,7 @@
 		"agent"
 	],
 	"dependencies": {
-		"@mondaydotcomorg/atp-protocol": "0.18.2",
+		"@mondaydotcomorg/atp-protocol": "0.18.3",
 		"@opentelemetry/api": "^1.9.0"
 	},
 	"devDependencies": {

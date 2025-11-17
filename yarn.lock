@@ -3585,12 +3585,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mondaydotcomorg/atp-client@npm:*, @mondaydotcomorg/atp-client@npm:0.18.2, @mondaydotcomorg/atp-client@workspace:*, @mondaydotcomorg/atp-client@workspace:packages/client":
+"@mondaydotcomorg/atp-client@npm:*, @mondaydotcomorg/atp-client@npm:0.18.3, @mondaydotcomorg/atp-client@workspace:*, @mondaydotcomorg/atp-client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-client@workspace:packages/client"
   dependencies:
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
-    "@mondaydotcomorg/atp-runtime": "npm:0.18.2"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
+    "@mondaydotcomorg/atp-runtime": "npm:0.18.3"
     typescript: "npm:^5.3.3"
     undici: "npm:*"
     vitest: "npm:^1.2.1"
@@ -3599,7 +3599,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-compiler@npm:0.18.2, @mondaydotcomorg/atp-compiler@workspace:packages/atp-compiler":
+"@mondaydotcomorg/atp-compiler@npm:0.18.3, @mondaydotcomorg/atp-compiler@workspace:packages/atp-compiler":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-compiler@workspace:packages/atp-compiler"
   dependencies:
@@ -3607,8 +3607,8 @@ __metadata:
     "@babel/parser": "npm:^7.26.0"
     "@babel/traverse": "npm:^7.26.0"
     "@babel/types": "npm:^7.26.0"
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
-    "@mondaydotcomorg/atp-runtime": "npm:0.18.2"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
+    "@mondaydotcomorg/atp-runtime": "npm:0.18.3"
     "@stryker-mutator/core": "npm:^8.0.0"
     "@types/babel__generator": "npm:^7.6.0"
     "@types/babel__traverse": "npm:^7.20.0"
@@ -3618,8 +3618,8 @@ __metadata:
     nanoid: "npm:^5.0.0"
     typescript: "npm:^5.3.0"
   peerDependencies:
-    "@mondaydotcomorg/atp-protocol": 0.18.2
-    "@mondaydotcomorg/atp-runtime": 0.18.2
+    "@mondaydotcomorg/atp-protocol": 0.18.3
+    "@mondaydotcomorg/atp-runtime": 0.18.3
   languageName: unknown
   linkType: soft
 
@@ -3628,8 +3628,8 @@ __metadata:
   resolution: "@mondaydotcomorg/atp-langchain@workspace:packages/langchain"
   dependencies:
     "@langchain/core": "npm:^0.3.78"
-    "@mondaydotcomorg/atp-client": "npm:0.18.2"
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
+    "@mondaydotcomorg/atp-client": "npm:0.18.3"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
     json-schema-to-zod: "npm:^2.6.1"
     langchain: "npm:^0.3.35"
     typescript: "npm:^5.3.3"
@@ -3643,26 +3643,26 @@ __metadata:
   resolution: "@mondaydotcomorg/atp-mcp-adapter@workspace:packages/mcp-adapter"
   dependencies:
     "@modelcontextprotocol/sdk": "npm:^0.5.0"
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
-    "@mondaydotcomorg/atp-server": "npm:0.18.3"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
+    "@mondaydotcomorg/atp-server": "npm:0.18.4"
     typescript: "npm:^5.3.3"
     vitest: "npm:^1.2.1"
     zod: "npm:^4.1.11"
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-protocol@npm:0.18.2, @mondaydotcomorg/atp-protocol@workspace:*, @mondaydotcomorg/atp-protocol@workspace:packages/protocol":
+"@mondaydotcomorg/atp-protocol@npm:0.18.3, @mondaydotcomorg/atp-protocol@workspace:*, @mondaydotcomorg/atp-protocol@workspace:packages/protocol":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-protocol@workspace:packages/protocol"
   dependencies:
-    "@mondaydotcomorg/atp-provenance": "npm:0.18.2"
+    "@mondaydotcomorg/atp-provenance": "npm:0.18.3"
     typescript: "npm:^5.3.3"
     vitest: "npm:^1.2.1"
     zod: "npm:^3.23.8"
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-provenance@npm:0.18.2, @mondaydotcomorg/atp-provenance@workspace:packages/provenance":
+"@mondaydotcomorg/atp-provenance@npm:0.18.3, @mondaydotcomorg/atp-provenance@workspace:packages/provenance":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-provenance@workspace:packages/provenance"
   dependencies:
@@ -3676,17 +3676,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-providers@npm:0.18.2, @mondaydotcomorg/atp-providers@workspace:*, @mondaydotcomorg/atp-providers@workspace:packages/providers":
+"@mondaydotcomorg/atp-providers@npm:0.18.3, @mondaydotcomorg/atp-providers@workspace:*, @mondaydotcomorg/atp-providers@workspace:packages/providers":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-providers@workspace:packages/providers"
   dependencies:
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
     "@opentelemetry/api": "npm:^1.9.0"
     typescript: "npm:^5.7.2"
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-runtime@npm:0.18.2, @mondaydotcomorg/atp-runtime@workspace:packages/runtime":
+"@mondaydotcomorg/atp-runtime@npm:0.18.3, @mondaydotcomorg/atp-runtime@workspace:packages/runtime":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-runtime@workspace:packages/runtime"
   dependencies:
@@ -3705,7 +3705,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-server@npm:*, @mondaydotcomorg/atp-server@npm:0.18.3, @mondaydotcomorg/atp-server@workspace:*, @mondaydotcomorg/atp-server@workspace:packages/server":
+"@mondaydotcomorg/atp-server@npm:*, @mondaydotcomorg/atp-server@npm:0.18.4, @mondaydotcomorg/atp-server@workspace:*, @mondaydotcomorg/atp-server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-server@workspace:packages/server"
   dependencies:
@@ -3713,11 +3713,11 @@ __metadata:
     "@babel/parser": "npm:^7.26.0"
     "@babel/traverse": "npm:^7.26.0"
     "@babel/types": "npm:^7.26.0"
-    "@mondaydotcomorg/atp-compiler": "npm:0.18.2"
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
-    "@mondaydotcomorg/atp-provenance": "npm:0.18.2"
-    "@mondaydotcomorg/atp-providers": "npm:0.18.2"
-    "@mondaydotcomorg/atp-runtime": "npm:0.18.2"
+    "@mondaydotcomorg/atp-compiler": "npm:0.18.3"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
+    "@mondaydotcomorg/atp-provenance": "npm:0.18.3"
+    "@mondaydotcomorg/atp-providers": "npm:0.18.3"
+    "@mondaydotcomorg/atp-runtime": "npm:0.18.3"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/auto-instrumentations-node": "npm:^0.66.0"
     "@opentelemetry/core": "npm:^2.2.0"

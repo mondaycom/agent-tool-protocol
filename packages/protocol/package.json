@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-protocol",
-	"version": "0.18.2",
+	"version": "0.18.3",
 	"description": "Core protocol types and interfaces for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -37,7 +37,7 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@mondaydotcomorg/atp-provenance": "0.18.2",
+		"@mondaydotcomorg/atp-provenance": "0.18.3",
 		"zod": "^3.23.8"
 	},
 	"publishConfig": {

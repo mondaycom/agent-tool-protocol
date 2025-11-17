@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-runtime",
-	"version": "0.18.2",
+	"version": "0.18.3",
 	"description": "Runtime SDK injected into sandbox for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.js",

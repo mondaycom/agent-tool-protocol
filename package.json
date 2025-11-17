@@ -17,6 +17,7 @@
 		"test:e2e:server": "NODE_OPTIONS='--no-node-snapshot' npm run jest -- __tests__/e2e/server --runInBand --forceExit --testTimeout=120000",
 		"test:e2e:client": "NODE_OPTIONS='--no-node-snapshot' npm run jest -- __tests__/e2e/client --runInBand --forceExit --testTimeout=120000",
 		"test:e2e:integrations": "NODE_OPTIONS='--no-node-snapshot' npm run jest -- __tests__/e2e/integrations --runInBand --forceExit --testTimeout=120000",
+		"test:integration": "NODE_OPTIONS='--no-node-snapshot' npm run jest -- __tests__/e2e/integrations --runInBand --forceExit --testTimeout=120000",
 		"test:production": "NODE_OPTIONS='--no-node-snapshot' npm run jest -- __tests__/e2e/runtime/cache-approval.test.ts __tests__/e2e/server/api.test.ts --runInBand --forceExit --testTimeout=120000",
 		"test:watch": "NODE_OPTIONS='--no-node-snapshot' npm run jest -- --watch",
 		"test:coverage": "NODE_OPTIONS='--no-node-snapshot' npm run jest -- --coverage",
