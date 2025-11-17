@@ -16,6 +16,7 @@ import { DEFAULT_COMPILER_CONFIG } from '../types.js';
 import { TransformationError } from '../runtime/errors.js';
 import { resetIdCounter } from '../runtime/context.js';
 import { PluginRegistry, type CompilerPlugin, type PluginContext } from './plugin-api.js';
+import type { ICompiler } from '../types/compiler-interface.js';
 
 /**
  * Plugin-based ATP Compiler
@@ -33,7 +34,7 @@ import { PluginRegistry, type CompilerPlugin, type PluginContext } from './plugi
  * const result = compiler.transform(code);
  * ```
  */
-export class PluggableCompiler {
+export class PluggableCompiler implements ICompiler {
 	private config: CompilerConfig;
 	private registry: PluginRegistry;
 	private initialized: boolean = false;
@@ -283,6 +284,13 @@ export class PluggableCompiler {
 	 */
 	clearCache(): void {
 		this.astCache.clear();
+	}
+
+	/**
+	 * Get the compiler type identifier (ICompiler interface requirement)
+	 */
+	getType(): string {
+		return 'PluggableCompiler';
 	}
 
 	/**

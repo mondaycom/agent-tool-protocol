@@ -12,8 +12,13 @@ import type { TransformResult, CompilerConfig, TransformMetadata } from '../type
 import { DEFAULT_COMPILER_CONFIG } from '../types.js';
 import { TransformationError } from '../runtime/errors.js';
 import { resetIdCounter } from '../runtime/context.js';
+import type { ICompiler } from '../types/compiler-interface.js';
 
-export class ATPCompiler {
+/**
+ * ATP Compiler - Standard compiler for transforming code to support resumability
+ * Implements ICompiler interface for consistency and dependency injection support
+ */
+export class ATPCompiler implements ICompiler {
 	private config: CompilerConfig;
 	private detector: AsyncIterationDetector;
 	private loopTransformer: LoopTransformer;
@@ -143,6 +148,21 @@ export class ATPCompiler {
 			t.isIdentifier(callee.object, { name: 'Promise' }) &&
 			t.isIdentifier(callee.property, { name: 'allSettled' })
 		);
+	}
+
+	/**
+	 * Get the compiler type identifier (ICompiler interface requirement)
+	 */
+	getType(): string {
+		return 'ATPCompiler';
+	}
+
+	/**
+	 * Get cache statistics (ICompiler interface requirement)
+	 * ATPCompiler doesn't cache ASTs, so returns null
+	 */
+	getCacheStats() {
+		return null;
 	}
 }
 

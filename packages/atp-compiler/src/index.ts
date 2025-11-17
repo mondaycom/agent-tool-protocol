@@ -3,6 +3,9 @@ export * from './types.js';
 export * from './transformer/index.js';
 export * from './runtime/index.js';
 
+// Compiler interface exports
+export * from './types/compiler-interface.js';
+
 // Plugin system exports
 export * from './plugin-system/index.js';
 
@@ -24,3 +27,6 @@ export type {
 	BabelVisitor,
 } from './plugin-system/plugin-api.js';
 export type { ATPCompilerLike } from './plugin-system/create-default-compiler.js';
+
+// Compiler interface type exports
+export type { ICompiler, CacheStats } from './types/compiler-interface.js';
