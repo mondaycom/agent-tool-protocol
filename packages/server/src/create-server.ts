@@ -7,6 +7,7 @@ import type {
 	AuditEvent,
 	ToolMetadata,
 } from '@mondaydotcomorg/atp-protocol';
+import type { ICompiler } from '@mondaydotcomorg/atp-compiler';
 import { ProvenanceMode } from '@mondaydotcomorg/atp-protocol';
 import { log, initializeLogger } from '@mondaydotcomorg/atp-runtime';
 import { shutdownLogger } from '@mondaydotcomorg/atp-runtime';
@@ -62,6 +63,7 @@ export class AgentToolProtocolServer {
 	cacheProvider?: CacheProvider;
 	authProvider?: AuthProvider;
 	auditSink?: AuditSink;
+	compiler?: ICompiler;
 	private customLogger?: any;
 
 	constructor(config: ServerConfig = {}) {
@@ -169,6 +171,12 @@ export class AgentToolProtocolServer {
 			});
 		} else {
 			this.customLogger = this.config.logger;
+		}
+
+		// Store compiler if provided (defaults handled in transformCodeWithCompiler)
+		if (config.compiler) {
+			this.compiler = config.compiler;
+			log.info('Custom compiler configured', { type: config.compiler.getType() });
 		}
 	}
 
@@ -294,7 +302,8 @@ export class AgentToolProtocolServer {
 			},
 			this.apiGroups,
 			this.approvalHandler,
-			this.sessionManager
+			this.sessionManager,
+			this.compiler
 		);
 
 		for (const group of this.apiGroups) {

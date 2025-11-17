@@ -6,6 +6,7 @@ import type {
 	SecurityPolicy,
 	ScopeFilteringConfig,
 } from '@mondaydotcomorg/atp-protocol';
+import type { ICompiler } from '@mondaydotcomorg/atp-compiler';
 
 export const MB = 1024 * 1024;
 export const GB = 1024 * 1024 * 1024;
@@ -129,6 +130,8 @@ export interface ServerConfig {
 	otel?: Partial<OpenTelemetryConfig>;
 	/** External providers (cache, auth) */
 	providers?: ProvidersConfig;
+	/** Custom compiler implementation (optional, defaults to standard ATPCompiler) */
+	compiler?: ICompiler;
 	logger?: 'debug' | 'info' | 'warn' | 'error' | Logger;
 }
 

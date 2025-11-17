@@ -179,15 +179,16 @@ export async function transformCodeWithCompiler(
 	code: string,
 	executionId: string,
 	cacheProvider: CacheProvider,
-	executionLogger: Logger
+	executionLogger: Logger,
+	injectedCompiler?: ICompiler
 ): Promise<CompilerResult> {
 	if (!ATP_COMPILER_ENABLED) {
 		return { code, useCompiler: false };
 	}
 
 	try {
-		// Create compiler using factory (dependency injection)
-		const compilerImpl = CompilerFactory.create({
+		// Use injected compiler or create default via factory
+		const compilerImpl = injectedCompiler ?? CompilerFactory.create({
 			enableBatchParallel: true,
 			batchSizeThreshold: ATP_BATCH_SIZE_THRESHOLD,
 		});

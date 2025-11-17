@@ -6,6 +6,7 @@ import type {
 	ExecutionResult,
 } from '@mondaydotcomorg/atp-protocol';
 import { ExecutionStatus, ProvenanceMode } from '@mondaydotcomorg/atp-protocol';
+import type { ICompiler } from '@mondaydotcomorg/atp-compiler';
 import {
 	clearVectorStoreExecutionId,
 	initializeApproval,
@@ -57,17 +58,20 @@ export class SandboxExecutor {
 	private sandboxBuilder: SandboxBuilder;
 	private approvalHandler?: (request: any) => Promise<any>;
 	private sessionManager?: ClientSessionManager;
+	private compiler?: ICompiler;
 
 	constructor(
 		config: ExecutorConfig,
 		apiGroups: APIGroupConfig[] = [],
 		approvalHandler?: (request: any) => Promise<any>,
-		sessionManager?: ClientSessionManager
+		sessionManager?: ClientSessionManager,
+		compiler?: ICompiler
 	) {
 		this.config = config;
 		this.sandboxBuilder = new SandboxBuilder(apiGroups);
 		this.approvalHandler = approvalHandler;
 		this.sessionManager = sessionManager;
+		this.compiler = compiler;
 	}
 
 	async execute(
@@ -399,12 +403,13 @@ export class SandboxExecutor {
 				!astInstrumented &&
 				!alreadyTransformed
 			) {
-				const compilerResult = await transformCodeWithCompiler(
-					code,
-					executionId,
-					this.config.cacheProvider,
-					executionLogger
-				);
+			const compilerResult = await transformCodeWithCompiler(
+				code,
+				executionId,
+				this.config.cacheProvider,
+				executionLogger,
+				this.compiler
+			);
 				codeToExecute = compilerResult.code;
 				useCompiler = compilerResult.useCompiler;
 			} else if (alreadyTransformed) {
