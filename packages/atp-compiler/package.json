@@ -10,6 +10,14 @@
 			"types": "./dist/atp-compiler/src/index.d.ts",
 			"import": "./dist/atp-compiler/src/index.js"
 		},
+		"./plugin-system": {
+			"types": "./dist/atp-compiler/src/plugin-system/index.d.ts",
+			"import": "./dist/atp-compiler/src/plugin-system/index.js"
+		},
+		"./plugin-system/*": {
+			"types": "./dist/atp-compiler/src/plugin-system/*.d.ts",
+			"import": "./dist/atp-compiler/src/plugin-system/*.js"
+		},
 		"./*": {
 			"types": "./dist/atp-compiler/src/*.d.ts",
 			"import": "./dist/atp-compiler/src/*.js"
