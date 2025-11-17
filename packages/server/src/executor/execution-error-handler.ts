@@ -38,7 +38,7 @@ export function handleExecutionError(
 	}
 
 	setCurrentExecutionId(executionId);
-	
+
 	const apiResults = getAPICallResults();
 
 	if (isBatchPauseError(error)) {

@@ -287,24 +287,28 @@ export class SandboxBuilder {
 						});
 
 						const operationName = `${group.name}.${func.name}`;
-					try {
-						isReplayMode();
-					} catch (contextError) {
-						setCurrentExecutionId(executionId);
-					}
-
-				try {
-					const cacheKey = `${operationName}:${JSON.stringify(input)}`;
-					const operationCached = getAPIResultFromCache(cacheKey);
-					if (operationCached !== undefined) {
-						if (operationCached && typeof operationCached === 'object' && (operationCached as any).__error) {
-							throw new Error((operationCached as any).message);
+						try {
+							isReplayMode();
+						} catch (contextError) {
+							setCurrentExecutionId(executionId);
 						}
-						return operationCached;
-					}
-				} catch (cacheError) {
-					// Continue without cache
-				}
+
+						try {
+							const cacheKey = `${operationName}:${JSON.stringify(input)}`;
+							const operationCached = getAPIResultFromCache(cacheKey);
+							if (operationCached !== undefined) {
+								if (
+									operationCached &&
+									typeof operationCached === 'object' &&
+									(operationCached as any).__error
+								) {
+									throw new Error((operationCached as any).message);
+								}
+								return operationCached;
+							}
+						} catch (cacheError) {
+							// Continue without cache
+						}
 
 						// In AST mode, recursively unwrap tainted primitives and register their provenance
 						if (
@@ -459,23 +463,23 @@ export class SandboxBuilder {
 							});
 						}
 
-					const result = await handler(input);
+						const result = await handler(input);
 
-					try {
-						storeAPICallResult({
-							type: 'api',
-							operation: operationName,
-							payload: input,
-							result: result,
-							timestamp: Date.now(),
-							sequenceNumber: -1,
-						});
-					} catch (cacheError) {
-						logger.debug(`Failed to store result in callback history for ${operationName}`, {
-							error: cacheError instanceof Error ? cacheError.message : String(cacheError),
-						});
-						// Continue without caching
-					}
+						try {
+							storeAPICallResult({
+								type: 'api',
+								operation: operationName,
+								payload: input,
+								result: result,
+								timestamp: Date.now(),
+								sequenceNumber: -1,
+							});
+						} catch (cacheError) {
+							logger.debug(`Failed to store result in callback history for ${operationName}`, {
+								error: cacheError instanceof Error ? cacheError.message : String(cacheError),
+							});
+							// Continue without caching
+						}
 
 						if (config.provenanceMode === ProvenanceMode.PROXY) {
 							let readers: ReaderPermissions = { type: 'public' };
@@ -617,11 +621,7 @@ export class SandboxBuilder {
 
 				const cachedResult = getCachedResult(currentSequence);
 				if (cachedResult !== undefined) {
-					if (
-						cachedResult &&
-						typeof cachedResult === 'object' &&
-						(cachedResult as any).__error
-					) {
+					if (cachedResult && typeof cachedResult === 'object' && (cachedResult as any).__error) {
 						throw new Error((cachedResult as any).message);
 					}
 

@@ -28,8 +28,8 @@ jobs:
     name: Publish Prerelease to NPM
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # needed to push commit + tags
-      id-token: write   # needed for provenance data generation
+      contents: write # needed to push commit + tags
+      id-token: write # needed for provenance data generation
     timeout-minutes: 20
     steps:
       - name: Checkout repository
@@ -37,7 +37,7 @@ jobs:
         with:
           fetch-depth: 0
           filter: tree:0
-          ref: ${{ github.ref }}  # Use the branch that triggered the workflow
+          ref: ${{ github.ref }} # Use the branch that triggered the workflow
 
       - name: Install Node
         uses: actions/setup-node@v4

@@ -8,6 +8,7 @@
 		"paths": {
 			"@mondaydotcomorg/atp-protocol": ["packages/protocol/src/index.ts"],
 			"@mondaydotcomorg/atp-provenance": ["packages/provenance/src/index.ts"],
+			"@mondaydotcomorg/atp-providers": ["packages/providers/src/index.ts"],
 			"@mondaydotcomorg/atp-server": ["packages/server/src/index.ts"],
 			"@mondaydotcomorg/atp-client": ["packages/client/src/index.ts"],
 			"@mondaydotcomorg/atp-runtime": ["packages/runtime/src/index.ts"],
@@ -18,5 +19,10 @@
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist", "**/*.test.ts"],
-	"references": [{ "path": "../protocol" }, { "path": "../provenance" }, { "path": "../runtime" }]
+	"references": [
+		{ "path": "../protocol" },
+		{ "path": "../provenance" },
+		{ "path": "../providers" },
+		{ "path": "../runtime" }
+	]
 }

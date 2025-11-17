@@ -23,7 +23,11 @@ export function setupResumeExecution(
 	for (const record of resumeData.callbackHistory) {
 		if (record.result !== undefined) {
 			replayMap.set(record.sequenceNumber, record.result);
-			if (record.operation && record.operation.includes('.') && !record.operation.includes('call')) {
+			if (
+				record.operation &&
+				record.operation.includes('.') &&
+				!record.operation.includes('call')
+			) {
 				const cacheKey = `${record.operation}:${JSON.stringify(record.payload)}`;
 				apiCache.set(cacheKey, record.result);
 			}

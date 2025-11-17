@@ -637,7 +637,7 @@ export class SandboxExecutor {
 		setProgressCallback(null);
 
 		clearVectorStoreExecutionId();
-		
+
 		if (executionId) {
 			try {
 				cleanupExecutionState(executionId);
