@@ -1,0 +1,10 @@
+{
+  "name": "@examples/runtime-openapi-loading",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts"
+  }
+}
+

@@ -182,23 +182,47 @@ export class AgentToolProtocolServer {
 
 	/**
 	 * Register middleware or API groups.
-	 * SECURITY: Cannot be called after server starts to prevent runtime injection attacks.
-	 * @throws {Error} If called after listen() or handler()
+	 * Can be called before OR after server starts.
+	 * - Before start: Simply adds to configuration
+	 * - After start: Dynamically updates running server components
+	 * 
+	 * Note: Middleware can only be added before server starts.
+	 * @throws {Error} If trying to add middleware after server has started
 	 */
 	use(...items: (Middleware | APIGroupConfig | APIGroupConfig[])[]): this {
-		if (this.isRunning) {
-			throw new Error('Cannot add middleware or API groups after server has started. ');
-		}
+		const middlewareItems: Middleware[] = [];
+		const apiGroupItems: APIGroupConfig[] = [];
 
+		// Separate middleware from API groups
 		for (const item of items) {
 			if (Array.isArray(item)) {
-				this.apiGroups.push(...item);
+				apiGroupItems.push(...item);
 			} else if (typeof item === 'function') {
-				this.middleware.push(item);
+				middlewareItems.push(item);
 			} else if ('name' in item && 'type' in item) {
-				this.apiGroups.push(item);
+				apiGroupItems.push(item);
 			}
 		}
+
+		// Middleware can only be added before server starts
+		if (middlewareItems.length > 0) {
+			if (this.isRunning) {
+				throw new Error('Cannot add middleware after server has started. Add middleware before calling listen().');
+			}
+			this.middleware.push(...middlewareItems);
+		}
+
+		// API groups can be added anytime
+		if (apiGroupItems.length > 0) {
+			if (this.isRunning) {
+				// Server is running - update components dynamically
+				this.updateComponentsWithNewGroups(apiGroupItems);
+			} else {
+				// Server not started yet - just add to array
+				this.apiGroups.push(...apiGroupItems);
+			}
+		}
+
 		return this;
 	}
 
@@ -485,6 +509,70 @@ export class AgentToolProtocolServer {
 			this.config,
 			this.sessionManager
 		);
+	}
+
+	/**
+	 * Update server components with new API groups (internal method)
+	 * @private
+	 */
+	private updateComponentsWithNewGroups(groups: APIGroupConfig[]): void {
+		// Add to apiGroups array
+		this.apiGroups.push(...groups);
+
+		// Update search engine with new groups
+		if (this.searchEngine) {
+			this.searchEngine = new SearchEngine(this.apiGroups);
+		}
+
+		// Update explorer service with new groups
+		if (this.explorerService) {
+			this.explorerService = new ExplorerService(this.apiGroups);
+		}
+
+		// Update executor with new groups
+		if (this.executor) {
+			this.executor = new SandboxExecutor(
+				{
+					defaultTimeout: this.config.execution.timeout,
+					maxTimeout: this.config.execution.timeout * 2,
+					defaultMemoryLimit: this.config.execution.memory,
+					maxMemoryLimit: this.config.execution.memory * 2,
+					defaultLLMCallLimit: this.config.execution.llmCalls,
+					maxLLMCallLimit: this.config.execution.llmCalls * 2,
+					cacheProvider: this.cacheProvider,
+				},
+				this.apiGroups,
+				this.approvalHandler,
+				this.sessionManager
+			);
+		}
+
+		for (const group of groups) {
+			log.info(`  ✅ Dynamically loaded: ${group.name} (${group.functions?.length || 0} functions)`);
+		}
+	}
+
+	/**
+	 * Load an OpenAPI spec and add it to the server
+	 * Works both before and after server starts
+	 * @param source - URL or file path to OpenAPI spec
+	 * @param options - OpenAPI loading options
+	 */
+	async loadOpenAPI(
+		source: string,
+		options: any = {}
+	): Promise<this> {
+		const { loadOpenAPI: loadSpec } = await import('./openapi-loader.js');
+		log.info(`📚 Loading OpenAPI spec: ${options.name || 'API'} from ${source}`);
+		
+		try {
+			const apiGroup = await loadSpec(source, options);
+			this.use(apiGroup);
+			return this;
+		} catch (error) {
+			log.error(`❌ Failed to load OpenAPI spec: ${(error as Error).message}`);
+			throw error;
+		}
 	}
 
 	/**
