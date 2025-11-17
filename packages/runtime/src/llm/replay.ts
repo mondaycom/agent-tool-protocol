@@ -73,24 +73,30 @@ function getCurrentState(): ExecutionState {
 		);
 	}
 
-	console.log(`[STATE] getCurrentState: executionId=${executionId}, hasState=${executionStates.has(executionId)}, totalStates=${executionStates.size}, stateKeys=${Array.from(executionStates.keys())}`);
+	console.log(
+		`[STATE] getCurrentState: executionId=${executionId}, hasState=${executionStates.has(executionId)}, totalStates=${executionStates.size}, stateKeys=${Array.from(executionStates.keys())}`
+	);
 
 	let state = executionStates.get(executionId);
 	if (!state) {
-	// State should have been initialized explicitly at execution start
-	// Create it now with a safe default to prevent crashes
-	console.warn('[STATE] State not initialized, creating with default. This should not happen.', { executionId });
-	state = {
-		shouldPauseForClient: false,
-		replayResults: undefined,
-		callSequenceNumber: 0,
-		apiCallResults: [],
-		apiResultCache: undefined,
-		createdAt: Date.now(),
-	};
-	executionStates.set(executionId, state);
+		// State should have been initialized explicitly at execution start
+		// Create it now with a safe default to prevent crashes
+		console.warn('[STATE] State not initialized, creating with default. This should not happen.', {
+			executionId,
+		});
+		state = {
+			shouldPauseForClient: false,
+			replayResults: undefined,
+			callSequenceNumber: 0,
+			apiCallResults: [],
+			apiResultCache: undefined,
+			createdAt: Date.now(),
+		};
+		executionStates.set(executionId, state);
 	} else {
-		console.log(`[STATE] Found existing state: shouldPause=${state.shouldPauseForClient}, hasReplay=${!!state.replayResults}, seqNum=${state.callSequenceNumber}`);
+		console.log(
+			`[STATE] Found existing state: shouldPause=${state.shouldPauseForClient}, hasReplay=${!!state.replayResults}, seqNum=${state.callSequenceNumber}`
+		);
 	}
 	return state;
 }
@@ -102,10 +108,14 @@ function getCurrentState(): ExecutionState {
 export function initializeExecutionState(shouldPause: boolean): void {
 	const executionId = currentExecutionId || executionContext.getStore();
 	if (!executionId) {
-		throw new Error('No execution context set. Executor must call setCurrentExecutionId() before initializeExecutionState().');
+		throw new Error(
+			'No execution context set. Executor must call setCurrentExecutionId() before initializeExecutionState().'
+		);
 	}
 
-	console.log(`[INIT] initializeExecutionState called: executionId=${executionId}, shouldPause=${shouldPause}, existingState=${executionStates.has(executionId)}`);
+	console.log(
+		`[INIT] initializeExecutionState called: executionId=${executionId}, shouldPause=${shouldPause}, existingState=${executionStates.has(executionId)}`
+	);
 
 	const existingState = executionStates.get(executionId);
 	if (existingState) {
@@ -116,7 +126,9 @@ export function initializeExecutionState(shouldPause: boolean): void {
 		if (!existingState.apiResultCache) {
 			existingState.apiResultCache = undefined;
 		}
-		console.log(`[INIT] Preserving existing state: replaySize=${existingState.replayResults?.size || 0}, counter=${existingState.callSequenceNumber}`);
+		console.log(
+			`[INIT] Preserving existing state: replaySize=${existingState.replayResults?.size || 0}, counter=${existingState.callSequenceNumber}`
+		);
 		return;
 	}
 
@@ -148,7 +160,9 @@ export function runInExecutionContext<T>(executionId: string, fn: () => T): T {
 export function setPauseForClient(pause: boolean): void {
 	const executionId = currentExecutionId || executionContext.getStore();
 	if (!executionId) {
-		throw new Error('No execution context set. Executor must call setCurrentExecutionId() before setPauseForClient().');
+		throw new Error(
+			'No execution context set. Executor must call setCurrentExecutionId() before setPauseForClient().'
+		);
 	}
 
 	const state = executionStates.get(executionId);
@@ -172,7 +186,9 @@ export function shouldPauseForClient(): boolean {
  */
 export function setReplayMode(results: Map<number, unknown> | undefined): void {
 	const executionId = currentExecutionId || executionContext.getStore();
-	console.log(`[REPLAY] setReplayMode called: executionId=${executionId}, replaySize=${results?.size || 0}, replayKeys=${results ? Array.from(results.keys()) : []}`);
+	console.log(
+		`[REPLAY] setReplayMode called: executionId=${executionId}, replaySize=${results?.size || 0}, replayKeys=${results ? Array.from(results.keys()) : []}`
+	);
 	const state = getCurrentState();
 
 	// Store replay results
@@ -186,12 +202,16 @@ export function setReplayMode(results: Map<number, unknown> | undefined): void {
 	state.callSequenceNumber = 0;
 
 	if (results && results.size > 0) {
-		console.log(`[REPLAY] Entering replay mode: ${oldCounter} -> 0 (have ${results.size} cached results)`);
+		console.log(
+			`[REPLAY] Entering replay mode: ${oldCounter} -> 0 (have ${results.size} cached results)`
+		);
 	} else {
 		console.log(`[REPLAY] Clearing replay mode: ${oldCounter} -> 0`);
 	}
 
-	console.log(`[REPLAY] setReplayMode completed: oldSize=${oldSize}, newSize=${state.replayResults?.size || 0}, callSequenceNumber=${state.callSequenceNumber}`);
+	console.log(
+		`[REPLAY] setReplayMode completed: oldSize=${oldSize}, newSize=${state.replayResults?.size || 0}, callSequenceNumber=${state.callSequenceNumber}`
+	);
 }
 
 /**
@@ -199,7 +219,9 @@ export function setReplayMode(results: Map<number, unknown> | undefined): void {
  */
 export function getCallSequenceNumber(): number {
 	const state = getCurrentState();
-	console.log(`[GET_SEQ] getCallSequenceNumber called: returning ${state.callSequenceNumber}, hasReplay=${!!state.replayResults}, replaySize=${state.replayResults?.size || 0}`);
+	console.log(
+		`[GET_SEQ] getCallSequenceNumber called: returning ${state.callSequenceNumber}, hasReplay=${!!state.replayResults}, replaySize=${state.replayResults?.size || 0}`
+	);
 	return state.callSequenceNumber;
 }
 
@@ -210,7 +232,9 @@ export function nextSequenceNumber(): number {
 	const state = getCurrentState();
 	const current = state.callSequenceNumber;
 	state.callSequenceNumber++;
-	console.log(`[SEQUENCE] nextSequenceNumber: returning ${current}, next will be ${state.callSequenceNumber}, isReplay=${state.replayResults !== undefined}, replaySize=${state.replayResults?.size || 0}`);
+	console.log(
+		`[SEQUENCE] nextSequenceNumber: returning ${current}, next will be ${state.callSequenceNumber}, isReplay=${state.replayResults !== undefined}, replaySize=${state.replayResults?.size || 0}`
+	);
 	return current;
 }
 
@@ -219,10 +243,15 @@ export function nextSequenceNumber(): number {
  */
 export function getCachedResult(sequenceNumber: number): unknown | undefined {
 	const state = getCurrentState();
-	console.log(`[CACHE] getCachedResult(${sequenceNumber}): hasReplayResults=${!!state.replayResults}, replayKeys=${state.replayResults ? Array.from(state.replayResults.keys()) : []}`);
+	console.log(
+		`[CACHE] getCachedResult(${sequenceNumber}): hasReplayResults=${!!state.replayResults}, replayKeys=${state.replayResults ? Array.from(state.replayResults.keys()) : []}`
+	);
 	if (state.replayResults && state.replayResults.has(sequenceNumber)) {
 		const result = state.replayResults.get(sequenceNumber);
-		console.log(`[CACHE] Found cached result for sequence ${sequenceNumber}:`, JSON.stringify(result));
+		console.log(
+			`[CACHE] Found cached result for sequence ${sequenceNumber}:`,
+			JSON.stringify(result)
+		);
 		return result;
 	}
 	console.log(`[CACHE] No cached result for sequence ${sequenceNumber}`);
@@ -315,7 +344,7 @@ export function cleanupExecutionState(executionId: string): void {
 export function cleanupOldExecutionStates(maxAgeMs: number = 3600000): number {
 	const now = Date.now();
 	let cleaned = 0;
-	
+
 	for (const [executionId, state] of executionStates.entries()) {
 		const age = now - state.createdAt;
 		if (age > maxAgeMs) {
@@ -323,7 +352,7 @@ export function cleanupOldExecutionStates(maxAgeMs: number = 3600000): number {
 			cleaned++;
 		}
 	}
-	
+
 	return cleaned;
 }
 
@@ -349,7 +378,7 @@ export function getExecutionStateStats(): {
 	const executionIds = Array.from(executionStates.keys());
 	let oldestAge: number | null = null;
 	let newestAge: number | null = null;
-	
+
 	for (const state of executionStates.values()) {
 		const age = now - state.createdAt;
 		if (oldestAge === null || age > oldestAge) {
@@ -359,7 +388,7 @@ export function getExecutionStateStats(): {
 			newestAge = age;
 		}
 	}
-	
+
 	return {
 		totalStates: executionStates.size,
 		oldestStateAge: oldestAge,

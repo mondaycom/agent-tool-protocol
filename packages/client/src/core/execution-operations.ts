@@ -119,7 +119,7 @@ export class ExecutionOperations {
 			hasEmbedding: !!this.serviceProviders.getEmbedding(),
 			hasTools: this.serviceProviders.hasTools(),
 		};
-		
+
 		const executionConfig = {
 			...config,
 			clientServices: {
@@ -184,24 +184,33 @@ export class ExecutionOperations {
 		);
 
 		if (missingServiceIds.size > 0) {
-			const missingServices = pausedResult.needsCallbacks.filter((cb) => missingServiceIds.has(cb.id));
+			const missingServices = pausedResult.needsCallbacks.filter((cb) =>
+				missingServiceIds.has(cb.id)
+			);
 			const explicitlyRequestedMissing = missingServices.filter((cb) =>
 				this.wasServiceExplicitlyRequested(cb.type)
 			);
-			const unexpectedMissing = missingServices.filter((cb) => 
-				!this.wasServiceExplicitlyRequested(cb.type)
+			const unexpectedMissing = missingServices.filter(
+				(cb) => !this.wasServiceExplicitlyRequested(cb.type)
 			);
-			
+
 			if (explicitlyRequestedMissing.length > 0) {
 				return pausedResult;
 			}
-			
-			const errorMessage = `Missing service providers for callback types: ${unexpectedMissing.map(cb => cb.type).join(', ')}`;
-			console.error(`Auto-handling batch paused execution without service providers: ${errorMessage}`, {
-				executionId: pausedResult.executionId,
-				missingServices: unexpectedMissing.map(cb => ({ type: cb.type, operation: cb.operation, id: cb.id })),
-			});
-			
+
+			const errorMessage = `Missing service providers for callback types: ${unexpectedMissing.map((cb) => cb.type).join(', ')}`;
+			console.error(
+				`Auto-handling batch paused execution without service providers: ${errorMessage}`,
+				{
+					executionId: pausedResult.executionId,
+					missingServices: unexpectedMissing.map((cb) => ({
+						type: cb.type,
+						operation: cb.operation,
+						id: cb.id,
+					})),
+				}
+			);
+
 			const existingCallbacks = pausedResult.needsCallbacks.filter(
 				(cb) => !missingServiceIds.has(cb.id)
 			);
@@ -217,7 +226,7 @@ export class ExecutionOperations {
 							return { id: cb.id, result: callbackResult };
 						})
 					);
-					
+
 					const allResults = pausedResult.needsCallbacks.map((cb) => {
 						if (missingServiceIds.has(cb.id)) {
 							return {
@@ -228,9 +237,9 @@ export class ExecutionOperations {
 								},
 							};
 						}
-						return existingResults.find(r => r.id === cb.id)!;
+						return existingResults.find((r) => r.id === cb.id)!;
 					});
-					
+
 					return await this.resumeWithBatchResults(pausedResult.executionId, allResults);
 				} catch (error) {
 					const errorMessage = error instanceof Error ? error.message : String(error);
@@ -241,7 +250,7 @@ export class ExecutionOperations {
 						id: cb.id,
 						result: {
 							__error: true,
-							message: missingServiceIds.has(cb.id) 
+							message: missingServiceIds.has(cb.id)
 								? `${cb.type} service not provided by client`
 								: errorMessage,
 						},
@@ -278,7 +287,7 @@ export class ExecutionOperations {
 				executionId: pausedResult.executionId,
 				callbackCount: pausedResult.needsCallbacks.length,
 			});
-			
+
 			const allErrorResults = pausedResult.needsCallbacks.map((cb) => ({
 				id: cb.id,
 				result: {
@@ -299,19 +308,21 @@ export class ExecutionOperations {
 		}
 
 		if (!this.serviceProviders.hasServiceForCallback(pausedResult.needsCallback.type)) {
-			const wasExplicitlyRequested = this.wasServiceExplicitlyRequested(pausedResult.needsCallback.type);
-			
+			const wasExplicitlyRequested = this.wasServiceExplicitlyRequested(
+				pausedResult.needsCallback.type
+			);
+
 			if (wasExplicitlyRequested) {
 				return pausedResult;
 			}
-			
+
 			const errorMessage = `${pausedResult.needsCallback.type} service not provided by client`;
 			console.error(`Auto-handling paused execution without service provider: ${errorMessage}`, {
 				executionId: pausedResult.executionId,
 				callbackType: pausedResult.needsCallback.type,
 				operation: pausedResult.needsCallback.operation,
 			});
-			
+
 			return await this.resume(pausedResult.executionId, {
 				__error: true,
 				message: errorMessage,
@@ -353,7 +364,7 @@ export class ExecutionOperations {
 		if (!this.lastExecutionConfig?.clientServices) {
 			return false;
 		}
-		
+
 		switch (callbackType) {
 			case CallbackType.LLM:
 				return this.lastExecutionConfig.clientServices.hasLLM;

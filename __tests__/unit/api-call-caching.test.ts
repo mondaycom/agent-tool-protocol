@@ -28,7 +28,7 @@ describe('API Call Caching During Resume', () => {
 			await server.stop();
 		}
 		// Give some time for all connections to close
-		await new Promise(resolve => setTimeout(resolve, 100));
+		await new Promise((resolve) => setTimeout(resolve, 100));
 	});
 
 	it('should cache API calls during resume', async () => {
@@ -83,7 +83,7 @@ describe('API Call Caching During Resume', () => {
 		console.log('[TEST] Initializing client');
 		await client.init();
 		console.log('[TEST] Client initialized');
-		
+
 		console.log('[TEST] Connecting client');
 		await client.connect();
 		console.log('[TEST] Client connected');
@@ -122,7 +122,9 @@ describe('API Call Caching During Resume', () => {
 		// Resume execution with approval
 		console.log('[TEST] Resuming execution...');
 		const resumeResult = await client.resume(result.executionId, { approved: true });
-		console.log(`[TEST] Resume completed with status: ${resumeResult.status}, callCount=${callCount}`);
+		console.log(
+			`[TEST] Resume completed with status: ${resumeResult.status}, callCount=${callCount}`
+		);
 
 		const callsAfterResume = callCount;
 		const newCalls = callsAfterResume - callsBeforeResume;
@@ -138,7 +140,7 @@ describe('API Call Caching During Resume', () => {
 		console.log('[TEST] Stopping server...');
 		await testServer.stop();
 		// Wait for cleanup
-		await new Promise(resolve => setTimeout(resolve, 100));
+		await new Promise((resolve) => setTimeout(resolve, 100));
 		console.log('[TEST] Test completed successfully!');
 	});
 
@@ -222,8 +224,7 @@ describe('API Call Caching During Resume', () => {
 		console.log('[TEST2] Stopping server...');
 		await testServer.stop();
 		// Wait for cleanup
-		await new Promise(resolve => setTimeout(resolve, 100));
+		await new Promise((resolve) => setTimeout(resolve, 100));
 		console.log('[TEST2] Test completed successfully!');
 	});
 });
-
