@@ -3585,12 +3585,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mondaydotcomorg/atp-client@npm:*, @mondaydotcomorg/atp-client@npm:0.18.3, @mondaydotcomorg/atp-client@workspace:*, @mondaydotcomorg/atp-client@workspace:packages/client":
+"@mondaydotcomorg/atp-client@npm:*, @mondaydotcomorg/atp-client@npm:0.18.2":
+  version: 0.18.2
+  resolution: "@mondaydotcomorg/atp-client@npm:0.18.2"
+  dependencies:
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
+    "@mondaydotcomorg/atp-runtime": "npm:0.18.2"
+    undici: "npm:*"
+    zod: "npm:^3.23.8"
+    zod-to-json-schema: "npm:^3.24.6"
+  checksum: 10c0/9394aa3ce3d3b2793d84a13f2349907f611cba88f7d056666a0ec7cde2da6c01c6b6e618b92e64dcd327752e52ab47ca63954d794111ac02c55ed76686b916f1
+  languageName: node
+  linkType: hard
+
+"@mondaydotcomorg/atp-client@npm:0.18.4-rc.0, @mondaydotcomorg/atp-client@workspace:*, @mondaydotcomorg/atp-client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-client@workspace:packages/client"
   dependencies:
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
-    "@mondaydotcomorg/atp-runtime": "npm:0.18.3"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.4-rc.0"
+    "@mondaydotcomorg/atp-runtime": "npm:0.18.4-rc.0"
     typescript: "npm:^5.3.3"
     undici: "npm:*"
     vitest: "npm:^1.2.1"
@@ -3599,7 +3612,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-compiler@npm:0.18.3, @mondaydotcomorg/atp-compiler@workspace:packages/atp-compiler":
+"@mondaydotcomorg/atp-compiler@npm:0.18.2":
+  version: 0.18.2
+  resolution: "@mondaydotcomorg/atp-compiler@npm:0.18.2"
+  dependencies:
+    "@babel/generator": "npm:^7.26.0"
+    "@babel/parser": "npm:^7.26.0"
+    "@babel/traverse": "npm:^7.26.0"
+    "@babel/types": "npm:^7.26.0"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
+    "@mondaydotcomorg/atp-runtime": "npm:0.18.2"
+    "@types/babel__generator": "npm:^7.6.0"
+    "@types/babel__traverse": "npm:^7.20.0"
+    nanoid: "npm:^5.0.0"
+  peerDependencies:
+    "@mondaydotcomorg/atp-protocol": 0.18.2
+    "@mondaydotcomorg/atp-runtime": 0.18.2
+  checksum: 10c0/54d58df0e7dea1c4896c124dac0de5268e1cf06cc302de5ccfa8b3e6cd03a7b9534ee6634d8a8b8c034a83ef3a7a19a504b60de8f293b4daf1f1ed398ec90f06
+  languageName: node
+  linkType: hard
+
+"@mondaydotcomorg/atp-compiler@npm:0.18.4-rc.0, @mondaydotcomorg/atp-compiler@workspace:packages/atp-compiler":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-compiler@workspace:packages/atp-compiler"
   dependencies:
@@ -3607,8 +3640,8 @@ __metadata:
     "@babel/parser": "npm:^7.26.0"
     "@babel/traverse": "npm:^7.26.0"
     "@babel/types": "npm:^7.26.0"
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
-    "@mondaydotcomorg/atp-runtime": "npm:0.18.3"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.4-rc.0"
+    "@mondaydotcomorg/atp-runtime": "npm:0.18.4-rc.0"
     "@stryker-mutator/core": "npm:^8.0.0"
     "@types/babel__generator": "npm:^7.6.0"
     "@types/babel__traverse": "npm:^7.20.0"
@@ -3618,18 +3651,32 @@ __metadata:
     nanoid: "npm:^5.0.0"
     typescript: "npm:^5.3.0"
   peerDependencies:
-    "@mondaydotcomorg/atp-protocol": 0.18.3
-    "@mondaydotcomorg/atp-runtime": 0.18.3
+    "@mondaydotcomorg/atp-protocol": 0.18.4-rc.0
+    "@mondaydotcomorg/atp-runtime": 0.18.4-rc.0
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-langchain@npm:*, @mondaydotcomorg/atp-langchain@workspace:*, @mondaydotcomorg/atp-langchain@workspace:packages/langchain":
+"@mondaydotcomorg/atp-langchain@npm:*":
+  version: 0.18.2
+  resolution: "@mondaydotcomorg/atp-langchain@npm:0.18.2"
+  dependencies:
+    "@langchain/core": "npm:^0.3.78"
+    "@mondaydotcomorg/atp-client": "npm:0.18.2"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
+    json-schema-to-zod: "npm:^2.6.1"
+    langchain: "npm:^0.3.35"
+    zod: "npm:^4.1.11"
+  checksum: 10c0/15a6d7d148c6ce2142a1f06cec883d56853b81ade834c622754b225269e8762a6e4c3a4a865352911a59e8e97503b2f64ffcf8edb480892a1a1edcaa8d9ee831
+  languageName: node
+  linkType: hard
+
+"@mondaydotcomorg/atp-langchain@workspace:*, @mondaydotcomorg/atp-langchain@workspace:packages/langchain":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-langchain@workspace:packages/langchain"
   dependencies:
     "@langchain/core": "npm:^0.3.78"
-    "@mondaydotcomorg/atp-client": "npm:0.18.3"
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
+    "@mondaydotcomorg/atp-client": "npm:0.18.4-rc.0"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.4-rc.0"
     json-schema-to-zod: "npm:^2.6.1"
     langchain: "npm:^0.3.35"
     typescript: "npm:^5.3.3"
@@ -3638,31 +3685,66 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-mcp-adapter@npm:*, @mondaydotcomorg/atp-mcp-adapter@workspace:packages/mcp-adapter":
+"@mondaydotcomorg/atp-mcp-adapter@npm:*":
+  version: 0.18.2
+  resolution: "@mondaydotcomorg/atp-mcp-adapter@npm:0.18.2"
+  dependencies:
+    "@modelcontextprotocol/sdk": "npm:^0.5.0"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
+    "@mondaydotcomorg/atp-server": "npm:0.18.2"
+    zod: "npm:^4.1.11"
+  checksum: 10c0/9e48a81de850bfdbdad57ff46ccc8ee192c50ab6f065d9697cc17742161d134ba33562c4bfb5730e6c943748b1235b06c2c4aab7be0dcdb9fd59c6add2696a42
+  languageName: node
+  linkType: hard
+
+"@mondaydotcomorg/atp-mcp-adapter@workspace:packages/mcp-adapter":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-mcp-adapter@workspace:packages/mcp-adapter"
   dependencies:
     "@modelcontextprotocol/sdk": "npm:^0.5.0"
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
-    "@mondaydotcomorg/atp-server": "npm:0.18.4"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.4-rc.0"
+    "@mondaydotcomorg/atp-server": "npm:0.18.5-rc.0"
     typescript: "npm:^5.3.3"
     vitest: "npm:^1.2.1"
     zod: "npm:^4.1.11"
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-protocol@npm:0.18.3, @mondaydotcomorg/atp-protocol@workspace:*, @mondaydotcomorg/atp-protocol@workspace:packages/protocol":
+"@mondaydotcomorg/atp-protocol@npm:0.18.2":
+  version: 0.18.2
+  resolution: "@mondaydotcomorg/atp-protocol@npm:0.18.2"
+  dependencies:
+    "@mondaydotcomorg/atp-provenance": "npm:0.18.2"
+    zod: "npm:^3.23.8"
+  checksum: 10c0/dc33581f8356b773f66b54279ba1271a95bb03361840119b194266dea45ae1eae411d87b61f46c18d87a7b141cd9b6c7186884d2026813c861a49d45b4faa596
+  languageName: node
+  linkType: hard
+
+"@mondaydotcomorg/atp-protocol@npm:0.18.4-rc.0, @mondaydotcomorg/atp-protocol@workspace:*, @mondaydotcomorg/atp-protocol@workspace:packages/protocol":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-protocol@workspace:packages/protocol"
   dependencies:
-    "@mondaydotcomorg/atp-provenance": "npm:0.18.3"
+    "@mondaydotcomorg/atp-provenance": "npm:0.18.4-rc.0"
     typescript: "npm:^5.3.3"
     vitest: "npm:^1.2.1"
     zod: "npm:^3.23.8"
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-provenance@npm:0.18.3, @mondaydotcomorg/atp-provenance@workspace:packages/provenance":
+"@mondaydotcomorg/atp-provenance@npm:0.18.2":
+  version: 0.18.2
+  resolution: "@mondaydotcomorg/atp-provenance@npm:0.18.2"
+  dependencies:
+    "@types/escodegen": "npm:^0.0.10"
+    acorn: "npm:^8.11.0"
+    acorn-walk: "npm:^8.3.0"
+    escodegen: "npm:^2.1.0"
+    nanoid: "npm:^5.0.0"
+  checksum: 10c0/5930bd26473a9b09e108eb46d7135c120319011423319bd1dea129a2a08e0798361cf997e51872f996f24e61f83de3ac59bad493e325cdf0168fbd9b4bc11cfa
+  languageName: node
+  linkType: hard
+
+"@mondaydotcomorg/atp-provenance@npm:0.18.4-rc.0, @mondaydotcomorg/atp-provenance@workspace:packages/provenance":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-provenance@workspace:packages/provenance"
   dependencies:
@@ -3676,17 +3758,41 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-providers@npm:0.18.3, @mondaydotcomorg/atp-providers@workspace:*, @mondaydotcomorg/atp-providers@workspace:packages/providers":
+"@mondaydotcomorg/atp-providers@npm:0.18.2":
+  version: 0.18.2
+  resolution: "@mondaydotcomorg/atp-providers@npm:0.18.2"
+  dependencies:
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
+    "@opentelemetry/api": "npm:^1.9.0"
+  checksum: 10c0/1c74c6f58d2dd7d42f554189f4eb31ccd9c0a565d782b685bd47d4744a5758bfa87cd7c30dc1b3f1342a5f27e99779aaf2e313864da8e5238a05ea8830d27ebd
+  languageName: node
+  linkType: hard
+
+"@mondaydotcomorg/atp-providers@npm:0.18.4-rc.0, @mondaydotcomorg/atp-providers@workspace:*, @mondaydotcomorg/atp-providers@workspace:packages/providers":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-providers@workspace:packages/providers"
   dependencies:
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.4-rc.0"
     "@opentelemetry/api": "npm:^1.9.0"
     typescript: "npm:^5.7.2"
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-runtime@npm:0.18.3, @mondaydotcomorg/atp-runtime@workspace:packages/runtime":
+"@mondaydotcomorg/atp-runtime@npm:0.18.2":
+  version: 0.18.2
+  resolution: "@mondaydotcomorg/atp-runtime@npm:0.18.2"
+  dependencies:
+    ioredis: "npm:^5.8.0"
+    node-cache: "npm:*"
+    pino: "npm:*"
+    pino-pretty: "npm:*"
+    reflect-metadata: "npm:^0.2.1"
+    undici: "npm:*"
+  checksum: 10c0/3f754f13374361c820516f4151ed8ff3367502870e86b17b4465ec89dfc28cca17d2f11a68794dcd3ed2583ee3dc6012a17e8553c5ba31aee70460d54d598d2b
+  languageName: node
+  linkType: hard
+
+"@mondaydotcomorg/atp-runtime@npm:0.18.4-rc.0, @mondaydotcomorg/atp-runtime@workspace:packages/runtime":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-runtime@workspace:packages/runtime"
   dependencies:
@@ -3705,7 +3811,45 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mondaydotcomorg/atp-server@npm:*, @mondaydotcomorg/atp-server@npm:0.18.4, @mondaydotcomorg/atp-server@workspace:*, @mondaydotcomorg/atp-server@workspace:packages/server":
+"@mondaydotcomorg/atp-server@npm:*, @mondaydotcomorg/atp-server@npm:0.18.2":
+  version: 0.18.2
+  resolution: "@mondaydotcomorg/atp-server@npm:0.18.2"
+  dependencies:
+    "@babel/generator": "npm:^7.26.0"
+    "@babel/parser": "npm:^7.26.0"
+    "@babel/traverse": "npm:^7.26.0"
+    "@babel/types": "npm:^7.26.0"
+    "@mondaydotcomorg/atp-compiler": "npm:0.18.2"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.2"
+    "@mondaydotcomorg/atp-provenance": "npm:0.18.2"
+    "@mondaydotcomorg/atp-providers": "npm:0.18.2"
+    "@mondaydotcomorg/atp-runtime": "npm:0.18.2"
+    "@opentelemetry/api": "npm:^1.9.0"
+    "@opentelemetry/auto-instrumentations-node": "npm:^0.66.0"
+    "@opentelemetry/core": "npm:^2.2.0"
+    "@opentelemetry/exporter-metrics-otlp-http": "npm:^0.207.0"
+    "@opentelemetry/exporter-trace-otlp-http": "npm:^0.207.0"
+    "@opentelemetry/resources": "npm:^2.2.0"
+    "@opentelemetry/sdk-node": "npm:^0.207.0"
+    "@opentelemetry/semantic-conventions": "npm:^1.37.0"
+    "@types/acorn": "npm:^6.0.4"
+    "@types/babel__generator": "npm:^7.6.8"
+    "@types/babel__traverse": "npm:^7.20.5"
+    "@types/escodegen": "npm:^0.0.10"
+    "@types/js-yaml": "npm:^4.0.9"
+    "@types/jsonwebtoken": "npm:^9.0.5"
+    acorn: "npm:^8.11.0"
+    acorn-walk: "npm:^8.3.0"
+    isolated-vm: "npm:5.0.4"
+    js-yaml: "npm:^4.1.0"
+    jsonwebtoken: "npm:^9.0.2"
+    nanoid: "npm:^5.1.6"
+    rate-limiter-flexible: "npm:*"
+  checksum: 10c0/8b0f8cca16b01fecfd2f787fa1e5e3580fa8ae80bfa86ce86ff9a284a215ed81923d6a2455699325f4216e9f25caa9e882648cb760637f27993d41dffa72bbe5
+  languageName: node
+  linkType: hard
+
+"@mondaydotcomorg/atp-server@npm:0.18.5-rc.0, @mondaydotcomorg/atp-server@workspace:*, @mondaydotcomorg/atp-server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-server@workspace:packages/server"
   dependencies:
@@ -3713,11 +3857,11 @@ __metadata:
     "@babel/parser": "npm:^7.26.0"
     "@babel/traverse": "npm:^7.26.0"
     "@babel/types": "npm:^7.26.0"
-    "@mondaydotcomorg/atp-compiler": "npm:0.18.3"
-    "@mondaydotcomorg/atp-protocol": "npm:0.18.3"
-    "@mondaydotcomorg/atp-provenance": "npm:0.18.3"
-    "@mondaydotcomorg/atp-providers": "npm:0.18.3"
-    "@mondaydotcomorg/atp-runtime": "npm:0.18.3"
+    "@mondaydotcomorg/atp-compiler": "npm:0.18.4-rc.0"
+    "@mondaydotcomorg/atp-protocol": "npm:0.18.4-rc.0"
+    "@mondaydotcomorg/atp-provenance": "npm:0.18.4-rc.0"
+    "@mondaydotcomorg/atp-providers": "npm:0.18.4-rc.0"
+    "@mondaydotcomorg/atp-runtime": "npm:0.18.4-rc.0"
     "@opentelemetry/api": "npm:^1.9.0"
     "@opentelemetry/auto-instrumentations-node": "npm:^0.66.0"
     "@opentelemetry/core": "npm:^2.2.0"
