@@ -261,9 +261,10 @@ export async function handleExecute(
 			ctx.throw(500, 'Invalid paused state: no callback request');
 		}
 
+		const transformedCodeToSave = (result as any).transformedCode || code;
 		await stateManager.pause({
 			executionId: result.executionId,
-			code: (result as any).transformedCode || code,
+			code: transformedCodeToSave,
 			config: executionConfig,
 			clientId: ctx.clientId,
 			callbackRequest,

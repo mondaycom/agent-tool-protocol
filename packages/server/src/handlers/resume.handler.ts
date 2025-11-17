@@ -274,9 +274,11 @@ export async function handleResume(
 				? captureProvenanceSnapshot(result.executionId)
 				: undefined;
 
+		const codeToSave = (result as any).transformedCode || pausedState.code;
+
 		await stateManager.pause({
 			executionId: result.executionId,
-			code: pausedState.code,
+			code: codeToSave,
 			config: pausedState.config,
 			clientId: pausedState.clientId,
 			callbackRequest: result.needsCallbacks[0]!,
@@ -296,9 +298,10 @@ export async function handleResume(
 				? captureProvenanceSnapshot(result.executionId)
 				: undefined;
 
+		const codeToSave = (result as any).transformedCode || pausedState.code;
 		await stateManager.pause({
 			executionId: result.executionId,
-			code: pausedState.code,
+			code: codeToSave,
 			config: pausedState.config,
 			clientId: pausedState.clientId,
 			callbackRequest: result.needsCallback,

@@ -1,5 +1,5 @@
 import type { Logger } from '@mondaydotcomorg/atp-runtime';
-import { setReplayMode } from '@mondaydotcomorg/atp-runtime';
+import { setReplayMode, setAPIResultCache } from '@mondaydotcomorg/atp-runtime';
 import type { CallbackRecord } from '../execution-state/index.js';
 
 export interface ResumeData {
@@ -18,10 +18,15 @@ export function setupResumeExecution(
 	});
 
 	const replayMap = new Map<number, unknown>();
+	const apiCache = new Map<string, unknown>();
 
 	for (const record of resumeData.callbackHistory) {
 		if (record.result !== undefined) {
 			replayMap.set(record.sequenceNumber, record.result);
+			if (record.operation && record.operation.includes('.') && !record.operation.includes('call')) {
+				const cacheKey = `${record.operation}:${JSON.stringify(record.payload)}`;
+				apiCache.set(cacheKey, record.result);
+			}
 		}
 	}
 
@@ -31,6 +36,11 @@ export function setupResumeExecution(
 	}
 
 	setReplayMode(replayMap);
+
+	if (apiCache.size > 0) {
+		setAPIResultCache(apiCache);
+	}
+
 	callbackHistory.push(...resumeData.callbackHistory);
 
 	executionLogger.debug('Replay map configured', {

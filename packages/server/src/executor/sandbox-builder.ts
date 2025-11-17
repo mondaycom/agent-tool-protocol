@@ -21,10 +21,12 @@ import {
 	clearCurrentExecutionId,
 	setVectorStoreExecutionId,
 	clearVectorStoreExecutionId,
-	isPauseError,
 	pauseForCallback,
 	nextSequenceNumber,
 	getCachedResult,
+	isReplayMode,
+	storeAPICallResult,
+	getAPIResultFromCache,
 } from '@mondaydotcomorg/atp-runtime';
 import type { RuntimeContext } from './types.js';
 import {
@@ -284,6 +286,26 @@ export class SandboxBuilder {
 							inputPreview: JSON.stringify(input)?.substring(0, 200) || 'undefined',
 						});
 
+						const operationName = `${group.name}.${func.name}`;
+					try {
+						isReplayMode();
+					} catch (contextError) {
+						setCurrentExecutionId(executionId);
+					}
+
+				try {
+					const cacheKey = `${operationName}:${JSON.stringify(input)}`;
+					const operationCached = getAPIResultFromCache(cacheKey);
+					if (operationCached !== undefined) {
+						if (operationCached && typeof operationCached === 'object' && (operationCached as any).__error) {
+							throw new Error((operationCached as any).message);
+						}
+						return operationCached;
+					}
+				} catch (cacheError) {
+					// Continue without cache
+				}
+
 						// In AST mode, recursively unwrap tainted primitives and register their provenance
 						if (
 							config.provenanceMode === ProvenanceMode.AST &&
@@ -420,34 +442,40 @@ export class SandboxBuilder {
 
 							const approvalMessage = `Approve ${operationDescription}: ${func.name}`;
 
-							setCurrentExecutionId(executionId);
-							try {
-								const approvalResult = await approval.request(approvalMessage, {
-									tool: func.name,
-									group: group.name,
-									params: input,
-									metadata: metadata,
-								});
+							const approvalResult = await approval.request(approvalMessage, {
+								tool: func.name,
+								group: group.name,
+								params: input,
+								metadata: metadata,
+							});
 
-								if (!approvalResult || !approvalResult.approved) {
-									throw new Error(`Operation ${func.name} denied by user`);
-								}
-
-								logger.info(`Tool approved by user: ${group.name}.${func.name}`, {
-									operationType: metadata?.operationType,
-									sensitivityLevel: metadata?.sensitivityLevel,
-								});
-							} catch (error) {
-								clearCurrentExecutionId();
-								if (isPauseError(error)) {
-									throw error;
-								}
-								throw error;
+							if (!approvalResult || !approvalResult.approved) {
+								throw new Error(`Operation ${func.name} denied by user`);
 							}
-							clearCurrentExecutionId();
+
+							logger.info(`Tool approved by user: ${group.name}.${func.name}`, {
+								operationType: metadata?.operationType,
+								sensitivityLevel: metadata?.sensitivityLevel,
+							});
 						}
 
-						const result = await handler(input);
+					const result = await handler(input);
+
+					try {
+						storeAPICallResult({
+							type: 'api',
+							operation: operationName,
+							payload: input,
+							result: result,
+							timestamp: Date.now(),
+							sequenceNumber: -1,
+						});
+					} catch (cacheError) {
+						logger.debug(`Failed to store result in callback history for ${operationName}`, {
+							error: cacheError instanceof Error ? cacheError.message : String(cacheError),
+						});
+						// Continue without caching
+					}
 
 						if (config.provenanceMode === ProvenanceMode.PROXY) {
 							let readers: ReaderPermissions = { type: 'public' };
@@ -579,71 +607,75 @@ export class SandboxBuilder {
 			const policyEngine = this.policyEngine;
 
 			api[namespace][toolName] = async (input: unknown) => {
-				setCurrentExecutionId(executionId);
-
+				let currentSequence: number;
 				try {
-					const currentSequence = nextSequenceNumber();
-
-					const cachedResult = getCachedResult(currentSequence);
-					if (cachedResult !== undefined) {
-						if (cachedResult && typeof cachedResult === 'object' && (cachedResult as any).__error) {
-							throw new Error((cachedResult as any).message);
-						}
-						return cachedResult;
-					}
-
-					// Re-attach provenance from hints before policy checks
-					const hintMap = getHintMap(executionId);
-					if (hintMap && hintMap.size > 0 && input && typeof input === 'object') {
-						try {
-							reattachProvenanceFromHints(input as Record<string, unknown>, hintMap);
-						} catch (error) {
-							// Silent fail - re-attachment is best-effort
-						}
-					}
-
-					if (policyEngine && provenanceMode !== ProvenanceMode.NONE) {
-						await policyEngine.checkTool(toolName, namespace, input as Record<string, unknown>);
-					}
-
-					if (metadata) {
-						const isDestructive = metadata.operationType === ToolOperationType.DESTRUCTIVE;
-						const isSensitive = metadata.sensitivityLevel === ToolSensitivityLevel.SENSITIVE;
-						const needsApproval = metadata.requiresApproval || isDestructive || isSensitive;
-
-						if (needsApproval) {
-							const operationDescription = isDestructive
-								? 'destructive operation'
-								: isSensitive
-									? 'sensitive operation'
-									: 'operation';
-							const approvalMessage = `Approve client tool ${operationDescription}: ${toolName}`;
-
-							const approvalResult = await approval.request(approvalMessage, {
-								tool: toolName,
-								namespace,
-								params: input,
-								metadata: metadata,
-								isClientTool: true,
-							});
-
-							if (!approvalResult || !approvalResult.approved) {
-								throw new Error(`Client tool ${toolName} denied by user`);
-							}
-						}
-					}
-
-					pauseForCallback(CallbackType.TOOL, ToolOperation.CALL, {
-						toolName,
-						namespace,
-						input,
-						sequenceNumber: currentSequence,
-					});
-
-					throw new Error('Tool execution should have paused');
-				} finally {
-					clearCurrentExecutionId();
+					currentSequence = nextSequenceNumber();
+				} catch (seqError) {
+					setCurrentExecutionId(executionId);
+					currentSequence = nextSequenceNumber();
 				}
+
+				const cachedResult = getCachedResult(currentSequence);
+				if (cachedResult !== undefined) {
+					if (
+						cachedResult &&
+						typeof cachedResult === 'object' &&
+						(cachedResult as any).__error
+					) {
+						throw new Error((cachedResult as any).message);
+					}
+
+					return cachedResult;
+				}
+
+				const hintMap = getHintMap(executionId);
+				if (hintMap && hintMap.size > 0 && input && typeof input === 'object') {
+					try {
+						reattachProvenanceFromHints(input as Record<string, unknown>, hintMap);
+					} catch (error) {
+						// Silent fail - re-attachment is best-effort
+					}
+				}
+
+				if (policyEngine && provenanceMode !== ProvenanceMode.NONE) {
+					await policyEngine.checkTool(toolName, namespace, input as Record<string, unknown>);
+				}
+
+				if (metadata) {
+					const isDestructive = metadata.operationType === ToolOperationType.DESTRUCTIVE;
+					const isSensitive = metadata.sensitivityLevel === ToolSensitivityLevel.SENSITIVE;
+					const needsApproval = metadata.requiresApproval || isDestructive || isSensitive;
+
+					if (needsApproval) {
+						const operationDescription = isDestructive
+							? 'destructive operation'
+							: isSensitive
+								? 'sensitive operation'
+								: 'operation';
+						const approvalMessage = `Approve client tool ${operationDescription}: ${toolName}`;
+
+						const approvalResult = await approval.request(approvalMessage, {
+							tool: toolName,
+							namespace,
+							params: input,
+							metadata: metadata,
+							isClientTool: true,
+						});
+
+						if (!approvalResult || !approvalResult.approved) {
+							throw new Error(`Client tool ${toolName} denied by user`);
+						}
+					}
+				}
+
+				pauseForCallback(CallbackType.TOOL, ToolOperation.CALL, {
+					toolName,
+					namespace,
+					input,
+					sequenceNumber: currentSequence,
+				});
+
+				throw new Error('Tool execution should have paused');
 			};
 		}
 

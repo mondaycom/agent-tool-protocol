@@ -44,7 +44,8 @@ class ApprovalAPI {
 			return cachedResult as ApprovalResponse;
 		}
 
-		if (shouldPauseForClient()) {
+		const shouldPause = shouldPauseForClient();
+		if (shouldPause) {
 			pauseForCallback(CallbackType.APPROVAL, ApprovalOperation.REQUEST, {
 				message,
 				context,
@@ -53,7 +54,6 @@ class ApprovalAPI {
 		}
 
 		const handler = getApprovalHandler();
-
 		if (!handler) {
 			throw new Error(
 				'Approval handler not configured. Human approval is required but no handler is set.'

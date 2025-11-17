@@ -10,7 +10,7 @@
 		"build": "nx run-many -t build",
 		"dev": "nx run-many -t dev",
 		"jest": "node --no-node-snapshot node_modules/.bin/jest",
-		"test": "NODE_OPTIONS='--no-node-snapshot' NODE_ENV=test npm run jest -- --testPathIgnorePatterns=packages/atp-compiler --runInBand --forceExit && cd packages/atp-compiler && npm test",
+		"test": "NODE_OPTIONS='--no-node-snapshot' NODE_ENV=test npm run jest -- --runInBand --forceExit",
 		"test:unit": "NODE_OPTIONS='--no-node-snapshot' npm run jest -- __tests__/unit --runInBand && cd packages/atp-compiler && npm test",
 		"test:e2e": "NODE_OPTIONS='--no-node-snapshot' npm run jest -- __tests__/e2e --runInBand --forceExit --testTimeout=120000",
 		"test:e2e:runtime": "NODE_OPTIONS='--no-node-snapshot' npm run jest -- __tests__/e2e/runtime --runInBand --forceExit --testTimeout=120000",

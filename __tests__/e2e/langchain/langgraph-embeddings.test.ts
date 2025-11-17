@@ -139,6 +139,6 @@ describe('LangGraph: Embeddings Support', () => {
 
 		expect(result.result.status).toBe('failed');
 		expect(result.result.error).toBeDefined();
-		expect(result.result.error!.message).toContain('Embedding service not provided by client');
+		expect(result.result.error!.message).toContain('embedding service not provided by client');
 	});
 });

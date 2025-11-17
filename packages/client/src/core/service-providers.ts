@@ -102,6 +102,24 @@ export class ServiceProviders {
 		);
 	}
 
+	/**
+	 * Check if client has a service for a specific callback type
+	 */
+	hasServiceForCallback(callbackType: CallbackType): boolean {
+		switch (callbackType) {
+			case CallbackType.LLM:
+				return !!this.providers.llm;
+			case CallbackType.APPROVAL:
+				return !!this.providers.approval;
+			case CallbackType.EMBEDDING:
+				return !!this.providers.embedding;
+			case CallbackType.TOOL:
+				return this.hasTools();
+			default:
+				return false;
+		}
+	}
+
 	async handleCallback(callbackType: CallbackType, payload: any): Promise<any> {
 		if (payload.operation === 'batch_parallel' && payload.calls) {
 			return await Promise.all(

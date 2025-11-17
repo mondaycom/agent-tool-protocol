@@ -4,7 +4,7 @@
 import type { CacheProvider } from '@mondaydotcomorg/atp-protocol';
 import { log } from '@mondaydotcomorg/atp-runtime';
 import { Serializer } from './serializer.js';
-import type { ExecutionState, StatementState, SerializedValue, BranchDecision } from './types.js';
+import type { BranchDecision, ExecutionState, SerializedValue, StatementState } from './types.js';
 
 export class StateManager {
 	private state: ExecutionState;
@@ -105,6 +105,44 @@ export class StateManager {
 		}
 
 		return result;
+	}
+
+	/**
+	 * Check if a call result is cached (for use from isolate)
+	 */
+	getCached(statementId: number): unknown | null {
+		if (this.resumeMode) {
+			const cached = this.findStatement(statementId);
+			if (cached && cached.result !== undefined) {
+				return this.serializer.deserialize(cached.result);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Store a call result (for use from isolate)
+	 */
+	async storeResult(statementId: number, result: unknown): Promise<void> {
+		try {
+			const serialized = this.serializer.serialize(result);
+			let statement = this.findStatement(statementId);
+			if (!statement) {
+				statement = {
+					id: statementId,
+					executed: true,
+					variables: {},
+					timestamp: Date.now(),
+				};
+				this.state.statements.push([statementId, statement]);
+			}
+			statement.result = serialized;
+			if (this.cache) {
+				await this.persist();
+			}
+		} catch (e) {
+			this.logger.warn('Failed to serialize and store call result', { statementId, error: e });
+		}
 	}
 
 	/**
