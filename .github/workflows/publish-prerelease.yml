@@ -1,0 +1,144 @@
+name: Publish Prerelease
+
+on:
+  workflow_dispatch:
+    inputs:
+      preid:
+        description: 'Prerelease identifier (e.g., beta, rc, alpha)'
+        required: true
+        type: string
+        default: 'rc'
+      tag:
+        description: 'NPM dist-tag (leave empty to auto-use preid value)'
+        required: false
+        type: string
+      skip_version:
+        description: 'Skip versioning (only publish existing versions)'
+        required: false
+        type: boolean
+        default: false
+      skip_git_push:
+        description: 'Skip pushing git commits and tags (for local testing)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  publish-prerelease:
+    name: Publish Prerelease to NPM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to push commit + tags
+      id-token: write   # needed for provenance data generation
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: tree:0
+          ref: ${{ github.ref }}  # Use the branch that triggered the workflow
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+
+      - name: Enable Corepack
+        run: corepack enable
+        shell: bash
+
+      - name: Setup Yarn
+        run: corepack prepare yarn@stable --activate
+        shell: bash
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Cache yarn dependencies
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+        shell: bash
+
+      - name: Print Environment Info
+        run: |
+          yarn nx report
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Preid: ${{ inputs.preid }}"
+        shell: bash
+
+      - name: Build packages
+        run: yarn build
+        shell: bash
+
+      - name: Configure Git
+        if: ${{ !inputs.skip_version }}
+        run: |
+          git config user.name "atp-release[bot]"
+          git config user.email "atp+github-actions[bot]@noreply.github.com"
+        shell: bash
+
+      - name: Version packages (prerelease)
+        if: ${{ !inputs.skip_version }}
+        run: yarn nx release version prerelease --preid=${{ inputs.preid }}
+        shell: bash
+
+      - name: Push version commit and tags
+        if: ${{ !inputs.skip_version && !inputs.skip_git_push }}
+        run: |
+          git push origin HEAD:${{ github.ref_name }}
+          git push --tags
+        shell: bash
+
+      - name: Determine NPM tag
+        id: npm-tag
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "value=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=${{ inputs.preid }}" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      - name: Publish packages to NPM
+        run: yarn nx release publish --tag=${{ steps.npm-tag.outputs.value }}
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Summary
+        run: |
+          echo "## 🚀 Published Prerelease" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Prerelease ID**: \`${{ inputs.preid }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **NPM Tag**: \`${{ steps.npm-tag.outputs.value }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Skipped Versioning**: ${{ inputs.skip_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Skipped Git Push**: ${{ inputs.skip_git_push }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Install this prerelease with:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "npm install @mondaydotcomorg/atp-server@${{ steps.npm-tag.outputs.value }}" >> $GITHUB_STEP_SUMMARY
+          echo "npm install @mondaydotcomorg/atp-client@${{ steps.npm-tag.outputs.value }}" >> $GITHUB_STEP_SUMMARY
+          echo "npm install @mondaydotcomorg/atp-runtime@${{ steps.npm-tag.outputs.value }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Or install a specific package:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "npm install @mondaydotcomorg/<package-name>@${{ steps.npm-tag.outputs.value }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        shell: bash
