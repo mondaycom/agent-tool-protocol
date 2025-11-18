@@ -580,6 +580,10 @@ yarn test:e2e
 yarn lint
 ```
 
+### Publishing
+
+See [docs/publishing.md](./docs/publishing.md) for publishing releases and prereleases.
+
 ## 📦 Requirements
 
 ### Node.js Version

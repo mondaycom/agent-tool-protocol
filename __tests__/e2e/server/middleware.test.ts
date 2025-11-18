@@ -24,7 +24,10 @@ describe('Middleware', () => {
 
 	beforeAll(() => {
 		process.env.ATP_JWT_SECRET = 'test-secret-key-for-e2e-tests-' + Date.now();
-		port = getTestPort();
+	});
+
+	beforeEach(() => {
+		port = getTestPort(); // Fresh port for each test to avoid port conflicts
 	});
 
 	afterEach(async () => {
