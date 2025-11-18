@@ -1,0 +1,28 @@
+{
+	"name": "vercel-ai-sdk-example",
+	"version": "1.0.0",
+	"type": "module",
+	"private": true,
+	"description": "Example demonstrating Vercel AI SDK integration with ATP",
+	"scripts": {
+		"server": "NODE_OPTIONS='--no-node-snapshot' ATP_JWT_SECRET=test-secret-key tsx server.ts",
+		"agent": "NODE_OPTIONS='--no-node-snapshot' tsx agent.ts",
+		"streaming": "NODE_OPTIONS='--no-node-snapshot' tsx streaming.ts",
+		"webhook": "NODE_OPTIONS='--no-node-snapshot' tsx webhook-approval.ts"
+	},
+	"dependencies": {
+		"@ai-sdk/openai": "^1.0.0",
+		"@mondaydotcomorg/atp-server": "workspace:*",
+		"@mondaydotcomorg/atp-vercel-sdk": "workspace:*",
+		"ai": "^4.0.0",
+		"dotenv": "^16.4.5",
+		"express": "^4.21.2",
+		"zod": "^3.23.8"
+	},
+	"devDependencies": {
+		"@types/express": "^5.0.0",
+		"@types/node": "^22.10.2",
+		"tsx": "^4.19.2",
+		"typescript": "^5.3.3"
+	}
+}

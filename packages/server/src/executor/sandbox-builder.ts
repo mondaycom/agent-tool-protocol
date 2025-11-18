@@ -77,13 +77,17 @@ export class SandboxBuilder {
 					},
 				},
 				llm: {
-					call: async (options: {
+					call: async (promptOrOptions: string | {
 						prompt: string;
 						context?: Record<string, unknown>;
 						model?: string;
 						temperature?: number;
 						systemPrompt?: string;
 					}) => {
+						const options = typeof promptOrOptions === 'string' 
+							? { prompt: promptOrOptions }
+							: promptOrOptions;
+
 						if (!config.allowLLMCalls) {
 							throw new Error('LLM calls are not allowed in this execution');
 						}
@@ -95,17 +99,17 @@ export class SandboxBuilder {
 							model: options.model,
 						});
 
-						if (config.customLLMHandler) {
-							return await config.customLLMHandler(options.prompt, options);
-						}
+				if (config.customLLMHandler) {
+					return await config.customLLMHandler(options.prompt, options);
+				}
 
-						setCurrentExecutionId(executionId);
-						try {
-							return await llm.call(options);
-						} finally {
-							clearCurrentExecutionId();
-						}
-					},
+				setCurrentExecutionId(executionId);
+				try {
+					return await llm.call(options);
+				} finally {
+					clearCurrentExecutionId();
+				}
+				},
 					extract: async (options: {
 						prompt: string;
 						schema: unknown;
