@@ -1,6 +1,6 @@
 /**
  * E2E Tests for Compiler Dependency Injection
- * 
+ *
  * Tests that compiler injection works correctly at the createServer level:
  * 1. Default compiler (no injection)
  * 2. Injected PluggableCompiler
@@ -39,13 +39,13 @@ class TestCompiler implements ICompiler {
 	transform(code: string): TransformResult {
 		this.transformCalls++;
 		this.lastTransformedCode = code;
-		
+
 		// Add a unique marker and a test variable to prove transformation happened
 		const transformedCode = `
 			const __TEST_COMPILER_MARKER = 'custom-compiler-executed';
 			${code}
 		`;
-		
+
 		return {
 			code: transformedCode,
 			transformed: true,
@@ -300,10 +300,10 @@ describe('Compiler Dependency Injection E2E', () => {
 
 			// Verify detect was called
 			expect(customCompiler.detectCalls).toBeGreaterThan(0);
-			
+
 			// Verify transform was called (code has 'for (')
 			expect(customCompiler.transformCalls).toBeGreaterThan(0);
-			
+
 			// Verify the code that was detected/transformed
 			expect(customCompiler.lastDetectedCode).toContain('for (');
 			expect(customCompiler.lastTransformedCode).toContain('for (');
@@ -326,11 +326,11 @@ describe('Compiler Dependency Injection E2E', () => {
 
 			const result = await client.execute(code);
 			expect(result.status).toBe('completed');
-			
+
 			// If custom compiler transformation was applied, __TEST_COMPILER_MARKER exists
 			// and result should be 100. If not applied, result would be 42.
 			expect(result.result).toBe(100);
-			
+
 			// Verify the compiler was called
 			expect(customCompiler.transformCalls).toBeGreaterThan(0);
 		});
@@ -410,20 +410,20 @@ describe('Compiler Dependency Injection E2E', () => {
 
 			// Test with each compiler type that gets injected
 			const compilers: Array<{ name: string; compiler: ICompiler; expectedType: string }> = [
-				{ 
-					name: 'pluggable', 
-					compiler: createDefaultCompiler(), 
-					expectedType: 'PluggableCompiler' 
+				{
+					name: 'pluggable',
+					compiler: createDefaultCompiler(),
+					expectedType: 'PluggableCompiler',
 				},
-				{ 
-					name: 'custom', 
-					compiler: new TestCompiler(), 
-					expectedType: 'TestCompiler' 
+				{
+					name: 'custom',
+					compiler: new TestCompiler(),
+					expectedType: 'TestCompiler',
 				},
-				{ 
-					name: 'atp', 
-					compiler: new ATPCompiler(), 
-					expectedType: 'ATPCompiler' 
+				{
+					name: 'atp',
+					compiler: new ATPCompiler(),
+					expectedType: 'ATPCompiler',
 				},
 			];
 
@@ -436,7 +436,7 @@ describe('Compiler Dependency Injection E2E', () => {
 				// Verify injected compiler is stored
 				expect(server.compiler).toBe(compiler);
 				expect(server.compiler!.getType()).toBe(expectedType);
-				
+
 				// Verify getCacheStats exists
 				expect(typeof server.compiler!.getCacheStats).toBe('function');
 

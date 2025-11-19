@@ -1,6 +1,6 @@
 /**
  * Plugin-based ATP Compiler
- * 
+ *
  * Extensible compiler that supports custom plugins for detection,
  * transformation, optimization, and validation
  */
@@ -11,7 +11,12 @@ const traverse = (_traverse as any).default || _traverse;
 import _generate from '@babel/generator';
 const generate = (_generate as any).default || _generate;
 import type * as t from '@babel/types';
-import type { TransformResult, CompilerConfig, TransformMetadata, DetectionResult } from '../types.js';
+import type {
+	TransformResult,
+	CompilerConfig,
+	TransformMetadata,
+	DetectionResult,
+} from '../types.js';
 import { DEFAULT_COMPILER_CONFIG } from '../types.js';
 import { TransformationError } from '../runtime/errors.js';
 import { resetIdCounter } from '../runtime/context.js';
@@ -20,16 +25,16 @@ import type { ICompiler } from '../types/compiler-interface.js';
 
 /**
  * Plugin-based ATP Compiler
- * 
+ *
  * @example
  * ```typescript
  * const compiler = new PluggableCompiler({
  *   enableBatchParallel: true
  * });
- * 
+ *
  * // Register custom plugin
  * compiler.use(myCustomPlugin);
- * 
+ *
  * // Transform code
  * const result = compiler.transform(code);
  * ```
@@ -38,12 +43,12 @@ export class PluggableCompiler implements ICompiler {
 	private config: CompilerConfig;
 	private registry: PluginRegistry;
 	private initialized: boolean = false;
-	
+
 	/**
 	 * AST cache - maps code string to parsed AST
 	 * This avoids re-parsing the same code multiple times
 	 * (e.g., once in detect() and once in transform())
-	 * 
+	 *
 	 * Performance Impact: ~30% reduction in compile time
 	 */
 	private astCache: Map<string, t.File> = new Map();
@@ -160,7 +165,7 @@ export class PluggableCompiler implements ICompiler {
 			const visitors: any = {};
 			for (const transformer of transformers) {
 				const visitor = transformer.getVisitor(this.config);
-				
+
 				// Merge visitors, combining multiple handlers for the same node type
 				for (const [nodeType, handler] of Object.entries(visitor)) {
 					if (!visitors[nodeType]) {
@@ -220,9 +225,8 @@ export class PluggableCompiler implements ICompiler {
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			// Include context about which phase failed
-			const context = detection.patterns.length > 0 
-				? `[Plugin transformation] ${message}` 
-				: message;
+			const context =
+				detection.patterns.length > 0 ? `[Plugin transformation] ${message}` : message;
 			throw new TransformationError(context, code, 'plugin-error');
 		}
 	}
@@ -252,7 +256,7 @@ export class PluggableCompiler implements ICompiler {
 
 	/**
 	 * Parse code to AST with caching
-	 * 
+	 *
 	 * Caches parsed AST to avoid re-parsing the same code multiple times.
 	 * This provides ~30% performance improvement when detect() and transform()
 	 * are called on the same code.
@@ -278,7 +282,7 @@ export class PluggableCompiler implements ICompiler {
 
 	/**
 	 * Clear AST cache
-	 * 
+	 *
 	 * Call this method to free memory if you've compiled many different code snippets.
 	 * The cache is automatically managed and uses Map, so old entries don't leak memory.
 	 */
@@ -315,4 +319,3 @@ export class PluggableCompiler implements ICompiler {
 		}
 	}
 }
-

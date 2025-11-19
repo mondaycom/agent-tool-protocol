@@ -38,4 +38,3 @@ export class DefaultDetectionPlugin implements DetectionPlugin {
 		return this.detector.detect(code);
 	}
 }
-

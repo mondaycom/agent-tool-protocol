@@ -1,6 +1,6 @@
 /**
  * Example: How to create and inject a custom compiler
- * 
+ *
  * This demonstrates the power of dependency injection -
  * you can add new compilers WITHOUT modifying core code!
  */
@@ -39,7 +39,7 @@ class CompilerWrapper {
 
 /**
  * Step 1: Define your custom compiler implementing ICompiler interface
- * 
+ *
  * Example: A compiler that adds timeout checks to every function
  */
 class TimeoutEnforcingCompiler {
@@ -52,7 +52,7 @@ class TimeoutEnforcingCompiler {
 	detect(code: string): DetectionResult {
 		// Detect if code has functions that might run long
 		const hasFunctions = /function|=>|\basync\b/.test(code);
-		
+
 		return {
 			needsTransform: hasFunctions,
 			patterns: hasFunctions ? (['timeout-enforcement'] as unknown as AsyncPattern[]) : [],
@@ -130,10 +130,10 @@ class TimeoutCompilerAdapter implements ICompiler {
 async function useCustomCompilerDirectly() {
 	// Create your custom compiler
 	const customCompiler = new TimeoutCompilerAdapter({ timeout: 3000 });
-	
+
 	// Inject it into the wrapper
 	const compiler = new CompilerWrapper(customCompiler);
-	
+
 	// Use it!
 	const code = `
 		async function processData(data) {
@@ -141,11 +141,11 @@ async function useCustomCompilerDirectly() {
 			return await heavyComputation(data);
 		}
 	`;
-	
+
 	const detection = await compiler.detect(code);
 	console.log('Detection:', detection);
 	// { needsTransform: true, patterns: ['timeout-enforcement'], ... }
-	
+
 	if (detection.needsTransform) {
 		const transformed = await compiler.transform(code);
 		console.log('Transformed code:', transformed.code);
@@ -156,11 +156,11 @@ async function useCustomCompilerDirectly() {
 // ===== METHOD 2: Add to Factory (for production use) =====
 /**
  * In packages/server/src/executor/compiler-config.ts:
- * 
+ *
  * class CompilerFactory {
  *     static create(config): ICompiler {
  *         const compilerType = process.env.ATP_COMPILER_TYPE || 'atp';
- * 
+ *
  *         switch (compilerType) {
  *             case 'timeout':  // ADD THIS
  *                 return new TimeoutCompilerAdapter({
@@ -174,7 +174,7 @@ async function useCustomCompilerDirectly() {
  *         }
  *     }
  * }
- * 
+ *
  * Then use it:
  * ATP_COMPILER_TYPE=timeout TIMEOUT_MS=3000 npm start
  */
@@ -238,7 +238,7 @@ class PerformanceMonitoringCompiler implements ICompiler {
 
 	transform(code: string): TransformResult {
 		const startTime = performance.now();
-		
+
 		// Add performance markers
 		const transformedCode = `
 			performance.mark('code-start');
@@ -280,7 +280,7 @@ class PerformanceMonitoringCompiler implements ICompiler {
 
 /**
  * The key point: You can add ANY compiler you want!
- * 
+ *
  * - Timeout enforcement
  * - Performance monitoring
  * - Security sandboxing
@@ -289,7 +289,7 @@ class PerformanceMonitoringCompiler implements ICompiler {
  * - A/B testing different transformations
  * - Rate limiting
  * - Memory profiling
- * 
+ *
  * Just implement ICompiler and inject it!
  * NO CHANGES to core code required! 🎉
  */
@@ -300,4 +300,3 @@ export {
 	MockCompiler,
 	PerformanceMonitoringCompiler,
 };
-

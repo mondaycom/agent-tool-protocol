@@ -17,6 +17,9 @@ export {
 	restoreProvenanceState,
 	captureProvenanceSnapshot,
 	restoreProvenanceSnapshot,
+	setGlobalProvenanceStore,
+	hydrateProvenance,
+	hydrateExecutionProvenance,
 } from './registry.js';
 
 export {
@@ -44,4 +47,28 @@ export {
 	createCustomPolicy,
 } from './policies/engine.js';
 
+export {
+	createDeclarativePolicy,
+	loadDeclarativePolicies,
+	type DeclarativePolicyConfig,
+	type PolicyConfiguration,
+	type PolicyRule,
+	type Condition,
+	type Operator,
+} from './policies/declarative.js';
+
+export {
+	DeclarativePolicyConfigSchema,
+	PolicyConfigurationSchema,
+	PolicyRuleSchema,
+	ConditionSchema,
+	OperatorSchema,
+	PolicyActionSchema,
+} from './policies/schema.js';
+
+export { PolicyBuilder, RuleBuilder } from './policies/builder.js';
+export { DynamicPolicyRegistry } from './policies/dynamic.js';
+
 export { instrumentCode, createTrackingRuntime } from './ast/instrumentor.js';
+
+export { type ProvenanceStore, InMemoryProvenanceStore } from './store.js';

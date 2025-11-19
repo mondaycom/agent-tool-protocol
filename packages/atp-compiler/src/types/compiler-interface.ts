@@ -7,21 +7,21 @@ import type { DetectionResult, TransformResult } from '../types.js';
 
 /**
  * ICompiler - The core interface that all ATP compilers must implement
- * 
+ *
  * This interface defines the contract for any compiler in the ATP system,
  * enabling dependency injection and easy extensibility.
- * 
+ *
  * @example
  * ```typescript
  * class MyCustomCompiler implements ICompiler {
  *   detect(code: string): DetectionResult {
  *     // Detection logic
  *   }
- *   
+ *
  *   transform(code: string): TransformResult {
  *     // Transformation logic
  *   }
- *   
+ *
  *   getType(): string {
  *     return 'MyCustomCompiler';
  *   }
@@ -76,4 +76,3 @@ export function isCompiler(obj: unknown): obj is ICompiler {
 		typeof (obj as any).getType === 'function'
 	);
 }
-

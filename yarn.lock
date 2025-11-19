@@ -3761,6 +3761,7 @@ __metadata:
     escodegen: "npm:^2.1.0"
     nanoid: "npm:^5.0.0"
     typescript: "npm:^5.3.0"
+    zod: "npm:^3.23.8"
   languageName: unknown
   linkType: soft
 

@@ -85,9 +85,7 @@ class PluggableCompilerAdapter implements ICompiler {
  */
 class CompilerFactory {
 	static create(config: { enableBatchParallel: boolean; batchSizeThreshold: number }): ICompiler {
-		const compilerType = process.env.ATP_USE_PLUGGABLE_COMPILER === 'true' 
-			? 'pluggable' 
-			: 'atp';
+		const compilerType = process.env.ATP_USE_PLUGGABLE_COMPILER === 'true' ? 'pluggable' : 'atp';
 
 		switch (compilerType) {
 			case 'pluggable':
@@ -188,10 +186,12 @@ export async function transformCodeWithCompiler(
 
 	try {
 		// Use injected compiler or create default via factory
-		const compilerImpl = injectedCompiler ?? CompilerFactory.create({
-			enableBatchParallel: true,
-			batchSizeThreshold: ATP_BATCH_SIZE_THRESHOLD,
-		});
+		const compilerImpl =
+			injectedCompiler ??
+			CompilerFactory.create({
+				enableBatchParallel: true,
+				batchSizeThreshold: ATP_BATCH_SIZE_THRESHOLD,
+			});
 		const compiler = new CompilerWrapper(compilerImpl);
 
 		executionLogger.debug('Using ATP compiler', {

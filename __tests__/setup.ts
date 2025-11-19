@@ -1,4 +1,4 @@
-import { resetAllExecutionState } from '@mondaydotcomorg/atp-runtime';
+import { resetAllExecutionState, cleanupOldExecutionStates } from '@mondaydotcomorg/atp-runtime';
 
 /**
  * Global test setup - runs before each test file
@@ -9,8 +9,30 @@ import { resetAllExecutionState } from '@mondaydotcomorg/atp-runtime';
 
 beforeEach(() => {
 	resetAllExecutionState();
+	if (global.gc) {
+		global.gc();
+	}
 });
 
 afterEach(() => {
 	resetAllExecutionState();
+	cleanupOldExecutionStates(0);
+	if (global.gc) {
+		global.gc();
+	}
 });
+
+if (typeof afterAll !== 'undefined') {
+	afterAll(() => {
+		resetAllExecutionState();
+		cleanupOldExecutionStates(0);
+		if (global.gc) {
+			try {
+				global.gc();
+				global.gc();
+			} catch (e) {
+				// Ignore if GC not available
+			}
+		}
+	});
+}

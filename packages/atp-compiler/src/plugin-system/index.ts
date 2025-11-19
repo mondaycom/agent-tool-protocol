@@ -1,8 +1,8 @@
 /**
- * check 
- * 
+ * check
+ *
  * ATP Compiler Plugin System
- * 
+ *
  * Extensible plugin architecture for custom transformations
  */
 
@@ -16,4 +16,3 @@ export * from './default-plugins/index.js';
 // Re-export examples for convenience
 export * from './examples/timeout-plugin.js';
 export * from './examples/security-validator-plugin.js';
-

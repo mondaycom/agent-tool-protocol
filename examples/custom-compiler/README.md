@@ -9,17 +9,25 @@ Thanks to the `ICompiler` interface and dependency injection architecture, you c
 ✅ **Create custom compilers** without modifying core code  
 ✅ **Inject them directly** for testing or specific use cases  
 ✅ **Add them to the factory** for production use via env vars  
-✅ **Combine multiple compilers** through composition  
+✅ **Combine multiple compilers** through composition
 
 ## Quick Example
 
 ```typescript
 // 1. Implement ICompiler
 class MyCompiler implements ICompiler {
-    detect(code: string): DetectionResult { /* ... */ }
-    transform(code: string): TransformResult { /* ... */ }
-    getType(): string { return 'MyCompiler'; }
-    getCacheStats() { return null; }
+	detect(code: string): DetectionResult {
+		/* ... */
+	}
+	transform(code: string): TransformResult {
+		/* ... */
+	}
+	getType(): string {
+		return 'MyCompiler';
+	}
+	getCacheStats() {
+		return null;
+	}
 }
 
 // 2. Inject it
@@ -32,6 +40,7 @@ const result = await compiler.transform(code);
 ## Examples in this Directory
 
 ### 1. **TimeoutEnforcingCompiler**
+
 Automatically adds timeout checks to all async functions.
 
 **Use case**: Prevent runaway functions in serverless environments
@@ -42,6 +51,7 @@ const wrapper = new CompilerWrapper(compiler);
 ```
 
 ### 2. **PerformanceMonitoringCompiler**
+
 Adds performance markers and metrics to code execution.
 
 **Use case**: Track execution time of code segments
@@ -53,16 +63,17 @@ const metrics = compiler.getMetrics();
 ```
 
 ### 3. **MockCompiler**
+
 Simple mock for testing purposes.
 
 **Use case**: Unit tests without real compiler overhead
 
 ```typescript
 it('should transform code', async () => {
-    const mock = new MockCompiler();
-    const compiler = new CompilerWrapper(mock);
-    const result = await compiler.transform('test');
-    expect(result.transformed).toBe(true);
+	const mock = new MockCompiler();
+	const compiler = new CompilerWrapper(mock);
+	const result = await compiler.transform('test');
+	expect(result.transformed).toBe(true);
 });
 ```
 
@@ -74,21 +85,21 @@ To make your custom compiler available in production:
 
 ```typescript
 class CompilerFactory {
-    static create(config): ICompiler {
-        const compilerType = process.env.ATP_COMPILER_TYPE || 'atp';
+	static create(config): ICompiler {
+		const compilerType = process.env.ATP_COMPILER_TYPE || 'atp';
 
-        switch (compilerType) {
-            case 'timeout':
-                return new TimeoutCompilerAdapter(config);
-            case 'performance':
-                return new PerformanceMonitoringCompiler();
-            case 'pluggable':
-                return new PluggableCompilerAdapter(config);
-            case 'atp':
-            default:
-                return new ATPCompilerAdapter(config);
-        }
-    }
+		switch (compilerType) {
+			case 'timeout':
+				return new TimeoutCompilerAdapter(config);
+			case 'performance':
+				return new PerformanceMonitoringCompiler();
+			case 'pluggable':
+				return new PluggableCompilerAdapter(config);
+			case 'atp':
+			default:
+				return new ATPCompilerAdapter(config);
+		}
+	}
 }
 ```
 
@@ -105,59 +116,66 @@ That's it! No other changes needed!
 Here are some ideas for custom compilers you could build:
 
 ### Security Enforcement
+
 ```typescript
 class SecurityCompiler implements ICompiler {
-    // Detect and block dangerous patterns
-    // Add sandboxing
-    // Enforce CSP headers
+	// Detect and block dangerous patterns
+	// Add sandboxing
+	// Enforce CSP headers
 }
 ```
 
 ### Cost Tracking
+
 ```typescript
 class CostTrackingCompiler implements ICompiler {
-    // Track API calls
-    // Calculate compute costs
-    // Enforce budget limits
+	// Track API calls
+	// Calculate compute costs
+	// Enforce budget limits
 }
 ```
 
 ### Rate Limiting
+
 ```typescript
 class RateLimitingCompiler implements ICompiler {
-    // Add rate limit checks to API calls
-    // Track usage per user
-    // Throttle based on limits
+	// Add rate limit checks to API calls
+	// Track usage per user
+	// Throttle based on limits
 }
 ```
 
 ### Memory Profiling
+
 ```typescript
 class MemoryProfilingCompiler implements ICompiler {
-    // Track memory allocations
-    // Detect memory leaks
-    // Add automatic cleanup
+	// Track memory allocations
+	// Detect memory leaks
+	// Add automatic cleanup
 }
 ```
 
 ### A/B Testing
+
 ```typescript
 class ABTestingCompiler implements ICompiler {
-    // Run two different transformations
-    // Compare performance
-    // Automatically select best one
+	// Run two different transformations
+	// Compare performance
+	// Automatically select best one
 }
 ```
 
 ## Architecture Benefits
 
 ### Before (Hardcoded) ❌
+
 - Adding new compiler = modify core code
 - Testing = complex mocking
 - Tight coupling
 - Violates Open/Closed Principle
 
 ### After (Dependency Injection) ✅
+
 - Adding new compiler = implement interface
 - Testing = inject mock
 - Loose coupling
@@ -179,4 +197,3 @@ Want to add a new compiler example?
 4. Submit a PR!
 
 The architecture is designed to be **open for extension**, so we welcome new compiler implementations!
-

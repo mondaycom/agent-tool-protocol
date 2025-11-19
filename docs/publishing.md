@@ -20,6 +20,7 @@ Publish test versions from any branch without affecting production:
 ### Steps:
 
 1. **Push your branch to GitHub**:
+
    ```bash
    git push origin your-branch-name
    ```
@@ -65,6 +66,7 @@ npm install @mondaydotcomorg/atp-server@0.18.4-rc.0
 ### Version increments:
 
 Each time you run the workflow with the same `preid`, the number increments:
+
 - First run: `0.18.4-rc.0`
 - Second run: `0.18.4-rc.1`
 - Third run: `0.18.4-rc.2`
@@ -105,4 +107,3 @@ npm install @mondaydotcomorg/atp-server@test
 - Multiple prereleases can exist simultaneously with different tags
 - Use `skip_version` if you manually versioned and just want to publish
 - Use `skip_git_push` for testing without pushing commits
-

@@ -59,4 +59,3 @@ console.log('✅ Custom API group added!');
 
 console.log('\n🚀 Ready to accept requests!');
 console.log('   Try: curl http://localhost:3000/atp/definitions');
-

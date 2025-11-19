@@ -398,4 +398,3 @@ describe('Plugin Integration', () => {
 		expect(result.metadata.loopCount).toBeGreaterThan(0);
 	});
 });
-

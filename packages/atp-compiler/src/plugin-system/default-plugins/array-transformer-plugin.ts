@@ -54,4 +54,3 @@ export class DefaultArrayTransformerPlugin implements TransformationPlugin {
 		return arrayMethods.includes(property.name);
 	}
 }
-
