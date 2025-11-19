@@ -8,7 +8,7 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-let portCounter = 5000;
+let portCounter = 10000 + Math.floor(Math.random() * 10000);
 
 export function getTestPort(): number {
 	return portCounter++;

@@ -6,6 +6,7 @@ import type {
 	ProvenanceState,
 } from './types.js';
 import { computeDigest } from './tokens.js';
+import { type ProvenanceStore, InMemoryProvenanceStore } from './store.js';
 
 const PROVENANCE_KEY = '__provenance__';
 const PROVENANCE_ID_KEY = '__prov_id__';
@@ -20,6 +21,15 @@ let currentExecutionId: string | null = null;
 const primitiveProvenanceMap = new Map<string, ProvenanceMetadata>();
 
 const executionTaintedPrimitives = new Map<string, Set<unknown>>();
+
+let globalStore: ProvenanceStore = new InMemoryProvenanceStore();
+
+/**
+ * Set the global provenance store implementation
+ */
+export function setGlobalProvenanceStore(store: ProvenanceStore): void {
+	globalStore = store;
+}
 
 /**
  * Mark a primitive value as tainted (derived from tool data)
@@ -39,6 +49,10 @@ export function markPrimitiveTainted(value: unknown, sourceMetadata: ProvenanceM
 
 	const key = `tainted:${String(value)}`;
 	primitiveProvenanceMap.set(key, sourceMetadata);
+
+	globalStore.setPrimitive(key, sourceMetadata, currentExecutionId || undefined).catch((err) => {
+		console.warn('Failed to save primitive taint to provenance store', err);
+	});
 }
 
 /**
@@ -81,6 +95,52 @@ export function clearProvenanceExecutionId(): void {
 }
 
 /**
+ * Hydrate provenance metadata for an execution (Multi-pod support)
+ * Call this when resuming an execution on a new pod to warm up the local cache
+ */
+export async function hydrateProvenance(ids: string[]): Promise<void> {
+	const batch = await globalStore.getBatch(ids);
+	for (const [id, metadata] of batch.entries()) {
+		provenanceRegistry.set(id, metadata);
+		if (currentExecutionId) {
+			let execIds = executionProvenanceIds.get(currentExecutionId);
+			if (!execIds) {
+				execIds = new Set();
+				executionProvenanceIds.set(currentExecutionId, execIds);
+			}
+			execIds.add(id);
+		}
+	}
+}
+
+/**
+ * Hydrate all provenance for a specific execution ID (if store supports tracking by execution)
+ * Note: Standard InMemoryProvenanceStore tracks execution IDs, but Redis implementations might need explicit sets
+ */
+export async function hydrateExecutionProvenance(executionId: string): Promise<void> {
+	const batch = await globalStore.getExecution(executionId);
+	for (const [id, metadata] of batch.entries()) {
+		provenanceRegistry.set(id, metadata);
+
+		// Also track in current execution context (re-bind to new execution scope if needed)
+		// Or just ensure it's in registry for reading.
+		// Typically, we just want it available for reading.
+		// If we want to ensure cleanup works for the *new* resumed execution, we might need to track it.
+		// But usually resumed execution has same ID?
+		// If executionId passed here IS the currentExecutionId, we track it.
+
+		if (currentExecutionId === executionId) {
+			let executionSet = executionProvenanceIds.get(executionId);
+			if (!executionSet) {
+				executionSet = new Set();
+				executionProvenanceIds.set(executionId, executionSet);
+			}
+			executionSet.add(id);
+		}
+	}
+}
+
+/**
  * Register provenance metadata directly (for AST tracking in isolated-vm)
  */
 export function registerProvenanceMetadata(
@@ -90,6 +150,10 @@ export function registerProvenanceMetadata(
 ): void {
 	if (id.startsWith('tainted:') || id.includes(':')) {
 		primitiveProvenanceMap.set(id, metadata);
+
+		globalStore.setPrimitive(id, metadata, executionId).catch((err) => {
+			console.warn('Failed to save primitive provenance to store', err);
+		});
 
 		if (id.startsWith('tainted:')) {
 			const value = id.slice('tainted:'.length);
@@ -104,6 +168,9 @@ export function registerProvenanceMetadata(
 		}
 	} else {
 		provenanceRegistry.set(id, metadata);
+		globalStore.set(id, metadata, executionId).catch((err) => {
+			console.warn('Failed to save provenance to store', err);
+		});
 	}
 
 	if (executionId) {
@@ -139,6 +206,11 @@ export function cleanupProvenanceForExecution(executionId: string): void {
 	}
 
 	executionTaintedPrimitives.delete(executionId);
+
+	// Cleanup from persistent store
+	globalStore.cleanupExecution(executionId).catch((err) => {
+		console.warn('Failed to cleanup provenance store', err);
+	});
 }
 
 /**
@@ -255,6 +327,7 @@ export function restoreProvenanceState(
 	for (const [id, metadata] of state) {
 		provenanceRegistry.set(id, metadata);
 		ids.add(id);
+		globalStore.set(id, metadata, executionId).catch(console.error);
 	}
 }
 
@@ -273,6 +346,7 @@ export function restoreProvenanceSnapshot(
 
 	for (const [key, meta] of snapshot.primitives) {
 		primitiveProvenanceMap.set(key, meta);
+		globalStore.setPrimitive(key, meta, executionId).catch(console.error);
 
 		if (key.startsWith('tainted:')) {
 			const value = key.slice('tainted:'.length);
@@ -325,12 +399,18 @@ export function createProvenanceProxy<T>(
 		}
 	}
 
+	globalStore.set(id, metadata, currentExecutionId || undefined).catch((err) => {
+		console.warn('Failed to persist provenance to store', err);
+	});
+
 	try {
 		Object.defineProperty(value, PROVENANCE_ID_KEY, {
 			value: id,
 			writable: false,
 			enumerable: true,
 			configurable: true,
+			// @ts-ignore
+			__proto__: null,
 		});
 	} catch (e) {
 		provenanceStore.set(value as object, metadata);
@@ -355,6 +435,9 @@ export function createProvenanceProxy<T>(
 				} else if (typeof nestedValue === 'string' || typeof nestedValue === 'number') {
 					const primitiveKey = `${id}:${key}:${String(nestedValue)}`;
 					primitiveProvenanceMap.set(primitiveKey, metadata);
+					globalStore
+						.setPrimitive(primitiveKey, metadata, currentExecutionId || undefined)
+						.catch(console.error);
 				}
 			}
 		}

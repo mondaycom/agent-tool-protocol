@@ -44,4 +44,3 @@ export class DefaultLoopTransformerPlugin implements TransformationPlugin {
 		this.transformer.resetTransformCount();
 	}
 }
-

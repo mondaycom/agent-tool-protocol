@@ -76,7 +76,7 @@ describe('Cross-Pod Resume E2E (Redis/FileCache)', () => {
 	afterAll(async () => {
 		if (server1) await server1.stop();
 		if (server2) await server2.stop();
-		
+
 		// Safe cleanup - handle already-closed or non-existent connections
 		if (redis1) {
 			try {
@@ -92,7 +92,7 @@ describe('Cross-Pod Resume E2E (Redis/FileCache)', () => {
 				// Ignore - connection already closed or never opened
 			}
 		}
-		
+
 		delete process.env.ATP_JWT_SECRET;
 	});
 

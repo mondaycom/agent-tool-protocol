@@ -1,8 +1,8 @@
 /**
  * Example Plugin: Security Validator
- * 
+ *
  * Validates code for security issues before transformation
- * 
+ *
  * @example
  * const compiler = new PluggableCompiler();
  * compiler.use(new SecurityValidatorPlugin({
@@ -165,4 +165,3 @@ function getDepth(path: any): number {
 
 	return depth;
 }
-

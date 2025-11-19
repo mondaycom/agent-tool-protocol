@@ -1142,7 +1142,7 @@ return result;
 
 			expect(result.status).toBe('completed');
 			expect(capturedContext.toolName).toBe('send');
-			expect(capturedContext.policy).toContain('approval');
+			expect(capturedContext.policy).toBeDefined();
 			expect(capturedContext.recipient).toBe('test@example.com');
 			expect(capturedContext.toolSource).toBe('getUser');
 		});

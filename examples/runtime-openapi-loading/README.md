@@ -22,18 +22,18 @@ const server = createServer();
 
 // Works before starting
 await server.loadOpenAPI('http://localhost:3040/openapi.json', {
-  name: 'demo',
+	name: 'demo',
 });
 
 await server.listen(3000);
 
 // Same method works after starting too!
 await server.loadOpenAPI('http://api.example.com/openapi.json', {
-  name: 'another-api',
-  filter: {
-    methods: ['GET', 'POST'],
-    tags: ['pets'],
-  },
+	name: 'another-api',
+	filter: {
+		methods: ['GET', 'POST'],
+		tags: ['pets'],
+	},
 });
 ```
 
@@ -53,6 +53,7 @@ server.use(apiGroup);
 ## When to Use Runtime Loading
 
 Runtime loading is useful when:
+
 - You need to load APIs from external services
 - API specifications are discovered dynamically
 - You want to hot-reload API configurations
@@ -64,10 +65,12 @@ Runtime loading is useful when:
 The server intelligently handles both scenarios:
 
 **Before server starts** (`use()` / `loadOpenAPI()`):
+
 - Simply adds to the configuration arrays
 - No component updates needed
 
 **After server starts** (`use()` / `loadOpenAPI()`):
+
 - Adds to the configuration arrays
 - Automatically recreates search engine with new groups
 - Automatically recreates explorer service with new groups
@@ -90,6 +93,7 @@ npm run dev examples/runtime-openapi-loading/server.ts
 Loads an OpenAPI spec and adds it to the server. Works both before and after server starts.
 
 **Parameters:**
+
 - `source`: URL or file path to OpenAPI spec
 - `options`: OpenAPI loader options
   - `name`: API group name
@@ -104,9 +108,9 @@ Loads an OpenAPI spec and adds it to the server. Works both before and after ser
 Adds middleware or API groups to the server. Works both before and after server starts.
 
 **Parameters:**
+
 - `items`: Middleware functions or API group configurations
 
 **Returns:** `this` for chaining
 
 **Throws:** Error if trying to add middleware after server has started.
-

@@ -1,6 +1,6 @@
 /**
  * Factory function to create a PluggableCompiler with all default plugins
- * 
+ *
  * This makes PluggableCompiler a drop-in replacement for ATPCompiler
  */
 
@@ -13,9 +13,9 @@ import type { CompilerConfig } from '../types.js';
 
 /**
  * Create a PluggableCompiler with all default ATP transformations
- * 
+ *
  * This provides the same functionality as ATPCompiler but with plugin extensibility.
- * 
+ *
  * @example
  * ```typescript
  * // Drop-in replacement for ATPCompiler
@@ -23,10 +23,10 @@ import type { CompilerConfig } from '../types.js';
  *     enableBatchParallel: true,
  *     maxBatchSize: 10,
  * });
- * 
+ *
  * // Works exactly like ATPCompiler
  * const result = await compiler.transform(code);
- * 
+ *
  * // But you can also add custom plugins!
  * compiler.use(myCustomPlugin);
  * ```
@@ -45,13 +45,12 @@ export function createDefaultCompiler(config: Partial<CompilerConfig> = {}): Plu
 
 /**
  * Type alias for backward compatibility
- * 
+ *
  * This allows:
  * ```typescript
  * import type { ATPCompilerLike } from '@mondaydotcomorg/atp-compiler';
- * 
+ *
  * const compiler: ATPCompilerLike = createDefaultCompiler();
  * ```
  */
 export type ATPCompilerLike = PluggableCompiler;
-

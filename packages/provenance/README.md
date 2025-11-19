@@ -24,6 +24,7 @@ graph TB
     ProvenanceSystem --> Policy[Policy Engine]
     Policy --> BuiltIn[Built-in Policies]
     Policy --> Custom[Custom Policies]
+    Policy --> Declarative[Declarative Policies]
 
     Proxy --> ProxyAPI[createProvenanceProxy]
     AST --> Compiler[instrumentCode]
@@ -131,7 +132,60 @@ import {
 } from '@mondaydotcomorg/atp-provenance';
 ```
 
-### Custom Policies
+### Declarative Policies (JSON Configuration)
+
+Designed for security teams to define policies without writing code. Supports AWS IAM-style JSON configuration.
+
+```typescript
+import { createDeclarativePolicy, SecurityPolicyEngine } from '@mondaydotcomorg/atp-provenance';
+
+const config = {
+	id: 'block-external-emails',
+	scope: { toolName: 'send' },
+	rules: [
+		{
+			action: 'block',
+			conditions: [
+				// Check argument value
+				{ field: 'args.to', operator: 'notEndsWith', value: '@company.com' },
+				// Check provenance of argument
+				{ field: 'provenance.args.body.source.type', operator: 'equals', value: 'user' },
+			],
+			reason: 'Cannot send internal user data to external email addresses',
+		},
+	],
+};
+
+const policy = createDeclarativePolicy(config);
+const engine = new SecurityPolicyEngine([policy], console);
+```
+
+**JSON Schema Structure:**
+
+```json
+{
+	"policies": [
+		{
+			"id": "policy-id",
+			"scope": { "toolName": "^send.*" },
+			"rules": [
+				{
+					"action": "block", // or "approve", "log"
+					"conditions": [
+						{
+							"field": "args.param",
+							"operator": "equals", // equals, contains, startsWith, matches...
+							"value": "expected-value"
+						}
+					]
+				}
+			]
+		}
+	]
+}
+```
+
+### Custom Policies (Code)
 
 ```typescript
 import { createCustomPolicy, type SecurityPolicy } from '@mondaydotcomorg/atp-provenance';
@@ -389,6 +443,13 @@ createTrackingRuntime(): Runtime
 new SecurityPolicyEngine(policies: SecurityPolicy[], logger: Logger)
 engine.checkTool(toolName: string, apiGroup: string, args: unknown): Promise<void>
 engine.setApprovalCallback(callback: ApprovalCallback): void
+```
+
+### Declarative Policies
+
+```typescript
+createDeclarativePolicy(config: DeclarativePolicyConfig): SecurityPolicy
+loadDeclarativePolicies(config: PolicyConfiguration): SecurityPolicy[]
 ```
 
 ### State Management

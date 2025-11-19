@@ -408,13 +408,13 @@ export class SandboxExecutor {
 				!astInstrumented &&
 				!alreadyTransformed
 			) {
-			const compilerResult = await transformCodeWithCompiler(
-				code,
-				executionId,
-				this.config.cacheProvider,
-				executionLogger,
-				this.compiler
-			);
+				const compilerResult = await transformCodeWithCompiler(
+					code,
+					executionId,
+					this.config.cacheProvider,
+					executionLogger,
+					this.compiler
+				);
 				codeToExecute = compilerResult.code;
 				useCompiler = compilerResult.useCompiler;
 			} else if (alreadyTransformed) {

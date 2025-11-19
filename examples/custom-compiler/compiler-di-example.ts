@@ -1,6 +1,6 @@
 /**
  * Example: Dependency Injection of Custom Compiler at Server Level
- * 
+ *
  * This demonstrates how to inject a custom compiler when creating the ATP server.
  * The compiler is injected at the top level (createServer) and flows down through the system.
  */
@@ -217,15 +217,15 @@ const testServer = createServer({
 /**
  * 1. **Top-Level Injection**: Compiler is injected at server creation,
  *    not deep in the execution flow.
- * 
+ *
  * 2. **Testability**: Easy to inject mock compilers for testing.
- * 
+ *
  * 3. **Flexibility**: Switch compilers at runtime via environment variables.
- * 
+ *
  * 4. **No Code Changes**: Existing code continues to work (uses default).
- * 
+ *
  * 5. **Explicit Configuration**: Clear what compiler is being used.
- * 
+ *
  * 6. **Follows SOLID**: Dependency Inversion Principle properly applied.
  */
 
@@ -239,4 +239,3 @@ export {
 	CustomTimeoutCompiler,
 	MockCompiler,
 };
-

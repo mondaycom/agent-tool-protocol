@@ -49,6 +49,8 @@ module.exports = {
 	},
 	testTimeout: 30000,
 	verbose: true,
+	maxWorkers: 1,
+	workerIdleMemoryLimit: '512MB',
 	extensionsToTreatAsEsm: [],
 	resolver: '<rootDir>/jest-resolver.js',
 	transformIgnorePatterns: [

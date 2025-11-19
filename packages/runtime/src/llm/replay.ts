@@ -28,6 +28,19 @@ interface ExecutionState {
 const executionStates = new Map<string, ExecutionState>();
 
 /**
+ * Maximum number of execution states to keep in memory
+ * After this limit, old states are automatically cleaned up
+ */
+const MAX_EXECUTION_STATES = 100;
+
+/**
+ * Automatic cleanup check counter
+ * Every N operations, we check if cleanup is needed
+ */
+let operationCounter = 0;
+const CLEANUP_CHECK_INTERVAL = 50;
+
+/**
  * AsyncLocalStorage for execution ID - provides proper async context isolation
  * This ensures each async execution chain has its own isolated execution ID
  */
@@ -73,9 +86,12 @@ function getCurrentState(): ExecutionState {
 		);
 	}
 
-	console.log(
-		`[STATE] getCurrentState: executionId=${executionId}, hasState=${executionStates.has(executionId)}, totalStates=${executionStates.size}, stateKeys=${Array.from(executionStates.keys())}`
-	);
+	// Automatic cleanup check (every N operations)
+	operationCounter++;
+	if (operationCounter >= CLEANUP_CHECK_INTERVAL) {
+		operationCounter = 0;
+		autoCleanup();
+	}
 
 	let state = executionStates.get(executionId);
 	if (!state) {
@@ -93,10 +109,6 @@ function getCurrentState(): ExecutionState {
 			createdAt: Date.now(),
 		};
 		executionStates.set(executionId, state);
-	} else {
-		console.log(
-			`[STATE] Found existing state: shouldPause=${state.shouldPauseForClient}, hasReplay=${!!state.replayResults}, seqNum=${state.callSequenceNumber}`
-		);
 	}
 	return state;
 }
@@ -113,10 +125,6 @@ export function initializeExecutionState(shouldPause: boolean): void {
 		);
 	}
 
-	console.log(
-		`[INIT] initializeExecutionState called: executionId=${executionId}, shouldPause=${shouldPause}, existingState=${executionStates.has(executionId)}`
-	);
-
 	const existingState = executionStates.get(executionId);
 	if (existingState) {
 		existingState.shouldPauseForClient = shouldPause;
@@ -126,9 +134,6 @@ export function initializeExecutionState(shouldPause: boolean): void {
 		if (!existingState.apiResultCache) {
 			existingState.apiResultCache = undefined;
 		}
-		console.log(
-			`[INIT] Preserving existing state: replaySize=${existingState.replayResults?.size || 0}, counter=${existingState.callSequenceNumber}`
-		);
 		return;
 	}
 
@@ -140,7 +145,6 @@ export function initializeExecutionState(shouldPause: boolean): void {
 		apiResultCache: undefined,
 		createdAt: Date.now(),
 	};
-	console.log(`[INIT] Creating new state: shouldPause=${shouldPause}`);
 	executionStates.set(executionId, state);
 }
 
@@ -185,33 +189,15 @@ export function shouldPauseForClient(): boolean {
  * @param results - Map of sequence number to result for replaying callbacks
  */
 export function setReplayMode(results: Map<number, unknown> | undefined): void {
-	const executionId = currentExecutionId || executionContext.getStore();
-	console.log(
-		`[REPLAY] setReplayMode called: executionId=${executionId}, replaySize=${results?.size || 0}, replayKeys=${results ? Array.from(results.keys()) : []}`
-	);
 	const state = getCurrentState();
 
 	// Store replay results
-	const oldSize = state.replayResults?.size || 0;
 	state.replayResults = results;
 
 	// Always reset counter when setting replay mode
 	// - When entering replay mode with cached results: start from 0 to match first call
 	// - When clearing replay mode (results=undefined): reset to 0 for clean state
-	const oldCounter = state.callSequenceNumber;
 	state.callSequenceNumber = 0;
-
-	if (results && results.size > 0) {
-		console.log(
-			`[REPLAY] Entering replay mode: ${oldCounter} -> 0 (have ${results.size} cached results)`
-		);
-	} else {
-		console.log(`[REPLAY] Clearing replay mode: ${oldCounter} -> 0`);
-	}
-
-	console.log(
-		`[REPLAY] setReplayMode completed: oldSize=${oldSize}, newSize=${state.replayResults?.size || 0}, callSequenceNumber=${state.callSequenceNumber}`
-	);
 }
 
 /**
@@ -219,9 +205,6 @@ export function setReplayMode(results: Map<number, unknown> | undefined): void {
  */
 export function getCallSequenceNumber(): number {
 	const state = getCurrentState();
-	console.log(
-		`[GET_SEQ] getCallSequenceNumber called: returning ${state.callSequenceNumber}, hasReplay=${!!state.replayResults}, replaySize=${state.replayResults?.size || 0}`
-	);
 	return state.callSequenceNumber;
 }
 
@@ -232,9 +215,6 @@ export function nextSequenceNumber(): number {
 	const state = getCurrentState();
 	const current = state.callSequenceNumber;
 	state.callSequenceNumber++;
-	console.log(
-		`[SEQUENCE] nextSequenceNumber: returning ${current}, next will be ${state.callSequenceNumber}, isReplay=${state.replayResults !== undefined}, replaySize=${state.replayResults?.size || 0}`
-	);
 	return current;
 }
 
@@ -243,18 +223,9 @@ export function nextSequenceNumber(): number {
  */
 export function getCachedResult(sequenceNumber: number): unknown | undefined {
 	const state = getCurrentState();
-	console.log(
-		`[CACHE] getCachedResult(${sequenceNumber}): hasReplayResults=${!!state.replayResults}, replayKeys=${state.replayResults ? Array.from(state.replayResults.keys()) : []}`
-	);
 	if (state.replayResults && state.replayResults.has(sequenceNumber)) {
-		const result = state.replayResults.get(sequenceNumber);
-		console.log(
-			`[CACHE] Found cached result for sequence ${sequenceNumber}:`,
-			JSON.stringify(result)
-		);
-		return result;
+		return state.replayResults.get(sequenceNumber);
 	}
-	console.log(`[CACHE] No cached result for sequence ${sequenceNumber}`);
 	return undefined;
 }
 
@@ -334,6 +305,28 @@ export function cleanupExecutionState(executionId: string): void {
 	executionStates.delete(executionId);
 	if (currentExecutionId === executionId) {
 		currentExecutionId = null;
+	}
+}
+
+/**
+ * Automatic cleanup when state count exceeds maximum
+ * Removes oldest states to keep memory usage bounded
+ */
+function autoCleanup(): void {
+	if (executionStates.size <= MAX_EXECUTION_STATES) {
+		return;
+	}
+
+	const entries = Array.from(executionStates.entries()).sort(
+		(a, b) => a[1].createdAt - b[1].createdAt
+	);
+
+	const toRemove = executionStates.size - MAX_EXECUTION_STATES;
+	for (let i = 0; i < toRemove; i++) {
+		const entry = entries[i];
+		if (entry) {
+			executionStates.delete(entry[0]);
+		}
 	}
 }
 

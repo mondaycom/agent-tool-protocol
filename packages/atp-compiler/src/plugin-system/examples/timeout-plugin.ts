@@ -1,16 +1,16 @@
 /**
  * Example Plugin: Async Timeout Wrapper
- * 
+ *
  * Automatically wraps await expressions with timeout protection
- * 
+ *
  * @example
  * // Before:
  * const result = await fetch('https://api.example.com');
- * 
+ *
  * // After:
  * const result = await Promise.race([
  *   fetch('https://api.example.com'),
- *   new Promise((_, reject) => 
+ *   new Promise((_, reject) =>
  *     setTimeout(() => reject(new Error('Timeout')), 5000)
  *   )
  * ]);
@@ -63,31 +63,26 @@ export class AsyncTimeoutPlugin implements TransformationPlugin {
 				}
 
 				// Create timeout promise
-				const timeoutPromise = t.newExpression(
-					t.identifier('Promise'),
-					[
-						t.arrowFunctionExpression(
-							[t.identifier('_'), t.identifier('reject')],
-							t.blockStatement([
-								t.expressionStatement(
-									t.callExpression(t.identifier('setTimeout'), [
-										t.arrowFunctionExpression(
-											[],
-											t.callExpression(t.identifier('reject'), [
-												t.newExpression(t.identifier('Error'), [
-													t.stringLiteral(
-														`Timeout after ${this.options.timeout}ms`
-													),
-												]),
-											])
-										),
-										t.numericLiteral(this.options.timeout!),
-									])
-								),
-							])
-						),
-					]
-				);
+				const timeoutPromise = t.newExpression(t.identifier('Promise'), [
+					t.arrowFunctionExpression(
+						[t.identifier('_'), t.identifier('reject')],
+						t.blockStatement([
+							t.expressionStatement(
+								t.callExpression(t.identifier('setTimeout'), [
+									t.arrowFunctionExpression(
+										[],
+										t.callExpression(t.identifier('reject'), [
+											t.newExpression(t.identifier('Error'), [
+												t.stringLiteral(`Timeout after ${this.options.timeout}ms`),
+											]),
+										])
+									),
+									t.numericLiteral(this.options.timeout!),
+								])
+							),
+						])
+					),
+				]);
 
 				// Wrap in Promise.race
 				const raceCall = t.callExpression(
@@ -155,4 +150,3 @@ export class AsyncTimeoutPlugin implements TransformationPlugin {
 		return null;
 	}
 }
-

@@ -103,7 +103,7 @@ describe('Default Compiler - Functional Equivalence', () => {
 			// Code should contain transformation
 			expect(pluggableResult.code).toContain('map');
 			expect(atpResult.code).toContain('map');
-			
+
 			// Metadata counts should match
 			expect(pluggableResult.metadata).toMatchObject({
 				loopCount: atpResult.metadata.loopCount,
@@ -198,7 +198,7 @@ describe('Default Compiler - Functional Equivalence', () => {
 					customPluginExecuted = false;
 				},
 			};
-			
+
 			compiler.use(customPlugin);
 
 			// Use code that will trigger transformation
@@ -256,4 +256,3 @@ describe('Default Compiler - Functional Equivalence', () => {
 		});
 	});
 });
-

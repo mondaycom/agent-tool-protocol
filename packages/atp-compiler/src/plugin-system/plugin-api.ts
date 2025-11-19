@@ -1,6 +1,6 @@
 /**
  * ATP Compiler Plugin API
- * 
+ *
  * Extensible plugin system for custom transformations and detections
  */
 
@@ -327,4 +327,3 @@ export function createTransformPlugin(config: {
 		},
 	};
 }
-

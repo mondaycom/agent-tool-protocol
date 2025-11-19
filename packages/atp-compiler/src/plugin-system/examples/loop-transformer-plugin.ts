@@ -1,6 +1,6 @@
 /**
  * Example: Loop Transformer as a Plugin
- * 
+ *
  * Shows how to migrate existing LoopTransformer to plugin architecture
  * This demonstrates the migration path for built-in transformers
  */
@@ -13,7 +13,7 @@ import { LoopTransformer } from '../../transformer/loop-transformer.js';
 
 /**
  * Loop Transformer Plugin
- * 
+ *
  * Transforms for...of, while, and for loops into resumable versions
  * with checkpoint-based state management
  */
@@ -73,4 +73,3 @@ export class LoopTransformerPlugin implements TransformationPlugin {
 export function createLoopTransformerPlugin(batchSizeThreshold?: number): LoopTransformerPlugin {
 	return new LoopTransformerPlugin(batchSizeThreshold);
 }
-

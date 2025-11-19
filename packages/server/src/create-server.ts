@@ -12,6 +12,11 @@ import { ProvenanceMode } from '@mondaydotcomorg/atp-protocol';
 import { log, initializeLogger } from '@mondaydotcomorg/atp-runtime';
 import { shutdownLogger } from '@mondaydotcomorg/atp-runtime';
 import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
+import {
+	DynamicPolicyRegistry,
+	type DeclarativePolicyConfig,
+	type SecurityPolicy,
+} from '@mondaydotcomorg/atp-provenance';
 import type {
 	ServerConfig,
 	Middleware,
@@ -49,6 +54,8 @@ export class AgentToolProtocolServer {
 	private httpServer: ReturnType<typeof createHTTPServer> | null = null;
 	private responseHeaders: Map<IncomingMessage, Map<string, string>> = new Map();
 	private isRunning: boolean = false;
+	private policyRegistry: DynamicPolicyRegistry;
+
 	sessionManager?: ClientSessionManager;
 	executor?: SandboxExecutor;
 	validator?: CodeValidator;
@@ -67,13 +74,18 @@ export class AgentToolProtocolServer {
 	private customLogger?: any;
 
 	constructor(config: ServerConfig = {}) {
+		// Initialize DynamicPolicyRegistry with policies from config
+		const initialPolicies = config.execution?.securityPolicies ?? [];
+		this.policyRegistry = new DynamicPolicyRegistry(initialPolicies);
+
 		this.config = {
 			execution: {
 				timeout: config.execution?.timeout ?? 30000,
 				memory: config.execution?.memory ?? 128 * MB,
 				llmCalls: config.execution?.llmCalls ?? 10,
 				provenanceMode: config.execution?.provenanceMode ?? ProvenanceMode.NONE,
-				securityPolicies: config.execution?.securityPolicies ?? [],
+				// Override policies to use the dynamic registry as the single entry point
+				securityPolicies: [this.policyRegistry],
 			},
 			clientInit: {
 				tokenTTL: config.clientInit?.tokenTTL ?? HOUR,
@@ -181,11 +193,73 @@ export class AgentToolProtocolServer {
 	}
 
 	/**
+	 * Add a security policy (programmatic SecurityPolicy object)
+	 * @example
+	 * server.addPolicy(preventDataExfiltration);
+	 */
+	addPolicy(policy: SecurityPolicy): this {
+		this.policyRegistry.addPolicy(policy);
+		log.info('Security policy added', { name: policy.name });
+		return this;
+	}
+
+	/**
+	 * Add multiple security policies
+	 */
+	addPolicies(policies: SecurityPolicy[]): this {
+		for (const policy of policies) {
+			this.policyRegistry.addPolicy(policy);
+		}
+		log.info('Security policies added', { count: policies.length });
+		return this;
+	}
+
+	/**
+	 * Load declarative policies from JSON configuration
+	 * @example
+	 * server.loadPolicies([{
+	 *   id: 'block-llm-payments',
+	 *   scope: { toolName: 'payment.*' },
+	 *   rules: [{ action: 'block', conditions: [...] }]
+	 * }]);
+	 */
+	loadPolicies(configs: DeclarativePolicyConfig[], replace = false): this {
+		this.policyRegistry.loadFromConfigs(configs, replace);
+		log.info('Declarative policies loaded', { count: configs.length, replace });
+		return this;
+	}
+
+	/**
+	 * Remove a policy by name
+	 */
+	removePolicy(name: string): this {
+		this.policyRegistry.removePolicy(name);
+		log.info('Security policy removed', { name });
+		return this;
+	}
+
+	/**
+	 * Clear all policies
+	 */
+	clearPolicies(): this {
+		this.policyRegistry.clear();
+		log.info('All security policies cleared');
+		return this;
+	}
+
+	/**
+	 * Get all active policies
+	 */
+	getPolicies(): SecurityPolicy[] {
+		return this.policyRegistry.getPolicies();
+	}
+
+	/**
 	 * Register middleware or API groups.
 	 * Can be called before OR after server starts.
 	 * - Before start: Simply adds to configuration
 	 * - After start: Dynamically updates running server components
-	 * 
+	 *
 	 * Note: Middleware can only be added before server starts.
 	 * @throws {Error} If trying to add middleware after server has started
 	 */
@@ -207,7 +281,9 @@ export class AgentToolProtocolServer {
 		// Middleware can only be added before server starts
 		if (middlewareItems.length > 0) {
 			if (this.isRunning) {
-				throw new Error('Cannot add middleware after server has started. Add middleware before calling listen().');
+				throw new Error(
+					'Cannot add middleware after server has started. Add middleware before calling listen().'
+				);
 			}
 			this.middleware.push(...middlewareItems);
 		}
@@ -300,10 +376,12 @@ export class AgentToolProtocolServer {
 		return this;
 	}
 
-	async listen(port: number): Promise<void> {
-		if (this.httpServer) {
-			throw new Error('Server is already running');
-		}
+	/**
+	 * Initialize server components without starting HTTP server.
+	 * Call this when using handler(), toExpress() or toFastify().
+	 */
+	async start(): Promise<void> {
+		if (this.isRunning) return;
 
 		this.isRunning = true;
 
@@ -341,6 +419,14 @@ export class AgentToolProtocolServer {
 			maxPauseDuration: this.config.executionState.maxPauseDuration,
 			keyPrefix: this.config.executionState.keyPrefix,
 		});
+	}
+
+	async listen(port: number): Promise<void> {
+		if (this.httpServer) {
+			throw new Error('Server is already running');
+		}
+
+		await this.start();
 
 		this.httpServer = createHTTPServer((req, res) => {
 			handleHTTPRequest(
@@ -385,7 +471,6 @@ export class AgentToolProtocolServer {
 			this.httpServer!.on('error', reject);
 		});
 	}
-
 	async stop(): Promise<void> {
 		if (!this.httpServer) return;
 
@@ -548,7 +633,9 @@ export class AgentToolProtocolServer {
 		}
 
 		for (const group of groups) {
-			log.info(`  ✅ Dynamically loaded: ${group.name} (${group.functions?.length || 0} functions)`);
+			log.info(
+				`  ✅ Dynamically loaded: ${group.name} (${group.functions?.length || 0} functions)`
+			);
 		}
 	}
 
@@ -558,13 +645,10 @@ export class AgentToolProtocolServer {
 	 * @param source - URL or file path to OpenAPI spec
 	 * @param options - OpenAPI loading options
 	 */
-	async loadOpenAPI(
-		source: string,
-		options: any = {}
-	): Promise<this> {
+	async loadOpenAPI(source: string, options: any = {}): Promise<this> {
 		const { loadOpenAPI: loadSpec } = await import('./openapi-loader.js');
 		log.info(`📚 Loading OpenAPI spec: ${options.name || 'API'} from ${source}`);
-		
+
 		try {
 			const apiGroup = await loadSpec(source, options);
 			this.use(apiGroup);
