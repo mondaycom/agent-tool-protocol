@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { SandboxExecutor } from '../executor/index.js';
+import type { SandboxExecutor } from '@mondaydotcomorg/atp-engine';
 import type { ExecutionStateManager } from '../execution-state/index.js';
 import type { log } from '@mondaydotcomorg/atp-runtime';
 

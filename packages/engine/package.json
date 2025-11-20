@@ -1,0 +1,45 @@
+{
+	"name": "@mondaydotcomorg/atp-engine",
+	"version": "0.1.0",
+	"description": "Embedded execution engine for Agent Tool Protocol - no HTTP required",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"test": "NODE_OPTIONS='--no-node-snapshot --experimental-vm-modules' jest",
+		"clean": "rm -rf dist"
+	},
+	"keywords": [
+		"atp",
+		"agent-tool-protocol",
+		"embedded",
+		"execution-engine",
+		"sandbox",
+		"ai-agents"
+	],
+	"author": "monday.com",
+	"license": "MIT",
+	"dependencies": {
+		"@mondaydotcomorg/atp-compiler": "workspace:*",
+		"@mondaydotcomorg/atp-protocol": "workspace:*",
+		"@mondaydotcomorg/atp-provenance": "workspace:*",
+		"@mondaydotcomorg/atp-runtime": "workspace:*",
+		"isolated-vm": "^5.0.1",
+		"nanoid": "^5.0.9",
+		"pino": "^9.5.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.1",
+		"typescript": "^5.7.2"
+	},
+	"publishConfig": {
+		"access": "public"
+	}
+}

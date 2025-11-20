@@ -25,7 +25,7 @@ import type {
 } from './core/config.js';
 import { MB, HOUR, MINUTE } from './core/config.js';
 import { ClientSessionManager } from './client-sessions.js';
-import { SandboxExecutor } from './executor/index.js';
+import { SandboxExecutor, APIAggregator } from '@mondaydotcomorg/atp-engine';
 import { CodeValidator } from './validator/index.js';
 import { SearchEngine } from './search/index.js';
 import { ExecutionStateManager } from './execution-state/index.js';
@@ -45,7 +45,6 @@ import {
 	MemoryCache,
 	OpenTelemetryAuditSink,
 } from '@mondaydotcomorg/atp-providers';
-import { APIAggregator } from './aggregator/index.js';
 
 export class AgentToolProtocolServer {
 	private config: ResolvedServerConfig;

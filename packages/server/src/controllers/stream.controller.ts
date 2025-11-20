@@ -7,7 +7,7 @@ import {
 	MAX_CODE_SIZE,
 } from '@mondaydotcomorg/atp-protocol';
 import type { CodeValidator } from '../validator/index.js';
-import type { SandboxExecutor } from '../executor/index.js';
+import type { SandboxExecutor } from '@mondaydotcomorg/atp-engine';
 import type { ExecutionStateManager } from '../execution-state/index.js';
 import { nanoid } from 'nanoid';
 import type { log } from '@mondaydotcomorg/atp-runtime';

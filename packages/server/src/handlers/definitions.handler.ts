@@ -1,5 +1,5 @@
 import type { APIGroupConfig } from '@mondaydotcomorg/atp-protocol';
-import { APIAggregator } from '../aggregator/index.js';
+import { APIAggregator } from '@mondaydotcomorg/atp-engine';
 
 export async function getDefinitions(apiGroups: APIGroupConfig[]): Promise<unknown> {
 	const aggregator = new APIAggregator(apiGroups);

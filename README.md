@@ -118,6 +118,28 @@ Provenance security is inspired by Google Research's CAMEL paper and provides de
 
 ## 📦 Installation
 
+### Option 1: Embedded Engine (No HTTP Server)
+
+For CLI tools, testing, and single-process applications:
+
+```bash
+# Using Yarn (recommended)
+yarn add @mondaydotcomorg/atp-engine
+
+# Using npm
+npm install @mondaydotcomorg/atp-engine
+
+# Using pnpm
+pnpm add @mondaydotcomorg/atp-engine
+
+# Using bun
+bun add @mondaydotcomorg/atp-engine
+```
+
+### Option 2: Full Server (With HTTP & Pause/Resume)
+
+For LLM agents with callbacks, approvals, and horizontal scaling:
+
 ```bash
 # Using Yarn (recommended)
 yarn add @mondaydotcomorg/atp-server @mondaydotcomorg/atp-client
@@ -136,7 +158,56 @@ bun add @mondaydotcomorg/atp-server @mondaydotcomorg/atp-client
 
 ## 🎯 Quick Start
 
-### Quickstart Example
+### Embedded Engine Example
+
+Direct execution without HTTP server (perfect for CLI tools and testing):
+
+```typescript
+import { ATPEngine } from '@mondaydotcomorg/atp-engine';
+import { loadOpenAPI } from '@mondaydotcomorg/atp-server';
+
+async function main() {
+	// Create engine
+	const engine = new ATPEngine({
+		timeout: 30000,
+		enableCompiler: true,
+	});
+
+	// Register APIs by ID
+	const petstore = await loadOpenAPI('https://petstore.swagger.io/v2/swagger.json', {
+		name: 'petstore',
+		filter: { methods: ['GET'] },
+	});
+
+	engine.registerAPI('petstore', {
+		type: 'openapi',
+		spec: petstore,
+	});
+
+	// Execute directly - no HTTP needed!
+	const result = await engine.execute(`
+		const pets = await atp.api.petstore.findPetsByStatus({ status: 'available' });
+		
+		return {
+			totalPets: pets.length,
+			categories: [...new Set(pets.map(p => p.category?.name))].slice(0, 5)
+		};
+	`);
+
+	console.log('Result:', JSON.stringify(result.result, null, 2));
+}
+
+main().catch(console.error);
+```
+
+**Run it:**
+
+```bash
+cd examples/embedded-engine
+NODE_OPTIONS='--no-node-snapshot' npm run basic
+```
+
+### Server Example (Full-Featured)
 
 A single script that integrates OpenAPI (Petstore) and MCP (Playwright):
 
@@ -481,20 +552,62 @@ server.addAPIGroup({
 });
 ```
 
-## 🏗️ Packages
+## 🏗️ Architecture
+
+ATP has a **decoupled architecture** that separates the execution engine from the HTTP server:
+
+```mermaid
+graph TB
+    Engine[ATPEngine<br/>Embedded Execution] --> Executor[SandboxExecutor]
+    Engine --> Aggregator[API Aggregator]
+    Engine --> Compiler[Pluggable Compiler]
+    Engine --> Provenance[Provenance Security]
+    
+    Server[ATPServer<br/>HTTP Layer] --> Engine
+    Server --> Sessions[Client Sessions]
+    Server --> PauseResume[Pause/Resume]
+    Server --> Callbacks[LLM/Approval Callbacks]
+```
+
+### Packages
 
 ```
-@agent-tool-protocol/
-├── protocol          # Core types and interfaces
-├── server            # ATP server implementation
-├── client            # Client SDK
-├── runtime           # Runtime APIs (atp.*)
-├── mcp-adapter       # MCP integration
-├── langchain         # LangChain/LangGraph integration
-├── atp-compiler      # Loop transformation and optimization
-├── providers         # Cache, auth, OAuth, audit providers
-└── provenance        # Provenance security (CAMEL-inspired)
+@mondaydotcomorg/
+├── atp-engine        # ⭐ NEW: Embedded execution (no HTTP)
+├── atp-server        # HTTP server (wraps engine)
+├── atp-client        # Client SDK
+├── atp-runtime       # Runtime APIs (atp.*)
+├── atp-compiler      # Pluggable compiler system
+├── atp-provenance    # Provenance security
+├── atp-protocol      # Core types and interfaces
+├── atp-mcp-adapter   # MCP integration
+├── atp-langchain     # LangChain/LangGraph integration
+└── atp-providers     # Cache, auth, OAuth, audit
 ```
+
+### Engine vs Server
+
+| Feature | ATPEngine | ATPServer |
+|---------|-----------|-----------|
+| HTTP Server | ❌ No | ✅ Yes |
+| Direct Execution | ✅ Yes | ❌ No |
+| Pause/Resume | ❌ No | ✅ Yes |
+| LLM Callbacks | ❌ No | ✅ Yes |
+| Approvals | ❌ No | ✅ Yes |
+| Latency | 🚀 Lower | 🐌 Higher |
+| Use Case | CLI, Testing, Embedded | LLM Agents, Scaling |
+
+**Use ATPEngine when:**
+- Building CLI tools
+- Testing and development
+- Single-process applications
+- You don't need pause/resume
+
+**Use ATPServer when:**
+- LLM agents need `atp.llm.*` callbacks
+- Human-in-the-loop approvals
+- Horizontal scaling
+- Client-side tool execution
 
 ## 🧪 Examples
 

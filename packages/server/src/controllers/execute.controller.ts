@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { ExecutionConfig } from '@mondaydotcomorg/atp-protocol';
 import { ExecutionErrorCode, sanitizeInput, MAX_CODE_SIZE } from '@mondaydotcomorg/atp-protocol';
 import type { CodeValidator } from '../validator/index.js';
-import type { SandboxExecutor } from '../executor/index.js';
+import type { SandboxExecutor } from '@mondaydotcomorg/atp-engine';
 import type { ExecutionStateManager } from '../execution-state/index.js';
 import type { AuditConfig } from '../middleware/audit.js';
 import { auditExecution } from '../middleware/audit.js';

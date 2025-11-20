@@ -47,6 +47,7 @@
 		"@babel/traverse": "^7.26.0",
 		"@babel/types": "^7.26.0",
 		"@mondaydotcomorg/atp-compiler": "0.18.4-rc.1",
+		"@mondaydotcomorg/atp-engine": "workspace:*",
 		"@mondaydotcomorg/atp-protocol": "0.18.4-rc.1",
 		"@mondaydotcomorg/atp-provenance": "0.18.4-rc.1",
 		"@mondaydotcomorg/atp-providers": "0.18.4-rc.1",

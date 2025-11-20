@@ -1,5 +1,5 @@
 import type { RequestContext, ResolvedServerConfig } from '../core/config.js';
-import type { SandboxExecutor } from '../executor/index.js';
+import type { SandboxExecutor } from '@mondaydotcomorg/atp-engine';
 import type { ExecutionStateManager } from '../execution-state/index.js';
 import type { ClientSessionManager } from '../client-sessions.js';
 import { log } from '@mondaydotcomorg/atp-runtime';

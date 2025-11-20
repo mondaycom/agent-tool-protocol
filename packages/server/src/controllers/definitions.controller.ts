@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { APIAggregator } from '../aggregator/index.js';
+import type { APIAggregator } from '@mondaydotcomorg/atp-engine';
 import { sendJson } from '../utils/response.js';
 
 export async function handleDefinitions(

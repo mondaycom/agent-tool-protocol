@@ -1,8 +1,7 @@
 export { AgentToolProtocolServer, createServer } from './create-server.js';
 export { loadOpenAPI } from './openapi-loader.js';
-export { APIAggregator } from './aggregator/index.js';
+export { APIAggregator, SandboxExecutor } from '@mondaydotcomorg/atp-engine';
 export { SearchEngine } from './search/index.js';
-export { SandboxExecutor } from './executor/index.js';
 export type {
 	ServerConfig,
 	AuditConfig,

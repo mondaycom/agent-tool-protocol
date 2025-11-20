@@ -3638,7 +3638,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mondaydotcomorg/atp-compiler@npm:0.18.4-rc.1, @mondaydotcomorg/atp-compiler@workspace:packages/atp-compiler":
+"@mondaydotcomorg/atp-compiler@npm:0.18.4-rc.1, @mondaydotcomorg/atp-compiler@workspace:*, @mondaydotcomorg/atp-compiler@workspace:packages/atp-compiler":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-compiler@workspace:packages/atp-compiler"
   dependencies:
@@ -3659,6 +3659,22 @@ __metadata:
   peerDependencies:
     "@mondaydotcomorg/atp-protocol": 0.18.4-rc.1
     "@mondaydotcomorg/atp-runtime": 0.18.4-rc.1
+  languageName: unknown
+  linkType: soft
+
+"@mondaydotcomorg/atp-engine@workspace:*, @mondaydotcomorg/atp-engine@workspace:packages/engine":
+  version: 0.0.0-use.local
+  resolution: "@mondaydotcomorg/atp-engine@workspace:packages/engine"
+  dependencies:
+    "@mondaydotcomorg/atp-compiler": "workspace:*"
+    "@mondaydotcomorg/atp-protocol": "workspace:*"
+    "@mondaydotcomorg/atp-provenance": "workspace:*"
+    "@mondaydotcomorg/atp-runtime": "workspace:*"
+    "@types/node": "npm:^22.10.1"
+    isolated-vm: "npm:^5.0.1"
+    nanoid: "npm:^5.0.9"
+    pino: "npm:^9.5.0"
+    typescript: "npm:^5.7.2"
   languageName: unknown
   linkType: soft
 
@@ -3750,7 +3766,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mondaydotcomorg/atp-provenance@npm:0.18.4-rc.1, @mondaydotcomorg/atp-provenance@workspace:packages/provenance":
+"@mondaydotcomorg/atp-provenance@npm:0.18.4-rc.1, @mondaydotcomorg/atp-provenance@workspace:*, @mondaydotcomorg/atp-provenance@workspace:packages/provenance":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-provenance@workspace:packages/provenance"
   dependencies:
@@ -3799,7 +3815,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mondaydotcomorg/atp-runtime@npm:0.18.4-rc.1, @mondaydotcomorg/atp-runtime@workspace:packages/runtime":
+"@mondaydotcomorg/atp-runtime@npm:0.18.4-rc.1, @mondaydotcomorg/atp-runtime@workspace:*, @mondaydotcomorg/atp-runtime@workspace:packages/runtime":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-runtime@workspace:packages/runtime"
   dependencies:
@@ -3865,6 +3881,7 @@ __metadata:
     "@babel/traverse": "npm:^7.26.0"
     "@babel/types": "npm:^7.26.0"
     "@mondaydotcomorg/atp-compiler": "npm:0.18.4-rc.1"
+    "@mondaydotcomorg/atp-engine": "workspace:*"
     "@mondaydotcomorg/atp-protocol": "npm:0.18.4-rc.1"
     "@mondaydotcomorg/atp-provenance": "npm:0.18.4-rc.1"
     "@mondaydotcomorg/atp-providers": "npm:0.18.4-rc.1"
@@ -7400,6 +7417,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/node@npm:^22.10.1":
+  version: 22.19.1
+  resolution: "@types/node@npm:22.19.1"
+  dependencies:
+    undici-types: "npm:~6.21.0"
+  checksum: 10c0/6edd93aea86da740cb7872626839cd6f4a67a049d3a3a6639cb592c620ec591408a30989ab7410008d1a0b2d4985ce50f1e488e79c033e4476d3bec6833b0a2f
+  languageName: node
+  linkType: hard
+
 "@types/node@npm:^22.10.2":
   version: 22.18.8
   resolution: "@types/node@npm:22.18.8"
@@ -9792,6 +9818,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"embedded-engine-examples@workspace:examples/embedded-engine":
+  version: 0.0.0-use.local
+  resolution: "embedded-engine-examples@workspace:examples/embedded-engine"
+  dependencies:
+    "@mondaydotcomorg/atp-engine": "workspace:*"
+    "@mondaydotcomorg/atp-server": "workspace:*"
+    tsx: "npm:^4.7.0"
+  languageName: unknown
+  linkType: soft
+
 "emittery@npm:^0.13.1":
   version: 0.13.1
   resolution: "emittery@npm:0.13.1"
@@ -12160,7 +12196,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"isolated-vm@npm:5.0.4":
+"isolated-vm@npm:5.0.4, isolated-vm@npm:^5.0.1":
   version: 5.0.4
   resolution: "isolated-vm@npm:5.0.4"
   dependencies:
@@ -14774,7 +14810,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pino@npm:^9.0.0":
+"pino@npm:^9.0.0, pino@npm:^9.5.0":
   version: 9.14.0
   resolution: "pino@npm:9.14.0"
   dependencies:

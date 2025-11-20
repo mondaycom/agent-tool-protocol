@@ -1,16 +1,52 @@
 # @mondaydotcomorg/atp-server
 
-Production-ready ATP server with sandboxed execution, API aggregation, semantic search, and state management.
+Production-ready HTTP server layer for Agent Tool Protocol with pause/resume, LLM callbacks, and horizontal scaling.
 
 ## Overview
 
-The ATP server provides secure, sandboxed TypeScript execution with built-in runtime APIs, OpenAPI integration, MCP support, semantic search, and comprehensive observability.
+The ATP server provides an **HTTP coordination layer** on top of `@mondaydotcomorg/atp-engine`. It adds:
+
+- **Pause/Resume**: Code execution can pause for LLM calls, approvals, or embeddings
+- **Client Callbacks**: Route `atp.llm.*`, `atp.approval.*`, `atp.embedding.*` to client
+- **Client Sessions**: Multi-user support with JWT authentication
+- **State Management**: Persistent execution state across pause/resume cycles
+- **Horizontal Scaling**: Stateless design with Redis cache support
+
+> **Note:** If you don't need pause/resume for callbacks, consider using `@mondaydotcomorg/atp-engine` directly for lower latency and simpler deployment.
 
 ## Installation
 
 ```bash
-npm install @mondaydotcomorg/atp-server
+# Server (with HTTP coordination)
+npm install @mondaydotcomorg/atp-server @mondaydotcomorg/atp-client
+
+# Or just the engine (without HTTP)
+npm install @mondaydotcomorg/atp-engine
 ```
+
+## Architecture
+
+```
+┌─────────────────────────────────────┐
+│      ATPServer (HTTP Layer)         │
+│                                     │
+│  • HTTP endpoints & routing         │
+│  • Client session management        │
+│  • Pause/Resume coordination        │
+│  • Callback handling (LLM/approval) │
+│                                     │
+│  ┌───────────────────────────────┐ │
+│  │   ATPEngine (from package)    │ │
+│  │                               │ │
+│  │  • Sandbox execution          │ │
+│  │  • API aggregation            │ │
+│  │  • Compiler integration       │ │
+│  │  • Provenance security        │ │
+│  └───────────────────────────────┘ │
+└─────────────────────────────────────┘
+```
+
+The server **wraps** the `@mondaydotcomorg/atp-engine` package, adding HTTP coordination for pause/resume workflows.
 
 ## Architecture
 
