@@ -4,37 +4,88 @@ import { isPauseError, runInExecutionContext } from '@mondaydotcomorg/atp-runtim
 import { isBatchPauseError } from '@mondaydotcomorg/atp-compiler';
 import { PAUSE_EXECUTION_MARKER } from './constants.js';
 
-export async function injectTimerPolyfills(ivmContext: ivm.Context): Promise<void> {
-	await ivmContext.eval(`
-		globalThis._timerCounter = 1;
-		globalThis._activeTimers = new Map();
-		
-		globalThis.setTimeout = function(callback, delay) {
-			const timerId = globalThis._timerCounter++;
-			const startTime = Date.now();
-			
-			const pollTimer = () => {
-				if (!globalThis._activeTimers.has(timerId)) {
-					return;
-				}
-				
-				if (Date.now() - startTime >= delay) {
-					globalThis._activeTimers.delete(timerId);
-					callback();
+export async function injectHostTimers(
+	ivmContext: ivm.Context,
+	jail: ivm.Reference<Record<string, unknown>>,
+	executionLogger: Logger
+): Promise<() => void> {
+	executionLogger.debug('Injecting host timers');
+	const activeTimers = new Map<number, NodeJS.Timeout>();
+
+	const setTimeoutRef = new ivm.Reference((id: number, delay: number) => {
+		const timer = setTimeout(() => {
+			activeTimers.delete(id);
+			try {
+				const dispatch = ivmContext.global.getSync('__dispatch_timer');
+				if (dispatch && (typeof dispatch === 'object' || typeof dispatch === 'function')) {
+					if (typeof dispatch.applyIgnored === 'function') {
+						dispatch.applyIgnored(undefined, [id]);
+					} else if (typeof dispatch === 'function') {
+						dispatch(id);
+					} else {
+						executionLogger.warn('dispatch.applyIgnored is missing', { type: typeof dispatch });
+					}
 				} else {
-					Promise.resolve().then(pollTimer);
+					executionLogger.warn('__dispatch_timer not found or invalid', { type: typeof dispatch });
 				}
-			};
-			
-			globalThis._activeTimers.set(timerId, true);
-			Promise.resolve().then(pollTimer);
-			return timerId;
-		};
+			} catch (error) {
+				executionLogger.warn('Failed to dispatch timer callback', {
+					id,
+					error: error instanceof Error ? error.message : String(error),
+					stack: error instanceof Error ? error.stack : undefined
+				});
+			}
+		}, delay);
+		activeTimers.set(id, timer);
+	});
+
+	const clearTimeoutRef = new ivm.Reference((id: number) => {
+		const timer = activeTimers.get(id);
+		if (timer) {
+			clearTimeout(timer);
+			activeTimers.delete(id);
+		}
+	});
+
+	await ivmContext.evalClosure(`
+		globalThis.__host_setTimeout = $0;
+		globalThis.__host_clearTimeout = $1;
 		
-		globalThis.clearTimeout = function(timerId) {
-			globalThis._activeTimers.delete(timerId);
+		globalThis._activeTimers = new Map();
+		globalThis._timerIdCounter = 1;
+
+		globalThis.__dispatch_timer = function(id) {
+			const cb = globalThis._activeTimers.get(id);
+			if (cb) {
+				globalThis._activeTimers.delete(id);
+				try { cb(); } catch(e) { console.error('Timer callback error:', e); }
+			}
 		};
-	`);
+
+		globalThis.setTimeout = function(callback, delay) {
+			const id = globalThis._timerIdCounter++;
+			globalThis._activeTimers.set(id, callback);
+			if (!globalThis.__host_setTimeout) {
+				throw new Error('__host_setTimeout is missing');
+			}
+			globalThis.__host_setTimeout.applyIgnored(undefined, [id, delay]);
+			return id;
+		};
+
+		globalThis.clearTimeout = function(id) {
+			if (globalThis._activeTimers.has(id)) {
+				globalThis._activeTimers.delete(id);
+				globalThis.__host_clearTimeout.applyIgnored(undefined, [id]);
+			}
+		};
+	`, [setTimeoutRef, clearTimeoutRef]);
+
+	return () => {
+		for (const timer of activeTimers.values()) {
+			clearTimeout(timer);
+		}
+		activeTimers.clear();
+	};
 }
 
 export async function injectSandbox(
@@ -113,20 +164,14 @@ export async function injectSandbox(
 					new ivm.Reference(async (...args: unknown[]) => {
 						try {
 							const result = await boundFunc(...args);
-							// In AST mode, tag result with provenance ID before copying so tag survives
-							if (isASTMode && result && typeof result === 'object') {
-								try {
-									// Generate unique ID for this API result
-									const provId = `tracked_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-									Object.defineProperty(result, '__prov_id__', {
-										value: provId,
-										writable: false,
-										enumerable: true,
-										configurable: true,
-									});
-								} catch (e) {
-									// If can't define property, that's ok
-								}
+							// In AST mode, wrap result with provenance ID
+							if (isASTMode) {
+								const provId = `tracked_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+								const wrapped = {
+									__atp_value: result,
+									__atp_prov: provId
+								};
+								return new ivm.ExternalCopy(wrapped).copyInto();
 							}
 							return new ivm.ExternalCopy(result).copyInto();
 						} catch (error) {
@@ -321,8 +366,59 @@ ${newAccessPath} = async function(...args) {
 	}
 	
 	const wrappedArgs = args.map(arg => wrapTaintedValues(arg));
-	const result = await __api_${safeName}.apply(undefined, wrappedArgs, { arguments: { copy: true }, result: { promise: true } });
-	if (typeof globalThis.__track === 'function' && result !== null && result !== undefined) {
+	const rawResult = await __api_${safeName}.apply(undefined, wrappedArgs, { arguments: { copy: true }, result: { promise: true } });
+	
+	let result = rawResult;
+	let provId = null;
+
+	// Check for wrapped result
+	if (rawResult && typeof rawResult === 'object' && '__atp_value' in rawResult && '__atp_prov' in rawResult) {
+		result = rawResult.__atp_value;
+		provId = rawResult.__atp_prov;
+	} else if (rawResult && typeof rawResult === 'object' && '__prov_id__' in rawResult) {
+		// Fallback for legacy/object tracking
+		provId = rawResult.__prov_id__;
+	}
+
+	if (typeof globalThis.__track === 'function') {
+		// If we have a specific provenance ID from the host, use it
+		if (provId) {
+			// Manually register the metadata for this ID if needed, or just track it
+			// The host doesn't send the metadata here, but __track expects to generate it or link it
+			// We need to tell __track to associate this value with this ID
+			
+			// If it's an object, we can attach the ID
+			if (result && typeof result === 'object') {
+				try {
+					Object.defineProperty(result, '__prov_id__', {
+						value: provId,
+						writable: false,
+						enumerable: false,
+						configurable: true
+					});
+				} catch(e) {}
+			}
+			
+			// Register metadata for this ID
+			if (globalThis.__astTracker && globalThis.__astTracker.metadata) {
+				globalThis.__astTracker.metadata.set(provId, {
+					id: provId,
+					source: { type: 'tool', tool: '${toolNameEscaped}', operation: 'read', timestamp: Date.now() },
+					deps: []
+				});
+				
+				// If it's a primitive, we need to map it
+				if (typeof result === 'string' || typeof result === 'number') {
+					const primitiveKey = provId + ':value:' + String(result);
+					globalThis.__astTracker.metadata.set(primitiveKey, globalThis.__astTracker.metadata.get(provId));
+					
+					// Also taint it by value for immediate detection
+					const taintedKey = 'tainted:' + String(result);
+					globalThis.__astTracker.metadata.set(taintedKey, globalThis.__astTracker.metadata.get(provId));
+				}
+			}
+		}
+		
 		return globalThis.__track(result, { type: 'tool', tool: '${toolNameEscaped}', operation: 'read' }, []);
 	}
 	return result;

@@ -32,7 +32,7 @@ import { getCompilerRuntime, transformCodeWithCompiler } from './compiler-config
 import { setupResumeExecution } from './resume-handler.js';
 import {
 	injectSandbox,
-	injectTimerPolyfills,
+	injectHostTimers,
 	setupAPINamespace,
 	setupRuntimeNamespace,
 } from './sandbox-injector.js';
@@ -199,6 +199,7 @@ export class SandboxExecutor {
 
 		let codeToExecute = code;
 		let alreadyTransformed = false;
+		let cleanupTimers: (() => void) | undefined;
 
 		try {
 			const ivmContext = await isolate.createContext();
@@ -206,7 +207,13 @@ export class SandboxExecutor {
 
 			await jail.set('global', jail.derefInto());
 
-			await injectTimerPolyfills(ivmContext);
+			// Disable eval and Function for security
+			await ivmContext.eval(`
+				globalThis.eval = function() { throw new Error("eval is disabled"); };
+				globalThis.Function = function() { throw new Error("Function constructor is disabled"); };
+			`);
+
+			cleanupTimers = await injectHostTimers(ivmContext, jail, executionLogger);
 
 			let result: unknown = null;
 
@@ -264,7 +271,7 @@ export class SandboxExecutor {
 					if (session?.tools && session.tools.length > 0) {
 						clientTools = session.tools;
 					}
-				} catch (error) {}
+				} catch (error) { }
 			}
 
 			const sandbox = this.sandboxBuilder.createSandbox(
@@ -438,10 +445,10 @@ export class SandboxExecutor {
 						error:
 							error instanceof Error
 								? {
-										message: error.message,
-										stack: error.stack,
-										name: error.name,
-									}
+									message: error.message,
+									stack: error.stack,
+									name: error.name,
+								}
 								: String(error),
 					});
 				}
@@ -592,6 +599,9 @@ export class SandboxExecutor {
 				codeToExecute !== code || alreadyTransformed ? codeToExecute : undefined
 			);
 		} finally {
+			if (cleanupTimers) {
+				cleanupTimers();
+			}
 			this.cleanup(executionId, config.provenanceMode);
 		}
 	}
@@ -622,22 +632,22 @@ export class SandboxExecutor {
 	private cleanup(executionId?: string, provenanceMode?: string): void {
 		try {
 			setPauseForClient(false);
-		} catch (e) {}
+		} catch (e) { }
 		try {
 			setReplayMode(undefined);
-		} catch (e) {}
+		} catch (e) { }
 
 		if (executionId && provenanceMode === ProvenanceMode.AST) {
 			try {
 				unregisterIsolateContext(executionId);
-			} catch (e) {}
+			} catch (e) { }
 		}
 
 		if (executionId && provenanceMode && provenanceMode !== ProvenanceMode.NONE) {
 			try {
 				cleanupProvenanceForExecution(executionId);
 				clearProvenanceExecutionId();
-			} catch (e) {}
+			} catch (e) { }
 		}
 		setProgressCallback(null);
 
@@ -646,7 +656,7 @@ export class SandboxExecutor {
 		if (executionId) {
 			try {
 				cleanupExecutionState(executionId);
-			} catch (e) {}
+			} catch (e) { }
 		}
 	}
 }

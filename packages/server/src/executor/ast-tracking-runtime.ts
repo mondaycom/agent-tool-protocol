@@ -523,6 +523,7 @@ globalThis.__track_template = (e, q) => __astTracker.trackTemplate(e, q);
 globalThis.__get_provenance = (v) => __astTracker.getMetadata(v);
 globalThis.__get_all_metadata = () => __astTracker.getAllMetadata();
 globalThis.__check_provenance = (v) => __astTracker.checkProvenance(v);
+globalThis.__astTracker = __astTracker;
 
 // Mark a string literal as tainted (for cross-execution tracking)
 globalThis.__mark_tainted = (value) => {
