@@ -520,7 +520,15 @@ function buildInputSchema(operation: OpenAPIOperation, spec: APISpec): unknown {
 	if (operation.parameters) {
 		for (const param of operation.parameters) {
 			if (param.schema) {
-				properties[param.name] = resolveSchema(param.schema, spec);
+				const paramSchema = resolveSchema(param.schema, spec);
+				if (typeof paramSchema === 'object' && paramSchema !== null) {
+					properties[param.name] = {
+						...paramSchema,
+						description: param.description || (paramSchema as any).description,
+					};
+				} else {
+					properties[param.name] = paramSchema;
+				}
 				if (param.required) {
 					required.push(param.name);
 				}

@@ -23,6 +23,8 @@ interface ExploreFunctionResult {
 	description: string;
 	definition: string;
 	group: string;
+	inputSchema?: any;
+	outputSchema?: any;
 }
 
 export type ExploreResult = ExploreDirectoryResult | ExploreFunctionResult;
@@ -47,8 +49,9 @@ export class ExplorerService {
 		for (const group of apiGroups) {
 			if (!group.functions || group.functions.length === 0) continue;
 
-			const typeFolder = this.ensureDirectory(this.root, group.type);
-			const groupFolder = this.ensureDirectory(typeFolder, group.name);
+			const groupFolder = group.type === 'graphql'
+				? this.ensureDirectory(this.root, group.name)
+				: this.ensureDirectory(this.ensureDirectory(this.root, group.type), group.name);
 
 			for (const func of group.functions) {
 				const segments = this.extractSegments(func, group);
@@ -70,6 +73,16 @@ export class ExplorerService {
 	 * Extract path segments for organizing functions
 	 */
 	private extractSegments(func: CustomFunctionDef, group: APIGroupConfig): string[] {
+		if (group.type === 'graphql') {
+			const name = func.name;
+			if (name.startsWith('query_')) {
+				return ['query', name.replace('query_', '')];
+			}
+			if (name.startsWith('mutation_')) {
+				return ['mutation', name.replace('mutation_', '')];
+			}
+		}
+
 		if (group.type === 'openapi') {
 			const name = func.name;
 
@@ -200,6 +213,8 @@ export class ExplorerService {
 				description: func.description,
 				definition,
 				group,
+				inputSchema: func.inputSchema,
+				outputSchema: func.outputSchema,
 			};
 		}
 	}

@@ -46,6 +46,7 @@ import {
 	OpenTelemetryAuditSink,
 } from '@mondaydotcomorg/atp-providers';
 import { APIAggregator } from './aggregator/index.js';
+import { loadGraphQL } from './graphql-loader.js';
 
 export class AgentToolProtocolServer {
 	private config: ResolvedServerConfig;
@@ -655,6 +656,23 @@ export class AgentToolProtocolServer {
 			return this;
 		} catch (error) {
 			log.error(`❌ Failed to load OpenAPI spec: ${(error as Error).message}`);
+			throw error;
+		}
+	}
+
+	/**
+	 * Load a GraphQL spec and add it to the server
+	 * Works both before and after server starts
+	 * @param source - URL or file path to GraphQL spec (SDL, introspection JSON, or endpoint URL)
+	 * @param options - GraphQL loading options
+	 */
+	async loadGraphQL(source: string, options: any = {}): Promise<this> {
+		try {
+			const apiGroup = await loadGraphQL(source, options);
+			this.use(apiGroup);
+			return this;
+		} catch (error) {
+			log.error(`Failed to load GraphQL spec: ${(error as Error).message}`);
 			throw error;
 		}
 	}
