@@ -42,7 +42,6 @@ atpServer.tool('calculate', {
 	},
 });
 
-// Get the raw request handler - components will be initialized on first request
 const atpHandler = atpServer.handler();
 
 // Create custom HTTP server with your own routing and middleware

@@ -7,9 +7,9 @@
 		"start": "NODE_OPTIONS='--no-node-snapshot' tsx index.ts"
 	},
 	"dependencies": {
-		"@mondaydotcomorg/atp-client": "*",
-		"@mondaydotcomorg/atp-mcp-adapter": "*",
-		"@mondaydotcomorg/atp-server": "*",
+		"@mondaydotcomorg/atp-client": "workspace:*",
+		"@mondaydotcomorg/atp-mcp-adapter": "workspace:*",
+		"@mondaydotcomorg/atp-server": "workspace:*",
 		"tsx": "^4.19.2"
 	}
 }

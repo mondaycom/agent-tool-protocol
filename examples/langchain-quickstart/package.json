@@ -10,9 +10,9 @@
 		"@langchain/core": "^0.3.22",
 		"@langchain/langgraph": "^0.2.28",
 		"@langchain/openai": "^0.3.17",
-		"@mondaydotcomorg/atp-client": "*",
-		"@mondaydotcomorg/atp-langchain": "*",
-		"@mondaydotcomorg/atp-server": "*",
+		"@mondaydotcomorg/atp-client": "workspace:*",
+		"@mondaydotcomorg/atp-langchain": "workspace:*",
+		"@mondaydotcomorg/atp-server": "workspace:*",
 		"tsx": "^4.19.2"
 	}
 }
