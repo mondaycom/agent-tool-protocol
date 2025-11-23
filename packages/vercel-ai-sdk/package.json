@@ -1,0 +1,57 @@
+{
+	"name": "@mondaydotcomorg/atp-vercel-sdk",
+	"version": "0.18.4",
+	"description": "Vercel AI SDK integration for Agent Tool Protocol",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"src"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mondaycom/agent-tool-protocol",
+		"directory": "packages/vercel-ai-sdk"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"dev": "tsc -p tsconfig.json --watch",
+		"clean": "rm -rf dist *.tsbuildinfo",
+		"test": "NODE_OPTIONS='--no-node-snapshot' jest --runInBand --forceExit --testTimeout=30000",
+		"lint": "tsc --noEmit"
+	},
+	"keywords": [
+		"agent",
+		"protocol",
+		"atp",
+		"vercel",
+		"ai-sdk",
+		"ai",
+		"llm"
+	],
+	"license": "MIT",
+	"dependencies": {
+		"@mondaydotcomorg/atp-client": "workspace:*",
+		"@mondaydotcomorg/atp-protocol": "workspace:*",
+		"zod": "^3.23.8"
+	},
+	"peerDependencies": {
+		"ai": "^4.0.0"
+	},
+	"devDependencies": {
+		"@jest/globals": "^29.7.0",
+		"@types/jest": "^29.5.11",
+		"jest": "^29.7.0",
+		"typescript": "^5.3.3"
+	}
+}
