@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-compiler",
-	"version": "0.19.0",
+	"version": "0.19.1",
 	"description": "Production-ready compiler for transforming async iteration patterns into resumable operations with checkpoint-based state management",
 	"type": "module",
 	"main": "dist/atp-compiler/src/index.js",
@@ -55,15 +55,15 @@
 		"@babel/parser": "^7.26.0",
 		"@babel/traverse": "^7.26.0",
 		"@babel/types": "^7.26.0",
-		"@mondaydotcomorg/atp-protocol": "0.19.0",
-		"@mondaydotcomorg/atp-runtime": "0.19.0",
+		"@mondaydotcomorg/atp-protocol": "0.19.1",
+		"@mondaydotcomorg/atp-runtime": "0.19.1",
 		"@types/babel__generator": "^7.6.0",
 		"@types/babel__traverse": "^7.20.0",
 		"nanoid": "^5.0.0"
 	},
 	"peerDependencies": {
-		"@mondaydotcomorg/atp-protocol": "0.19.0",
-		"@mondaydotcomorg/atp-runtime": "0.19.0"
+		"@mondaydotcomorg/atp-protocol": "0.19.1",
+		"@mondaydotcomorg/atp-runtime": "0.19.1"
 	},
 	"devDependencies": {
 		"@stryker-mutator/core": "^8.0.0",
