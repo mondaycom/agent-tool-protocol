@@ -1,0 +1,29 @@
+{
+  "name": "google-calendar-agent-example",
+  "version": "1.0.0",
+  "description": "Real-world LangChain agent for smart Google Calendar scheduling using ATP + MCP",
+  "type": "module",
+  "scripts": {
+    "auth": "./auth/generate-token.sh",
+    "chat:mcp": "NODE_OPTIONS='--no-node-snapshot' npx tsx mcp/interactive-agent.ts",
+    "chat:atp": "./atp/start-code-agent.sh"
+  },
+  "dependencies": {
+    "@langchain/langgraph": "^0.2.20",
+    "@langchain/openai": "^0.3.14",
+    "@mondaydotcomorg/atp-client": "workspace:*",
+    "@mondaydotcomorg/atp-langchain": "workspace:*",
+    "@mondaydotcomorg/atp-mcp-adapter": "workspace:*",
+    "@mondaydotcomorg/atp-server": "workspace:*",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.19.2"
+  },
+  "keywords": [
+    "langchain",
+    "atp",
+    "mcp",
+    "google-calendar",
+    "agent",
+    "oauth"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+	"name": "monday-graphql-example",
+	"version": "1.0.0",
+	"type": "module",
+	"scripts": {
+		"start": "sh -c 'export $(grep -v \"^#\" ../../.env | xargs) && NODE_OPTIONS=\"--no-node-snapshot\" tsx server.ts'",
+		"start:debug": "sh -c 'export $(grep -v \"^#\" ../../.env | xargs) && DEBUG_GRAPHQL=true NODE_OPTIONS=\"--no-node-snapshot\" tsx server.ts'",
+		"agent": "tsx agent.ts",
+		"chat": "NODE_OPTIONS='--no-node-snapshot' tsx interactive-agent.ts",
+		"chat:debug": "DEBUG_GRAPHQL=true NODE_OPTIONS='--no-node-snapshot' tsx interactive-agent.ts"
+	},
+	"dependencies": {
+		"@langchain/core": "^0.2.0",
+		"@langchain/langgraph": "^0.0.19",
+		"@langchain/openai": "^0.1.0",
+		"@mondaydotcomorg/atp-client": "workspace:*",
+		"@mondaydotcomorg/atp-langchain": "workspace:*",
+		"@mondaydotcomorg/atp-server": "workspace:*",
+		"dotenv": "^16.4.1",
+		"tsx": "^4.7.0"
+	}
+}

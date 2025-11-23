@@ -471,7 +471,7 @@ export interface ServerConfig {
 
 export interface APIGroupConfig {
 	name: string;
-	type: 'mcp' | 'openapi' | 'custom';
+	type: 'mcp' | 'openapi' | 'graphql' | 'custom';
 	url?: string;
 	spec?: unknown;
 	functions?: CustomFunctionDef[];
