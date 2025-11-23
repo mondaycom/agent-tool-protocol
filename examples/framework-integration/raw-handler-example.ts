@@ -42,13 +42,7 @@ atpServer.tool('calculate', {
 	},
 });
 
-// Initialize ATP server components without starting HTTP server
-// Use a temporary port to initialize, then stop the server
-const tempPort = 9999;
-await atpServer.listen(tempPort);
-await atpServer.stop();
-
-// Get the raw request handler
+// Get the raw request handler - components will be initialized on first request
 const atpHandler = atpServer.handler();
 
 // Create custom HTTP server with your own routing and middleware
@@ -64,16 +58,16 @@ const server = createHTTPServer(async (req, res) => {
 		return;
 	}
 
-	// Custom authentication
+	// Custom authentication (optional - only validates if API_KEYS is set)
 	const apiKey = req.headers['x-api-key'];
-	if (req.url?.startsWith('/api/')) {
+	if (req.url?.startsWith('/api/') && process.env.API_KEYS) {
 		if (!apiKey) {
 			res.writeHead(401, { 'Content-Type': 'application/json' });
 			res.end(JSON.stringify({ error: 'API key required' }));
 			return;
 		}
 
-		const validKeys = process.env.API_KEYS?.split(',') || [];
+		const validKeys = process.env.API_KEYS.split(',');
 		if (!validKeys.includes(apiKey as string)) {
 			res.writeHead(403, { 'Content-Type': 'application/json' });
 			res.end(JSON.stringify({ error: 'Invalid API key' }));
