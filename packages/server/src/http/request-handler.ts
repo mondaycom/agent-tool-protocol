@@ -36,7 +36,12 @@ export async function handleHTTPRequest(
 
 	try {
 		if (req.method === 'POST' || req.method === 'PUT') {
-			ctx.body = await parseBody(req);
+			const reqWithBody = req as IncomingMessage & { body?: unknown };
+			if (reqWithBody.body !== undefined) {
+				ctx.body = reqWithBody.body;
+			} else {
+				ctx.body = await parseBody(req);
+			}
 		}
 
 		await runMiddleware(ctx, deps.middleware, deps.routeHandler);

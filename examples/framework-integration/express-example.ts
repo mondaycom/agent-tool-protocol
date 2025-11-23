@@ -56,18 +56,9 @@ atpServer.tool('greet', {
 	},
 });
 
-// Initialize ATP server components without starting HTTP server
-// Use a temporary port to initialize, then stop the server
-const tempPort = 9999;
-await atpServer.listen(tempPort);
-await atpServer.stop();
-
-// Mount ATP routes under /atp prefix
-app.all('/atp/*', (req, res, next) => {
-	// Strip /atp prefix for ATP handler
-	req.url = req.url.replace('/atp', '');
-	atpServer.toExpress()(req, res, next);
-});
+// Mount ATP routes under /atp prefix - ATP expects /api/* routes
+// So /atp/api/info will be handled by ATP's /api/info
+app.use('/atp', atpServer.toExpress());
 
 // Or mount at root
 // app.all('/api/*', atpServer.toExpress());

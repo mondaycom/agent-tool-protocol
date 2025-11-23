@@ -56,6 +56,7 @@ export class AgentToolProtocolServer {
 	private responseHeaders: Map<IncomingMessage, Map<string, string>> = new Map();
 	private isRunning: boolean = false;
 	private policyRegistry: DynamicPolicyRegistry;
+	private initPromise: Promise<void> | null = null;
 
 	sessionManager?: ClientSessionManager;
 	executor?: SandboxExecutor;
@@ -384,8 +385,6 @@ export class AgentToolProtocolServer {
 	async start(): Promise<void> {
 		if (this.isRunning) return;
 
-		this.isRunning = true;
-
 		this.sessionManager = new ClientSessionManager({
 			cache: this.cacheProvider,
 			tokenTTL: this.config.clientInit.tokenTTL,
@@ -420,6 +419,8 @@ export class AgentToolProtocolServer {
 			maxPauseDuration: this.config.executionState.maxPauseDuration,
 			keyPrefix: this.config.executionState.keyPrefix,
 		});
+
+		this.isRunning = true;
 	}
 
 	async listen(port: number): Promise<void> {
@@ -680,25 +681,19 @@ export class AgentToolProtocolServer {
 	/**
 	 * Get raw Node.js request handler for framework integration
 	 * Use this to integrate ATP with Express, Fastify, or any Node.js framework
+	 * Components will be automatically initialized on first request if not already started.
 	 */
 	handler(): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
-		if (
-			!this.executor ||
-			!this.validator ||
-			!this.stateManager ||
-			!this.sessionManager ||
-			!this.searchEngine ||
-			!this.explorerService
-		) {
-			throw new Error(
-				'Server not initialized. Call listen() first or initialize components manually.'
-			);
-		}
+		return async (req, res) => {
+			if (!this.isRunning && !this.initPromise) {
+				this.initPromise = this.start();
+			}
+			if (this.initPromise) {
+				await this.initPromise;
+				this.initPromise = null;
+			}
 
-		this.isRunning = true;
-
-		return (req, res) =>
-			handleHTTPRequest(
+			return handleHTTPRequest(
 				req,
 				res,
 				{
@@ -712,6 +707,7 @@ export class AgentToolProtocolServer {
 				},
 				this.responseHeaders
 			);
+		};
 	}
 
 	/**
@@ -723,7 +719,10 @@ export class AgentToolProtocolServer {
 	toExpress(): (req: unknown, res: unknown, next: (err?: unknown) => void) => void {
 		const requestHandler = this.handler();
 		return (req: unknown, res: unknown, next: (err?: unknown) => void) => {
-			requestHandler(req as IncomingMessage, res as ServerResponse).catch(next);
+			requestHandler(req as IncomingMessage, res as ServerResponse).catch((error) => {
+				log.error('Express handler error:', error);
+				next(error);
+			});
 		};
 	}
 
@@ -737,6 +736,12 @@ export class AgentToolProtocolServer {
 		return async (request: unknown, reply: unknown) => {
 			const req = (request as { raw: IncomingMessage }).raw;
 			const res = (reply as { raw: ServerResponse }).raw;
+			
+			const fastifyReq = request as { body?: unknown };
+			if (fastifyReq.body !== undefined) {
+				(req as IncomingMessage & { body?: unknown }).body = fastifyReq.body;
+			}
+			
 			await requestHandler(req, res);
 		};
 	}

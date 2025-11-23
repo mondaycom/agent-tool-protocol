@@ -12,6 +12,15 @@ const fastify = Fastify({
 	logger: true,
 });
 
+fastify.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
+	try {
+		const json = JSON.parse(body as string);
+		done(null, json);
+	} catch (err: unknown) {
+		done(err as Error, undefined);
+	}
+});
+
 const atpServer = createServer();
 
 // Use Fastify's plugin ecosystem
@@ -51,11 +60,8 @@ atpServer.tool('greet', {
 	},
 });
 
-// Initialize ATP server components without starting HTTP server
-// Use a temporary port to initialize, then stop the server
-const tempPort = 9999;
-await atpServer.listen(tempPort);
-await atpServer.stop();
+// Get the ATP handler once
+const atpHandler = atpServer.toFastify();
 
 // Mount ATP routes - strip /atp prefix before handling
 fastify.all('/atp/*', async (request, reply) => {
@@ -63,7 +69,7 @@ fastify.all('/atp/*', async (request, reply) => {
 	if (originalUrl) {
 		request.raw.url = originalUrl.replace('/atp', '');
 	}
-	await atpServer.toFastify()(request, reply);
+	await atpHandler(request, reply);
 });
 
 // Or mount at root

@@ -14,6 +14,7 @@ ATP provides three integration methods:
    - Use `server.handler()`, `server.toExpress()`, or `server.toFastify()`
    - Integrate with your existing web framework
    - Use framework-native middleware for auth, CORS, rate limiting, etc.
+   - Server components initialize automatically on first request - no manual setup needed
 
 ## Examples
 
@@ -32,7 +33,7 @@ const atpServer = createServer();
 app.use(cors());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 
-// Mount ATP routes
+// Mount ATP routes - components initialize automatically on first request
 app.all('/atp/*', atpServer.toExpress());
 
 app.listen(3000);
@@ -59,7 +60,7 @@ const atpServer = createServer();
 await fastify.register(cors);
 await fastify.register(rateLimit);
 
-// Mount ATP routes
+// Mount ATP routes - components initialize automatically on first request
 fastify.all('/atp/*', atpServer.toFastify());
 
 await fastify.listen({ port: 3000 });
@@ -82,6 +83,7 @@ import { createServer } from '@mondaydotcomorg/atp-server';
 const atpServer = createServer();
 const atpHandler = atpServer.handler();
 
+// Components initialize automatically on first request
 const server = createHTTPServer(async (req, res) => {
 	// Your custom routing logic
 	if (req.url?.startsWith('/api/')) {

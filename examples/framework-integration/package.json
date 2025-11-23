@@ -5,9 +5,9 @@
 	"type": "module",
 	"description": "Examples of integrating ATP with Express, Fastify, and raw Node.js",
 	"scripts": {
-		"express": "tsx express-example.ts",
-		"fastify": "tsx fastify-example.ts",
-		"raw": "tsx raw-handler-example.ts"
+		"express": "NODE_OPTIONS='--no-node-snapshot' tsx express-example.ts",
+		"fastify": "NODE_OPTIONS='--no-node-snapshot' tsx fastify-example.ts",
+		"raw": "NODE_OPTIONS='--no-node-snapshot' tsx raw-handler-example.ts"
 	},
 	"dependencies": {
 		"@fastify/cors": "^9.0.1",
