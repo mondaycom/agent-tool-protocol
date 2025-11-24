@@ -3890,8 +3890,8 @@ __metadata:
   resolution: "@mondaydotcomorg/atp-vercel-sdk@workspace:packages/vercel-ai-sdk"
   dependencies:
     "@jest/globals": "npm:^29.7.0"
-    "@mondaydotcomorg/atp-client": "workspace:*"
-    "@mondaydotcomorg/atp-protocol": "workspace:*"
+    "@mondaydotcomorg/atp-client": "npm:0.19.1"
+    "@mondaydotcomorg/atp-protocol": "npm:0.19.1"
     "@types/jest": "npm:^29.5.11"
     jest: "npm:^29.7.0"
     typescript: "npm:^5.3.3"
