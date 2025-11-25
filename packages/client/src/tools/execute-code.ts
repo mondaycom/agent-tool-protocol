@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { ExecutionStatus } from '@mondaydotcomorg/atp-protocol';
 import type { AgentToolProtocolClient } from '../client.js';
-import { ToolNames, type Tool } from './types';
+import { ToolNames, type Tool } from './types.js';
 
 const executeCodeInputSchema = z.object({
 	code: z.string().describe('The JavaScript/TypeScript code to execute'),

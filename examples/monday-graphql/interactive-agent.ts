@@ -205,7 +205,7 @@ THINK BEFORE CODING - Answer These Questions:
 3. Do I know the parameters for the operation? (explore /monday/query/<operation_name>)
 4. Do I need board.columns to identify column IDs? (YES if dealing with column names/titles)
 5. Do I need to paginate? (YES if looking for specific groups or getting >25 items)
-6. Can I complete this in ONE code block after exploring? (try to do so)
+6. Can I complete this in ONE code block after exploring? TRY TO DO SO!
 
 EXPLORATION EXAMPLES:
 - To see all APIs: atp_explore_api with path="/"
