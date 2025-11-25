@@ -38,7 +38,7 @@
 	"license": "MIT",
 	"dependencies": {
 		"@mondaydotcomorg/atp-provenance": "0.19.3",
-		"zod": "^3.23.8"
+		"zod": "^3.25.0"
 	},
 	"publishConfig": {
 		"access": "public"

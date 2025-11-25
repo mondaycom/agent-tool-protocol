@@ -45,7 +45,7 @@
 		"@mondaydotcomorg/atp-protocol": "0.19.3",
 		"json-schema-to-zod": "^2.6.1",
 		"langchain": "^0.3.35",
-		"zod": "^4.1.11"
+		"zod": "^3.25.0"
 	},
 	"devDependencies": {
 		"typescript": "^5.3.3",
