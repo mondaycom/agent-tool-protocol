@@ -3753,7 +3753,7 @@ __metadata:
     zod: "npm:^3.25.0"
     zod-to-json-schema: "npm:^3.24.6"
   peerDependencies:
-    zod: ^3.0.0
+    zod: ^3.25.0
   languageName: unknown
   linkType: soft
 
@@ -3795,7 +3795,7 @@ __metadata:
     vitest: "npm:^1.2.1"
     zod: "npm:^3.25.0"
   peerDependencies:
-    zod: ^3.0.0
+    zod: ^3.25.0
   languageName: unknown
   linkType: soft
 
@@ -3811,7 +3811,7 @@ __metadata:
     zod: "npm:^3.25.0"
   peerDependencies:
     "@modelcontextprotocol/sdk": ">=0.5.0"
-    zod: ^3.0.0
+    zod: ^3.25.0
   peerDependenciesMeta:
     "@modelcontextprotocol/sdk":
       optional: true
@@ -3827,7 +3827,7 @@ __metadata:
     vitest: "npm:^1.2.1"
     zod: "npm:^3.25.0"
   peerDependencies:
-    zod: ^3.0.0
+    zod: ^3.25.0
   languageName: unknown
   linkType: soft
 
@@ -3845,7 +3845,7 @@ __metadata:
     typescript: "npm:^5.3.0"
     zod: "npm:^3.25.0"
   peerDependencies:
-    zod: ^3.0.0
+    zod: ^3.25.0
   languageName: unknown
   linkType: soft
 
@@ -3917,11 +3917,6 @@ __metadata:
     rate-limiter-flexible: "npm:*"
     typescript: "npm:^5.3.3"
     vitest: "npm:^1.2.1"
-  peerDependencies:
-    graphql: ^16.0.0
-  peerDependenciesMeta:
-    graphql:
-      optional: true
   languageName: unknown
   linkType: soft
 
@@ -3938,7 +3933,7 @@ __metadata:
     zod: "npm:^3.25.0"
   peerDependencies:
     ai: ^4.0.0
-    zod: ^3.0.0
+    zod: ^3.25.0
   languageName: unknown
   linkType: soft
 

@@ -73,14 +73,6 @@
 		"nanoid": "^5.1.6",
 		"rate-limiter-flexible": "*"
 	},
-	"peerDependencies": {
-		"graphql": "^16.0.0"
-	},
-	"peerDependenciesMeta": {
-		"graphql": {
-			"optional": true
-		}
-	},
 	"devDependencies": {
 		"@types/node": "^20.11.5",
 		"graphql": "^16.12.0",
