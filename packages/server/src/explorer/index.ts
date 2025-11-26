@@ -237,16 +237,13 @@ export class ExplorerService {
 	}
 
 	/**
-	 * Generates function definition showing how to call it.
-	 * Handles hierarchical group names (e.g., "monday/boards" → "api.monday.boards.func_name()")
+	 * Generates TypeScript function signature showing how to call the function.
 	 */
 	private generateFunctionDefinition(func: CustomFunctionDef, group: string): string {
-		const hasParams =
-			func.inputSchema?.properties && Object.keys(func.inputSchema.properties).length > 0;
-		const paramsPlaceholder = hasParams ? '{ ... }' : '{}';
+		const inputType = this.generateInputType(func.inputSchema);
 		const groupPath = group.replace(/\//g, '.');
 		const outputType = func.outputSchema ? this.generateOutputType(func.outputSchema) : 'unknown';
-		return `api.${groupPath}.${func.name}(${paramsPlaceholder}): Promise<${outputType}>`;
+		return `api.${groupPath}.${func.name}(${inputType}): Promise<${outputType}>`;
 	}
 
 	/**
