@@ -42,16 +42,17 @@
 	"license": "MIT",
 	"dependencies": {
 		"@mondaydotcomorg/atp-client": "0.19.5",
-		"@mondaydotcomorg/atp-protocol": "0.19.5",
-		"zod": "^3.25.0"
+		"@mondaydotcomorg/atp-protocol": "0.19.5"
 	},
 	"peerDependencies": {
-		"ai": "^4.0.0"
+		"ai": "^4.0.0",
+		"zod": "^3.0.0"
 	},
 	"devDependencies": {
 		"@jest/globals": "^29.7.0",
 		"@types/jest": "^29.5.11",
 		"jest": "^29.7.0",
-		"typescript": "^5.3.3"
+		"typescript": "^5.3.3",
+		"zod": "^3.25.0"
 	}
 }

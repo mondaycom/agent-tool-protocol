@@ -7,12 +7,14 @@
 export interface TokenEntry {
 	token: string;
 	addedAt: number;
+	sequence: number;
 }
 
 export class ProvenanceTokenRegistry {
 	private cache: Map<string, TokenEntry> = new Map();
 	private maxSize: number;
 	private ttl: number;
+	private sequenceCounter: number = 0;
 
 	constructor(maxSize: number = 10000, ttlHours: number = 1) {
 		this.maxSize = maxSize;
@@ -31,17 +33,23 @@ export class ProvenanceTokenRegistry {
 			this.evictLRU();
 		}
 
-		// Store token
+		// Store token with sequence number for stable ordering
 		this.cache.set(token, {
 			token,
 			addedAt: Date.now(),
+			sequence: this.sequenceCounter++,
 		});
 	}
 
 	/**
 	 * Get recent tokens (non-expired, sorted by age, limited)
+	 * Returns tokens in chronological order (oldest first, most recent last)
 	 */
 	getRecentTokens(maxCount: number = 1000): string[] {
+		if (maxCount <= 0) {
+			return [];
+		}
+
 		this.evictExpired();
 
 		const now = Date.now();
@@ -66,8 +74,8 @@ export class ProvenanceTokenRegistry {
 					return false;
 				}
 			})
-			.sort((a, b) => b.addedAt - a.addedAt)
-			.slice(0, maxCount);
+			.sort((a, b) => a.sequence - b.sequence)
+			.slice(-maxCount);
 
 		for (const token of expiredTokens) {
 			this.cache.delete(token);
@@ -113,11 +121,11 @@ export class ProvenanceTokenRegistry {
 	 */
 	private evictLRU(): void {
 		let oldestToken: string | null = null;
-		let oldestTime = Infinity;
+		let oldestSequence = Infinity;
 
 		for (const [token, entry] of this.cache.entries()) {
-			if (entry.addedAt < oldestTime) {
-				oldestTime = entry.addedAt;
+			if (entry.sequence < oldestSequence) {
+				oldestSequence = entry.sequence;
 				oldestToken = token;
 			}
 		}
