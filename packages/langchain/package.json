@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-langchain",
-	"version": "0.19.6",
+	"version": "0.19.7",
 	"description": "LangChain integration for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-server",
-	"version": "0.19.6",
+	"version": "0.19.7",
 	"description": "Server implementation for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -46,7 +46,7 @@
 		"@babel/parser": "^7.26.0",
 		"@babel/traverse": "^7.26.0",
 		"@babel/types": "^7.26.0",
-		"@mondaydotcomorg/atp-compiler": "0.19.6",
+		"@mondaydotcomorg/atp-compiler": "0.19.7",
 		"@mondaydotcomorg/atp-protocol": "0.19.6",
 		"@mondaydotcomorg/atp-provenance": "0.19.6",
 		"@mondaydotcomorg/atp-providers": "0.19.6",
