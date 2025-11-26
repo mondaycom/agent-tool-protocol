@@ -17,13 +17,162 @@ import {
 	type GraphQLArgument,
 	IntrospectionQuery,
 } from 'graphql';
-import type { APIGroupConfig, CustomFunctionDef, JSONSchema } from '@mondaydotcomorg/atp-protocol';
+import type { APIGroupConfig, CustomFunctionDef, JSONSchema, AuthProvider, AuthConfig } from '@mondaydotcomorg/atp-protocol';
+import { log } from '@mondaydotcomorg/atp-runtime';
 import fs from 'node:fs/promises';
+
+/**
+ * Dynamic header provider for GraphQL requests.
+ * Can optionally receive request params for dynamic header resolution.
+ */
+export type GraphQLAuthProvider = (params?: Record<string, any>) => Promise<Record<string, string>> | Record<string, string>;
+
+/**
+ * Resolve headers for GraphQL requests based on auth options
+ * Priority: headerProvider > authProvider + auth > static headers
+ * @param options - Load options including auth config
+ * @param params - Optional request params passed to headerProvider for dynamic resolution
+ */
+async function resolveHeaders(options: LoadGraphQLOptions, params?: Record<string, any>): Promise<Record<string, string>> {
+	const headers: Record<string, string> = {};
+	
+	if (options.headers) {
+		Object.assign(headers, options.headers);
+	}
+	
+	if (options.auth && options.authProvider) {
+		const authHeaders = await resolveAuthHeaders(options.auth, options.authProvider);
+		Object.assign(headers, authHeaders);
+	} else if (options.auth) {
+		const authHeaders = await resolveAuthHeadersFromEnv(options.auth);
+		Object.assign(headers, authHeaders);
+	}
+	
+	if (options.headerProvider) {
+		const dynamicHeaders = await options.headerProvider(params);
+		Object.assign(headers, dynamicHeaders);
+	}
+	
+	return headers;
+}
+
+/**
+ * Resolve auth headers using AuthProvider
+ */
+async function resolveAuthHeaders(auth: AuthConfig, authProvider: AuthProvider): Promise<Record<string, string>> {
+	const headers: Record<string, string> = {};
+	
+	switch (auth.scheme) {
+		case 'bearer': {
+			const envVar = auth.envVar || 'GRAPHQL_TOKEN';
+			const token = await authProvider.getCredential(envVar) || process.env[envVar];
+			if (token) {
+				headers['Authorization'] = `Bearer ${token}`;
+			}
+			break;
+		}
+		case 'apiKey': {
+			const envVar = auth.envVar || 'GRAPHQL_API_KEY';
+			const apiKey = await authProvider.getCredential(envVar) || process.env[envVar];
+			if (apiKey && auth.in === 'header') {
+				headers[auth.name] = apiKey;
+			}
+			break;
+		}
+		case 'basic': {
+			const username = auth.usernameEnvVar 
+				? (await authProvider.getCredential(auth.usernameEnvVar) || process.env[auth.usernameEnvVar])
+				: auth.username;
+			const password = auth.passwordEnvVar
+				? (await authProvider.getCredential(auth.passwordEnvVar) || process.env[auth.passwordEnvVar])
+				: auth.value;
+			if (username && password) {
+				const credentials = Buffer.from(`${username}:${password}`).toString('base64');
+				headers['Authorization'] = `Basic ${credentials}`;
+			}
+			break;
+		}
+		case 'custom': {
+			if (auth.headers) {
+				Object.assign(headers, auth.headers);
+			}
+			if (auth.headerEnvVars) {
+				for (const [headerName, envVar] of Object.entries(auth.headerEnvVars)) {
+					const value = await authProvider.getCredential(envVar) || process.env[envVar];
+					if (value) {
+						headers[headerName] = value;
+					}
+				}
+			}
+			break;
+		}
+	}
+	
+	return headers;
+}
+
+/**
+ * Resolve auth headers from environment variables only
+ */
+async function resolveAuthHeadersFromEnv(auth: AuthConfig): Promise<Record<string, string>> {
+	const headers: Record<string, string> = {};
+	
+	switch (auth.scheme) {
+		case 'bearer': {
+			const envVar = auth.envVar || 'GRAPHQL_TOKEN';
+			const token = process.env[envVar] || auth.value;
+			if (token) {
+				headers['Authorization'] = `Bearer ${token}`;
+			}
+			break;
+		}
+		case 'apiKey': {
+			const envVar = auth.envVar || 'GRAPHQL_API_KEY';
+			const apiKey = process.env[envVar] || auth.value;
+			if (apiKey && auth.in === 'header') {
+				headers[auth.name] = apiKey;
+			}
+			break;
+		}
+		case 'basic': {
+			const username = auth.usernameEnvVar ? process.env[auth.usernameEnvVar] : auth.username;
+			const password = auth.passwordEnvVar ? process.env[auth.passwordEnvVar] : auth.value;
+			if (username && password) {
+				const credentials = Buffer.from(`${username}:${password}`).toString('base64');
+				headers['Authorization'] = `Basic ${credentials}`;
+			}
+			break;
+		}
+		case 'custom': {
+			if (auth.headers) {
+				Object.assign(headers, auth.headers);
+			}
+			if (auth.headerEnvVars) {
+				for (const [headerName, envVar] of Object.entries(auth.headerEnvVars)) {
+					const value = process.env[envVar];
+					if (value) {
+						headers[headerName] = value;
+					}
+				}
+			}
+			break;
+		}
+	}
+	
+	return headers;
+}
 
 export interface LoadGraphQLOptions {
 	name?: string;
 	url?: string;
+	/** Static headers for authentication (simple use case) */
 	headers?: Record<string, string>;
+	/** Auth provider for dynamic credential resolution */
+	authProvider?: AuthProvider;
+	/** Dynamic header provider function - called before each request */
+	headerProvider?: GraphQLAuthProvider;
+	/** Auth configuration for automatic credential injection */
+	auth?: AuthConfig;
 	depthLimit?: number;
 	queryDepthLimit?: number;
 }
@@ -66,11 +215,14 @@ export async function loadGraphQL(
 async function loadSchema(source: string, options: LoadGraphQLOptions): Promise<GraphQLSchema> {
 	// Check if source is a URL
 	if (source.startsWith('http://') || source.startsWith('https://')) {
+		// Resolve headers for schema loading
+		const headers = await resolveHeaders(options);
+		
 		const response = await fetch(source, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
-				...options.headers,
+				...headers,
 			},
 			body: JSON.stringify({ query: getIntrospectionQuery() }),
 		});
@@ -78,7 +230,7 @@ async function loadSchema(source: string, options: LoadGraphQLOptions): Promise<
 		if (!response.ok) {
             // If POST with introspection fails, try GET assuming it might return SDL or JSON
             const getResponse = await fetch(source, {
-                headers: options.headers
+                headers
             });
             if (getResponse.ok) {
                 const text = await getResponse.text();
@@ -140,7 +292,6 @@ function convertFieldToFunction(
 			const paramsObj = (params as Record<string, any>) || {};
 			const customFields = paramsObj._fields;
 			
-			// Remove _fields from variables sent to GraphQL
 			const variables = { ...paramsObj };
 			delete variables._fields;
 			
@@ -154,18 +305,13 @@ function convertFieldToFunction(
 				customFields
 			);
 			
-			// Log to server console (controlled by DEBUG_GRAPHQL env var)
 			const debugMode = process.env.DEBUG_GRAPHQL === 'true';
 			if (debugMode) {
-				console.log(`\n${'='.repeat(80)}`);
-				console.log(`[GraphQL ${functionName}] Query:`);
-				console.log(query);
-				console.log(`\n[GraphQL ${functionName}] Variables:`);
-				console.log(JSON.stringify(variables, null, 2));
+				log.debug(`[GraphQL ${functionName}] Query:`, { query });
+				log.debug(`[GraphQL ${functionName}] Variables:`, { variables });
 				if (customFields) {
-					console.log(`\n[GraphQL ${functionName}] Custom fields: ${customFields}`);
+					log.debug(`[GraphQL ${functionName}] Custom fields:`, { customFields });
 				}
-				console.log('='.repeat(80) + '\n');
 			}
 			
 			if (context?.metadata) {
@@ -173,11 +319,13 @@ function convertFieldToFunction(
 				context.metadata.graphql_variables = variables;
 			}
 			
+			const headers = await resolveHeaders(options, paramsObj);
+			
 			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					...options.headers,
+					...headers,
 				},
 				body: JSON.stringify({ 
                     query,

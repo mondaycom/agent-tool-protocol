@@ -1,4 +1,5 @@
 import type { AuditEvent, AuditFilter, AuditSink } from '@mondaydotcomorg/atp-protocol';
+import { log } from '@mondaydotcomorg/atp-runtime';
 import { appendFile, readFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -29,7 +30,7 @@ export class JSONLAuditSink implements AuditSink {
 		const dir = dirname(this.filePath);
 		if (!existsSync(dir)) {
 			mkdir(dir, { recursive: true }).catch((err) => {
-				console.error(`Failed to create audit directory: ${err.message}`);
+				log.error('Failed to create audit directory', { error: err.message });
 			});
 		}
 
@@ -37,7 +38,7 @@ export class JSONLAuditSink implements AuditSink {
 			this.flushInterval = setInterval(() => {
 				if (this.buffer.length > 0) {
 					this.flush().catch((err) => {
-						console.error(`Failed to flush audit buffer: ${err.message}`);
+						log.error('Failed to flush audit buffer', { error: err.message });
 					});
 				}
 			}, options.flushIntervalMs);
@@ -51,7 +52,7 @@ export class JSONLAuditSink implements AuditSink {
 		try {
 			await appendFile(this.filePath, line, 'utf8');
 		} catch (error) {
-			console.error(`Failed to write audit event: ${(error as Error).message}`);
+			log.error('Failed to write audit event', { error: (error as Error).message });
 			throw error;
 		}
 	}
@@ -64,7 +65,7 @@ export class JSONLAuditSink implements AuditSink {
 		try {
 			await appendFile(this.filePath, lines, 'utf8');
 		} catch (error) {
-			console.error(`Failed to write audit batch: ${(error as Error).message}`);
+			log.error('Failed to write audit batch', { error: (error as Error).message });
 			throw error;
 		}
 	}

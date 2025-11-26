@@ -2,7 +2,7 @@
  * Log API Types
  */
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+export type LogLevel = 'none' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
 
 export interface LoggerConfig {
 	level: LogLevel;

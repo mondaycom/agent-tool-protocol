@@ -15,8 +15,7 @@ const server = createServer();
 const petstore = await loadOpenAPI(join(__dirname, 'petstore-api.json'), {
 	name: 'petstore',
 	filter: {
-		// Only include these operations
-		tags: ['pets'],
+		// Only include these HTTP methods
 		methods: ['GET', 'POST'],
 	},
 });

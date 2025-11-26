@@ -5,6 +5,7 @@
  */
 import crypto from 'crypto';
 import { nanoid } from 'nanoid';
+import { log } from '@mondaydotcomorg/atp-runtime';
 import type { ProvenanceMetadata } from './types.js';
 
 // Forward declare CacheProvider to avoid circular dependency
@@ -149,7 +150,7 @@ export async function issueProvenanceToken(
 			await cacheProvider.set(valueKey, JSON.stringify({ value: String(value), metaId }), ttl);
 		}
 	} catch (error) {
-		console.error('Failed to store provenance metadata in cache:', error);
+		log.error('Failed to store provenance metadata in cache', { error });
 		return null;
 	}
 
@@ -201,11 +202,11 @@ export async function verifyProvenanceToken(
 			const expectedBuf = Buffer.from(expectedSig, 'base64url');
 
 			if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
-				console.error('Token signature verification failed');
+				log.error('Token signature verification failed');
 				return null;
 			}
 		} catch (error) {
-			console.error('Token signature comparison error:', error);
+			log.error('Token signature comparison error', { error });
 			return null;
 		}
 
@@ -213,28 +214,28 @@ export async function verifyProvenanceToken(
 		const payload: TokenPayload = JSON.parse(payloadStr);
 
 		if (payload.v !== 1) {
-			console.error('Unsupported token version:', payload.v);
+			log.error('Unsupported token version', { version: payload.v });
 			return null;
 		}
 
 		if (payload.clientId !== clientId) {
-			console.error('Token clientId mismatch:', payload.clientId, 'vs', clientId);
+			log.error('Token clientId mismatch', { tokenClientId: payload.clientId, expectedClientId: clientId });
 			return null;
 		}
 
 		if (payload.executionId !== executionId) {
-			console.error('Token executionId mismatch:', payload.executionId, 'vs', executionId);
+			log.error('Token executionId mismatch', { tokenExecutionId: payload.executionId, expectedExecutionId: executionId });
 			return null;
 		}
 
 		if (Date.now() > payload.expiresAt) {
-			console.warn('Token expired');
+			log.warn('Token expired');
 			return null;
 		}
 
 		const valueDigest = computeDigest(value);
 		if (!valueDigest || valueDigest !== payload.valueDigest) {
-			console.warn('Token value digest mismatch (value may have been modified)');
+			log.warn('Token value digest mismatch (value may have been modified)');
 			return null;
 		}
 
@@ -242,14 +243,14 @@ export async function verifyProvenanceToken(
 		const metaStr = await cacheProvider.get(cacheKey);
 
 		if (!metaStr || typeof metaStr !== 'string') {
-			console.warn('Token metadata not found in cache (expired or evicted)');
+			log.warn('Token metadata not found in cache (expired or evicted)');
 			return null;
 		}
 
 		const metadata: ProvenanceMetadata = JSON.parse(metaStr);
 		return metadata;
 	} catch (error) {
-		console.error('Token verification error:', error);
+		log.error('Token verification error', { error });
 		return null;
 	}
 }
@@ -270,7 +271,7 @@ export async function verifyProvenanceHints(
 
 	const hintsToProcess = hints.slice(0, maxHints);
 	if (hints.length > maxHints) {
-		console.warn(`Capped provenance hints from ${hints.length} to ${maxHints}`);
+		log.warn(`Capped provenance hints from ${hints.length} to ${maxHints}`);
 	}
 
 	const timeout = 100;

@@ -4,6 +4,7 @@ import type {
 	SearchOptions,
 	SearchResult,
 	ClientTool,
+	ClientToolDefinition,
 	ExploreResult,
 } from '@mondaydotcomorg/atp-protocol';
 import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
@@ -19,6 +20,13 @@ import {
 	ExecutionOperations,
 	ServiceProviders,
 } from './core/index.js';
+import {
+	type Tool,
+	createSearchApiTool,
+	createFetchAllApisTool,
+	createExecuteCodeTool,
+	createExploreApiTool,
+} from './tools/index.js';
 
 /**
  * Options for creating an AgentToolProtocolClient
@@ -123,6 +131,46 @@ export class AgentToolProtocolClient {
 	 */
 	provideTools(tools: ClientTool[]): void {
 		this.serviceProviders.provideTools(tools);
+	}
+
+	/**
+	 * Gets all client-provided tools (registered via provideTools).
+	 * Returns the full tool objects including handlers.
+	 */
+	getClientTools(): ClientTool[] {
+		return this.serviceProviders.getTools() || [];
+	}
+
+	/**
+	 * Gets client-provided tool definitions (without handlers).
+	 * Useful for sending tool metadata to servers.
+	 */
+	getClientToolDefinitions(): ClientToolDefinition[] {
+		return this.serviceProviders.getToolDefinitions();
+	}
+
+	/**
+	 * Gets the ATP tools (execute_code, explore_api, search_api, fetch_all_apis).
+	 * These are ready-to-use tools that can be exposed to MCP or other frameworks.
+	 *
+	 * @example
+	 * ```typescript
+	 * const tools = client.getATPTools();
+	 * for (const tool of tools) {
+	 *   mcpServer.tool(tool.name, tool.description, tool.inputSchema, async (args) => {
+	 *     const result = await tool.func(args);
+	 *     return { content: [{ type: 'text', text: result }] };
+	 *   });
+	 * }
+	 * ```
+	 */
+	getATPTools(): Tool[] {
+		return [
+			createSearchApiTool(this),
+			createFetchAllApisTool(this),
+			createExecuteCodeTool(this),
+			createExploreApiTool(this),
+		];
 	}
 
 	/**

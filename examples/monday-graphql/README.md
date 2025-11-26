@@ -131,3 +131,61 @@ All operations are fully typed with TypeScript interfaces generated from the Gra
 - Nested objects
 - Enums (e.g., board states, board kinds)
 
+## Custom Authentication
+
+The GraphQL loader supports multiple authentication options:
+
+### Static Headers (Simple)
+```typescript
+await server.loadGraphQL('https://api.example.com/graphql', {
+  headers: {
+    'Authorization': 'Bearer your-token',
+    'X-Custom-Header': 'value'
+  }
+});
+```
+
+### Dynamic Header Provider
+For tokens that need to be refreshed or fetched dynamically:
+```typescript
+await server.loadGraphQL('https://api.example.com/graphql', {
+  headerProvider: async () => {
+    const token = await getTokenFromSecureVault();
+    return {
+      'Authorization': token,
+      'X-Request-Id': generateRequestId()
+    };
+  }
+});
+```
+
+### Auth Config with AuthProvider
+For integration with custom credential management:
+```typescript
+import { EnvAuthProvider } from '@mondaydotcomorg/atp-providers';
+
+const authProvider = new EnvAuthProvider();
+
+await server.loadGraphQL('https://api.example.com/graphql', {
+  authProvider,
+  auth: {
+    scheme: 'bearer',
+    envVar: 'API_TOKEN'
+  }
+});
+```
+
+### Combined Static + Dynamic Headers
+```typescript
+await server.loadGraphQL('https://api.example.com/graphql', {
+  headers: {
+    'X-Static-Header': 'static-value'
+  },
+  headerProvider: async () => ({
+    'Authorization': await refreshToken()
+  })
+});
+```
+
+Note: `headerProvider` takes precedence over `authProvider`/`auth`, which takes precedence over static `headers`.
+

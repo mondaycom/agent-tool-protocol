@@ -18,6 +18,7 @@ export function createExecuteCodeTool(client: AgentToolProtocolClient): Tool<Exe
 		description:
 			"Execute JavaScript/TypeScript code to call APIs. IMPORTANT: Code MUST use 'return' statement to see results. Examples: 'return api.groupName.functionName({})' or 'const result = api.group.func({}); return result'. Use bracket notation for dynamic names: api['groupName']['functionName']({}).",
 		inputSchema: zodToJsonSchema(executeCodeInputSchema) as any,
+		zodSchema: executeCodeInputSchema,
 		func: async (input: ExecuteCodeInput) => {
 			try {
 				const result = await client.execute(input.code, {

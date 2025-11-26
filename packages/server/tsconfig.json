@@ -14,6 +14,7 @@
 			"@mondaydotcomorg/atp-runtime": ["packages/runtime/src/index.ts"],
 			"@mondaydotcomorg/atp-mcp-adapter": ["packages/mcp-adapter/src/index.ts"],
 			"@mondaydotcomorg/atp-langchain": ["packages/langchain/src/index.ts"],
+			"@mondaydotcomorg/atp-compiler": ["packages/atp-compiler/src/index.ts"],
 			"@agent-tool-protocol/cli": ["packages/cli/src/index.ts"]
 		}
 	},
@@ -23,6 +24,7 @@
 		{ "path": "../protocol" },
 		{ "path": "../provenance" },
 		{ "path": "../providers" },
-		{ "path": "../runtime" }
+		{ "path": "../runtime" },
+		{ "path": "../atp-compiler" }
 	]
 }

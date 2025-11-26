@@ -204,7 +204,7 @@ export class ExplorerService {
 			}
 
 			const { func, group } = current.functionDef;
-			const definition = this.generateFunctionDefinition(func);
+			const definition = this.generateFunctionDefinition(func, group);
 
 			return {
 				type: 'function',
@@ -237,13 +237,13 @@ export class ExplorerService {
 	}
 
 	/**
-	 * Generates TypeScript function signature
+	 * Generates TypeScript function signature showing how to call the function.
 	 */
-	private generateFunctionDefinition(func: CustomFunctionDef): string {
+	private generateFunctionDefinition(func: CustomFunctionDef, group: string): string {
 		const inputType = this.generateInputType(func.inputSchema);
+		const groupPath = group.replace(/\//g, '.');
 		const outputType = func.outputSchema ? this.generateOutputType(func.outputSchema) : 'unknown';
-
-		return `async function ${func.name}(params: ${inputType}): Promise<${outputType}>`;
+		return `async function api.${groupPath}.${func.name}(${inputType}): Promise<${outputType}>`;
 	}
 
 	/**

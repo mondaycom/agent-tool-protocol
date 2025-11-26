@@ -1,4 +1,5 @@
 import type { CacheProvider } from '@mondaydotcomorg/atp-protocol';
+import { log } from '@mondaydotcomorg/atp-runtime';
 import type Redis from 'ioredis';
 
 export interface RedisCacheOptions {
@@ -33,11 +34,10 @@ export class RedisCache implements CacheProvider {
 			if (!value) return null;
 			return JSON.parse(value) as T;
 		} catch (error) {
-			console.error(
-				'[RedisCache] Failed to get key:',
+			log.error('RedisCache failed to get key', {
 				key,
-				error instanceof Error ? error.message : error
-			);
+				error: error instanceof Error ? error.message : error,
+			});
 			return null;
 		}
 	}
@@ -54,11 +54,10 @@ export class RedisCache implements CacheProvider {
 				await this.redis.set(fullKey, serialized);
 			}
 		} catch (error) {
-			console.error(
-				'[RedisCache] Failed to set key:',
+			log.error('RedisCache failed to set key', {
 				key,
-				error instanceof Error ? error.message : error
-			);
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
@@ -66,11 +65,10 @@ export class RedisCache implements CacheProvider {
 		try {
 			await this.redis.del(this.getFullKey(key));
 		} catch (error) {
-			console.error(
-				'[RedisCache] Failed to delete key:',
+			log.error('RedisCache failed to delete key', {
 				key,
-				error instanceof Error ? error.message : error
-			);
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
@@ -79,11 +77,10 @@ export class RedisCache implements CacheProvider {
 			const exists = await this.redis.exists(this.getFullKey(key));
 			return exists === 1;
 		} catch (error) {
-			console.error(
-				'[RedisCache] Failed to check key:',
+			log.error('RedisCache failed to check key', {
 				key,
-				error instanceof Error ? error.message : error
-			);
+				error: error instanceof Error ? error.message : error,
+			});
 			return false;
 		}
 	}
@@ -103,10 +100,9 @@ export class RedisCache implements CacheProvider {
 				}
 			}
 		} catch (error) {
-			console.error(
-				'[RedisCache] Failed to clear cache:',
-				error instanceof Error ? error.message : error
-			);
+			log.error('RedisCache failed to clear cache', {
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
@@ -116,10 +112,9 @@ export class RedisCache implements CacheProvider {
 			const values = await this.redis.mget(...fullKeys);
 			return values.map((value) => (value ? JSON.parse(value) : null));
 		} catch (error) {
-			console.error(
-				'[RedisCache] Failed to mget keys:',
-				error instanceof Error ? error.message : error
-			);
+			log.error('RedisCache failed to mget keys', {
+				error: error instanceof Error ? error.message : error,
+			});
 			return keys.map(() => null);
 		}
 	}
@@ -140,10 +135,9 @@ export class RedisCache implements CacheProvider {
 			}
 			await pipeline.exec();
 		} catch (error) {
-			console.error(
-				'[RedisCache] Failed to mset entries:',
-				error instanceof Error ? error.message : error
-			);
+			log.error('RedisCache failed to mset entries', {
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
@@ -151,10 +145,9 @@ export class RedisCache implements CacheProvider {
 		try {
 			await this.redis.quit();
 		} catch (error) {
-			console.error(
-				'[RedisCache] Failed to disconnect:',
-				error instanceof Error ? error.message : error
-			);
+			log.error('RedisCache failed to disconnect', {
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 }

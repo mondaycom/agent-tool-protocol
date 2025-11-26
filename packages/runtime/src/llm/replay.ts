@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'async_hooks';
+import { log } from '../log/index.js';
 
 /**
  * Execution-scoped state
@@ -97,7 +98,7 @@ function getCurrentState(): ExecutionState {
 	if (!state) {
 		// State should have been initialized explicitly at execution start
 		// Create it now with a safe default to prevent crashes
-		console.warn('[STATE] State not initialized, creating with default. This should not happen.', {
+		log.warn('State not initialized, creating with default. This should not happen.', {
 			executionId,
 		});
 		state = {

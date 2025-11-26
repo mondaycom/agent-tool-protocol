@@ -1,5 +1,6 @@
 import type { ExecutionResult, ExecutionConfig } from '@mondaydotcomorg/atp-protocol';
 import { ExecutionStatus, CallbackType } from '@mondaydotcomorg/atp-protocol';
+import { log } from '@mondaydotcomorg/atp-runtime';
 import type { ClientSession } from './session.js';
 import type { ServiceProviders } from './service-providers';
 import { ClientCallbackError } from '../errors.js';
@@ -85,7 +86,7 @@ export class ExecutionOperations {
 													return;
 												}
 											} catch (e) {
-												console.error('Failed to parse SSE data:', dataStr);
+												log.error('Failed to parse SSE data', { dataStr, error: e });
 											}
 										}
 										break;
@@ -199,17 +200,14 @@ export class ExecutionOperations {
 			}
 
 			const errorMessage = `Missing service providers for callback types: ${unexpectedMissing.map((cb) => cb.type).join(', ')}`;
-			console.error(
-				`Auto-handling batch paused execution without service providers: ${errorMessage}`,
-				{
-					executionId: pausedResult.executionId,
-					missingServices: unexpectedMissing.map((cb) => ({
-						type: cb.type,
-						operation: cb.operation,
-						id: cb.id,
-					})),
-				}
-			);
+			log.error(`Auto-handling batch paused execution without service providers: ${errorMessage}`, {
+				executionId: pausedResult.executionId,
+				missingServices: unexpectedMissing.map((cb) => ({
+					type: cb.type,
+					operation: cb.operation,
+					id: cb.id,
+				})),
+			});
 
 			const existingCallbacks = pausedResult.needsCallbacks.filter(
 				(cb) => !missingServiceIds.has(cb.id)
@@ -243,7 +241,7 @@ export class ExecutionOperations {
 					return await this.resumeWithBatchResults(pausedResult.executionId, allResults);
 				} catch (error) {
 					const errorMessage = error instanceof Error ? error.message : String(error);
-					console.error(`Error handling existing services in batch: ${errorMessage}`, {
+					log.error(`Error handling existing services in batch: ${errorMessage}`, {
 						executionId: pausedResult.executionId,
 					});
 					const allErrorResults = pausedResult.needsCallbacks.map((cb) => ({
@@ -283,7 +281,7 @@ export class ExecutionOperations {
 			return await this.resumeWithBatchResults(pausedResult.executionId, batchResults);
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error);
-			console.error(`Error handling batch callbacks: ${errorMessage}`, {
+			log.error(`Error handling batch callbacks: ${errorMessage}`, {
 				executionId: pausedResult.executionId,
 				callbackCount: pausedResult.needsCallbacks.length,
 			});
@@ -317,7 +315,7 @@ export class ExecutionOperations {
 			}
 
 			const errorMessage = `${pausedResult.needsCallback.type} service not provided by client`;
-			console.error(`Auto-handling paused execution without service provider: ${errorMessage}`, {
+			log.error(`Auto-handling paused execution without service provider: ${errorMessage}`, {
 				executionId: pausedResult.executionId,
 				callbackType: pausedResult.needsCallback.type,
 				operation: pausedResult.needsCallback.operation,
@@ -345,7 +343,7 @@ export class ExecutionOperations {
 				throw error;
 			}
 			const errorMessage = error instanceof Error ? error.message : String(error);
-			console.error(`Error handling callback: ${errorMessage}`, {
+			log.error(`Error handling callback: ${errorMessage}`, {
 				executionId: pausedResult.executionId,
 				callbackType: pausedResult.needsCallback.type,
 				operation: pausedResult.needsCallback.operation,

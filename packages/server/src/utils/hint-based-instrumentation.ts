@@ -8,6 +8,7 @@ import * as walk from 'acorn-walk';
 import * as escodegen from 'escodegen';
 import type { ProvenanceMetadata } from '@mondaydotcomorg/atp-provenance';
 import { computeDigest } from '@mondaydotcomorg/atp-provenance';
+import { log } from '@mondaydotcomorg/atp-runtime';
 
 /**
  * Instrument string literals in code that match hint digests
@@ -93,7 +94,7 @@ export function instrumentLiteralsFromHints(
 
 		return { code: instrumentedCode, taintedCount };
 	} catch (error) {
-		console.error('Failed to instrument literals from hints:', error);
+		log.error('Failed to instrument literals from hints', { error });
 		return { code, taintedCount: 0 };
 	}
 }

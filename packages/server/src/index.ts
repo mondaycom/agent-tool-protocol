@@ -1,5 +1,7 @@
 export { AgentToolProtocolServer, createServer } from './create-server.js';
 export { loadOpenAPI } from './openapi-loader.js';
+export { loadGraphQL } from './graphql-loader.js';
+export type { LoadGraphQLOptions, GraphQLAuthProvider } from './graphql-loader.js';
 export { APIAggregator } from './aggregator/index.js';
 export { SearchEngine } from './search/index.js';
 export { SandboxExecutor } from './executor/index.js';

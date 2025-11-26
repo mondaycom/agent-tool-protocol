@@ -1,4 +1,5 @@
 import type { ScopeChecker, TokenInfo } from '@mondaydotcomorg/atp-protocol';
+import { log } from '@mondaydotcomorg/atp-runtime';
 import { createHash } from 'node:crypto';
 
 /**
@@ -72,7 +73,7 @@ export class ScopeCheckerRegistry {
 		}
 
 		if (cleaned > 0) {
-			console.debug(`Cleaned ${cleaned} expired/old scope cache entries`);
+			log.debug(`Cleaned ${cleaned} expired/old scope cache entries`);
 		}
 	}
 
