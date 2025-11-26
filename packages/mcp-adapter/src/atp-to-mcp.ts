@@ -71,11 +71,12 @@ export function registerToolsWithMCP(tools: Tool[], mcpServer: MCPServerLike): v
 		};
 
 		if (typeof mcpServer.registerTool === 'function') {
+			const inputSchema = tool.zodSchema?.shape ?? {};
 			mcpServer.registerTool(
 				tool.name,
 				{
 					description: tool.description || '',
-					inputSchema: tool.zodSchema,
+					inputSchema,
 				},
 				handler
 			);
