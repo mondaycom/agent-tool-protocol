@@ -22,6 +22,7 @@ interface ExploreFunctionResult {
 	name: string;
 	description: string;
 	definition: string;
+	usage: string;
 	group: string;
 	inputSchema?: any;
 	outputSchema?: any;
@@ -49,9 +50,10 @@ export class ExplorerService {
 		for (const group of apiGroups) {
 			if (!group.functions || group.functions.length === 0) continue;
 
-			const groupFolder = group.type === 'graphql'
-				? this.ensureDirectory(this.root, group.name)
-				: this.ensureDirectory(this.ensureDirectory(this.root, group.type), group.name);
+			const groupFolder =
+				group.type === 'graphql'
+					? this.ensureDirectory(this.root, group.name)
+					: this.ensureDirectory(this.ensureDirectory(this.root, group.type), group.name);
 
 			for (const func of group.functions) {
 				const segments = this.extractSegments(func, group);
@@ -71,16 +73,13 @@ export class ExplorerService {
 
 	/**
 	 * Extract path segments for organizing functions
+	 * For GraphQL, keep flat structure to match actual function names (query_me not query/me)
 	 */
 	private extractSegments(func: CustomFunctionDef, group: APIGroupConfig): string[] {
 		if (group.type === 'graphql') {
-			const name = func.name;
-			if (name.startsWith('query_')) {
-				return ['query', name.replace('query_', '')];
-			}
-			if (name.startsWith('mutation_')) {
-				return ['mutation', name.replace('mutation_', '')];
-			}
+			// Keep GraphQL functions flat - path should match actual function name
+			// e.g., query_me stays as query_me, not split into query/me
+			return [func.name];
 		}
 
 		if (group.type === 'openapi') {
@@ -205,6 +204,7 @@ export class ExplorerService {
 
 			const { func, group } = current.functionDef;
 			const definition = this.generateFunctionDefinition(func);
+			const usage = this.generateUsageExample(func, group);
 
 			return {
 				type: 'function',
@@ -212,6 +212,7 @@ export class ExplorerService {
 				name: func.name,
 				description: func.description,
 				definition,
+				usage,
 				group,
 				inputSchema: func.inputSchema,
 				outputSchema: func.outputSchema,
@@ -244,6 +245,41 @@ export class ExplorerService {
 		const outputType = func.outputSchema ? this.generateOutputType(func.outputSchema) : 'unknown';
 
 		return `async function ${func.name}(params: ${inputType}): Promise<${outputType}>`;
+	}
+
+	/**
+	 * Generates usage example showing how to call the function
+	 */
+	private generateUsageExample(func: CustomFunctionDef, group: string): string {
+		const paramExample = this.generateParamExample(func.inputSchema);
+		return `api.${group}.${func.name}(${paramExample})`;
+	}
+
+	/**
+	 * Generates a parameter example from the input schema
+	 */
+	private generateParamExample(schema?: {
+		properties?: Record<string, any>;
+		required?: string[];
+	}): string {
+		if (!schema || !schema.properties) {
+			return '{}';
+		}
+
+		const required = schema.required || [];
+		const props: string[] = [];
+
+		for (const [key] of Object.entries(schema.properties)) {
+			if (required.includes(key)) {
+				props.push(`${key}: '...'`);
+			}
+		}
+
+		if (props.length === 0) {
+			return '{}';
+		}
+
+		return `{ ${props.join(', ')} }`;
 	}
 
 	/**

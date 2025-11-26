@@ -205,6 +205,7 @@ describe('ATP Server Explorer - Filesystem-like API navigation', () => {
 				expect(result.definition).toContain('getUser');
 				expect(result.definition).toContain('username');
 				expect(result.definition).toContain('string');
+				expect(result.usage).toBe("api.github.getUser({ username: '...' })");
 				expect(result.group).toBe('github');
 			}
 		});
@@ -240,6 +241,7 @@ describe('ATP Server Explorer - Filesystem-like API navigation', () => {
 				expect(result.description).toBe('Read a file from disk');
 				expect(result.definition).toContain('read_file');
 				expect(result.definition).toContain('path');
+				expect(result.usage).toBe("api.filesystem.read_file({ path: '...' })");
 			}
 		});
 	});
@@ -272,6 +274,7 @@ describe('ATP Server Explorer - Filesystem-like API navigation', () => {
 				expect(result.name).toBe('formatDate');
 				expect(result.description).toBe('Format a date string');
 				expect(result.definition).toContain('formatDate');
+				expect(result.usage).toBe("api.utilities.formatDate({ date: '...' })");
 			}
 		});
 	});

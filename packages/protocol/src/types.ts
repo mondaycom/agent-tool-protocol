@@ -430,6 +430,7 @@ export interface ExploreFunctionResult {
 	name: string;
 	description: string;
 	definition: string;
+	usage: string;
 	group: string;
 }
 

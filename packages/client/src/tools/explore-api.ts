@@ -41,6 +41,7 @@ export function createExploreApiTool(client: AgentToolProtocolClient): Tool<Expl
 							name: result.name,
 							description: result.description,
 							definition: result.definition,
+							usage: result.usage,
 							group: result.group,
 							path: result.path,
 						},
