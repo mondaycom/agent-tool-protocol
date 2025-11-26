@@ -43,7 +43,6 @@
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "^0.5.0",
 		"@mondaydotcomorg/atp-protocol": "0.19.4",
-		"@mondaydotcomorg/atp-protocol": "0.19.4",
 		"@mondaydotcomorg/atp-server": "0.19.4",
 		"zod": "^3.25.0"
 	},

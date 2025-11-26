@@ -3766,9 +3766,9 @@ __metadata:
   resolution: "@mondaydotcomorg/atp-langchain@workspace:packages/langchain"
   dependencies:
     "@langchain/core": "npm:^0.3.78"
-    "@mondaydotcomorg/atp-client": "npm:0.19.3"
-    "@mondaydotcomorg/atp-protocol": "npm:0.19.3"
-    "@mondaydotcomorg/atp-runtime": "npm:0.19.3"
+    "@mondaydotcomorg/atp-client": "npm:0.19.4"
+    "@mondaydotcomorg/atp-protocol": "npm:0.19.4"
+    "@mondaydotcomorg/atp-runtime": "npm:0.19.4"
     json-schema-to-zod: "npm:^2.6.1"
     langchain: "npm:^0.3.35"
     typescript: "npm:^5.3.3"
@@ -3782,9 +3782,8 @@ __metadata:
   resolution: "@mondaydotcomorg/atp-mcp-adapter@workspace:packages/mcp-adapter"
   dependencies:
     "@modelcontextprotocol/sdk": "npm:^0.5.0"
-    "@mondaydotcomorg/atp-client": "npm:0.19.3"
-    "@mondaydotcomorg/atp-protocol": "npm:0.19.3"
-    "@mondaydotcomorg/atp-server": "npm:0.19.3"
+    "@mondaydotcomorg/atp-protocol": "npm:0.19.4"
+    "@mondaydotcomorg/atp-server": "npm:0.19.4"
     typescript: "npm:^5.3.3"
     vitest: "npm:^1.2.1"
     zod: "npm:^3.25.0"
@@ -3822,12 +3821,26 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-providers@workspace:packages/providers"
   dependencies:
-    "@mondaydotcomorg/atp-protocol": "npm:0.19.3"
-    "@mondaydotcomorg/atp-runtime": "npm:0.19.3"
+    "@mondaydotcomorg/atp-protocol": "npm:0.19.4"
+    "@mondaydotcomorg/atp-runtime": "npm:0.19.4"
     "@opentelemetry/api": "npm:^1.9.0"
     typescript: "npm:^5.7.2"
   languageName: unknown
   linkType: soft
+
+"@mondaydotcomorg/atp-runtime@npm:0.19.3":
+  version: 0.19.3
+  resolution: "@mondaydotcomorg/atp-runtime@npm:0.19.3"
+  dependencies:
+    ioredis: "npm:^5.8.0"
+    node-cache: "npm:*"
+    pino: "npm:*"
+    pino-pretty: "npm:*"
+    reflect-metadata: "npm:^0.2.1"
+    undici: "npm:*"
+  checksum: 10c0/2255436085dd27f63d695e99126effe0a2e3b9b2b57d44416239f5be41f7866515699fcd24d1622334b3a87744892d4eea854e0c94477b40fa292834f0cb61e8
+  languageName: node
+  linkType: hard
 
 "@mondaydotcomorg/atp-runtime@npm:0.19.4, @mondaydotcomorg/atp-runtime@workspace:packages/runtime":
   version: 0.0.0-use.local
