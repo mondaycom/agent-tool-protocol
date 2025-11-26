@@ -1,6 +1,7 @@
 import * as t from '@babel/types';
 import { generateUniqueId } from '../runtime/context.js';
 import { BatchParallelDetector } from './batch-detector.js';
+import { RuntimeFunction } from '../runtime/runtime-functions.js';
 import type { BatchCallInfo } from '../types.js';
 
 export class PromiseTransformer {
@@ -47,7 +48,10 @@ export class PromiseTransformer {
 
 			const runtimeCall = t.awaitExpression(
 				t.callExpression(
-					t.memberExpression(t.identifier('__runtime'), t.identifier('resumablePromiseAllSettled')),
+					t.memberExpression(
+						t.identifier('__runtime'),
+						t.identifier(RuntimeFunction.RESUMABLE_PROMISE_ALL_SETTLED)
+					),
 					[arrayArg, t.stringLiteral(parallelId)]
 				)
 			);
@@ -103,7 +107,7 @@ export class PromiseTransformer {
 
 		const runtimeCall = t.awaitExpression(
 			t.callExpression(
-				t.memberExpression(t.identifier('__runtime'), t.identifier('batchParallel')),
+				t.memberExpression(t.identifier('__runtime'), t.identifier(RuntimeFunction.BATCH_PARALLEL)),
 				[batchCallsArray, t.stringLiteral(batchId)]
 			)
 		);
@@ -123,7 +127,10 @@ export class PromiseTransformer {
 
 		const runtimeCall = t.awaitExpression(
 			t.callExpression(
-				t.memberExpression(t.identifier('__runtime'), t.identifier('resumablePromiseAll')),
+				t.memberExpression(
+					t.identifier('__runtime'),
+					t.identifier(RuntimeFunction.RESUMABLE_PROMISE_ALL)
+				),
 				[arrayArg, t.stringLiteral(parallelId)]
 			)
 		);

@@ -3,6 +3,10 @@ import type { Logger } from '@mondaydotcomorg/atp-runtime';
 import { isPauseError, runInExecutionContext } from '@mondaydotcomorg/atp-runtime';
 import { isBatchPauseError } from '@mondaydotcomorg/atp-compiler';
 import { PAUSE_EXECUTION_MARKER } from './constants.js';
+import {
+	isInIsolateFunction,
+	getInIsolateImplementation,
+} from './in-isolate-runtime.js';
 
 export async function injectTimerPolyfills(ivmContext: ivm.Context): Promise<void> {
 	await ivmContext.eval(`
@@ -237,12 +241,20 @@ export async function setupRuntimeNamespace(
 	}
 
 	let runtimeSetup = 'globalThis.__runtime = {\n';
-	runtimeSetup += runtimeKeys
-		.map(
-			(key) =>
+	const functionSetups: string[] = [];
+
+	for (const key of runtimeKeys) {
+		const inIsolateImpl = getInIsolateImplementation(key);
+		if (isInIsolateFunction(key) && inIsolateImpl) {
+			functionSetups.push(`\t${key}: ${inIsolateImpl}`);
+		} else {
+			functionSetups.push(
 				`\t${key}: async (...args) => {\n\t\treturn await __runtime_${key}_impl.apply(undefined, args, { arguments: { copy: true }, result: { promise: true } });\n\t}`
-		)
-		.join(',\n');
+			);
+		}
+	}
+
+	runtimeSetup += functionSetups.join(',\n');
 	runtimeSetup += '\n};';
 
 	await ivmContext.eval(runtimeSetup);

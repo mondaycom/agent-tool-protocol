@@ -5,6 +5,7 @@ export * from './resumable-loops.js';
 export * from './resumable-arrays.js';
 export * from './resumable-parallel.js';
 export * from './batch-parallel.js';
+export * from './runtime-functions.js';
 
 import type { CacheProvider } from '@mondaydotcomorg/atp-protocol';
 import { CheckpointManager, setCheckpointManager } from './checkpoint-manager.js';
