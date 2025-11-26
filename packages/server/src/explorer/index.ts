@@ -243,7 +243,7 @@ export class ExplorerService {
 		const inputType = this.generateInputType(func.inputSchema);
 		const groupPath = group.replace(/\//g, '.');
 		const outputType = func.outputSchema ? this.generateOutputType(func.outputSchema) : 'unknown';
-		return `api.${groupPath}.${func.name}(${inputType}): Promise<${outputType}>`;
+		return `async function api.${groupPath}.${func.name}(${inputType}): Promise<${outputType}>`;
 	}
 
 	/**
