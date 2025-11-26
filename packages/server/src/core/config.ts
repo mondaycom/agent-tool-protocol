@@ -132,7 +132,7 @@ export interface ServerConfig {
 	providers?: ProvidersConfig;
 	/** Custom compiler implementation (optional, defaults to standard ATPCompiler) */
 	compiler?: ICompiler;
-	logger?: 'debug' | 'info' | 'warn' | 'error' | Logger;
+	logger?: 'none' | 'debug' | 'info' | 'warn' | 'error' | Logger;
 }
 
 /**
@@ -145,7 +145,7 @@ export interface ResolvedServerConfig {
 	discovery: DiscoveryConfig;
 	audit: AuditConfig;
 	otel: OpenTelemetryConfig;
-	logger: 'debug' | 'info' | 'warn' | 'error' | Logger;
+	logger: 'none' | 'debug' | 'info' | 'warn' | 'error' | Logger;
 }
 
 /**

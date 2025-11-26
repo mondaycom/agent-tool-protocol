@@ -188,7 +188,12 @@ const client = new AgentToolProtocolClient({
 
 await client.init(); // Registers tools with server
 
-// Code can now use atp.tool.fetch()
+const tools = client.getClientTools();
+console.log('Available tools:', tools.map((t) => t.name));
+
+const toolDefs = client.getClientToolDefinitions();
+console.log('Tool definitions:', JSON.stringify(toolDefs, null, 2));
+
 const result = await client.execute({
 	code: `
     const data = await atp.tool.fetch({
@@ -310,6 +315,11 @@ class AgentToolProtocolClient {
 	provideLLM(handler: ClientLLMHandler): void;
 	provideApproval(handler: ClientApprovalHandler): void;
 	provideEmbedding(handler: ClientEmbeddingHandler): void;
+	provideTools(tools: ClientTool[]): void;
+
+	// Get client tools
+	getTools(): ClientTool[]; // Returns tools with handlers
+	getToolDefinitions(): ClientToolDefinition[]; // Returns tools without handlers
 
 	// API discovery
 	search(options: SearchOptions): Promise<SearchResult[]>;

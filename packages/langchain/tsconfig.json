@@ -1,9 +1,11 @@
 {
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
-		"rootDir": "./src",
 		"outDir": "./dist",
+		"rootDir": "./src",
 		"composite": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
 		"baseUrl": "../..",
 		"paths": {
 			"@mondaydotcomorg/atp-protocol": ["packages/protocol/src/index.ts"],
@@ -17,5 +19,5 @@
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist", "**/*.test.ts"],
-	"references": [{ "path": "../protocol" }, { "path": "../client" }]
+	"references": [{ "path": "../protocol" }, { "path": "../client" }, { "path": "../runtime" }]
 }

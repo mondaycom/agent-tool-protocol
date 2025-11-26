@@ -1,4 +1,5 @@
 import { AgentToolProtocolClient } from './client.js';
+import { log } from '@mondaydotcomorg/atp-runtime';
 
 export class CodeGenerator {
 	private client: AgentToolProtocolClient;
@@ -9,7 +10,7 @@ export class CodeGenerator {
 
 	async generateCode(intent: string, parameters?: unknown): Promise<string> {
 		const types = this.client.getTypeDefinitions();
-		console.log('Generating code for intent:', intent, parameters, types);
+		log.debug('Generating code for intent', { intent, parameters, typesLength: types.length });
 		return '// Generated code';
 	}
 }

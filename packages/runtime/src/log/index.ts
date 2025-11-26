@@ -9,8 +9,9 @@ let logger: pino.Logger | null = null;
  * Initializes the logger with configuration
  */
 export function initializeLogger(config?: LoggerConfig): void {
+	const pinoLevel = config?.level === 'none' ? 'silent' : (config?.level ?? 'info');
 	const options: pino.LoggerOptions = {
-		level: config?.level ?? 'info',
+		level: pinoLevel,
 		timestamp: pino.stdTimeFunctions.isoTime,
 		formatters: {
 			level: (label) => {

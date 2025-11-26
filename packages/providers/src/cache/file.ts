@@ -1,4 +1,5 @@
 import type { CacheProvider } from '@mondaydotcomorg/atp-protocol';
+import { log } from '@mondaydotcomorg/atp-runtime';
 import { promises as fs } from 'fs';
 import path from 'path';
 import os from 'os';
@@ -45,10 +46,9 @@ export class FileCache implements CacheProvider {
 			// Start periodic cleanup
 			this.startCleanup();
 		} catch (error) {
-			console.error(
-				'[FileCache] Failed to initialize cache directory:',
-				error instanceof Error ? error.message : error
-			);
+			log.error('FileCache failed to initialize cache directory', {
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
@@ -68,7 +68,7 @@ export class FileCache implements CacheProvider {
 		if (this.cleanupInterval > 0) {
 			this.cleanupTimer = setInterval(() => {
 				this.cleanExpired().catch((error) => {
-					console.error('[FileCache] Cleanup error:', error);
+					log.error('FileCache cleanup error', { error });
 				});
 			}, this.cleanupInterval * 1000);
 
@@ -109,10 +109,9 @@ export class FileCache implements CacheProvider {
 			// Enforce max keys limit
 			await this.enforceMaxKeys();
 		} catch (error) {
-			console.error(
-				'[FileCache] Failed to clean expired entries:',
-				error instanceof Error ? error.message : error
-			);
+			log.error('FileCache failed to clean expired entries', {
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
@@ -144,10 +143,9 @@ export class FileCache implements CacheProvider {
 				);
 			}
 		} catch (error) {
-			console.error(
-				'[FileCache] Failed to enforce max keys:',
-				error instanceof Error ? error.message : error
-			);
+			log.error('FileCache failed to enforce max keys', {
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
@@ -168,11 +166,10 @@ export class FileCache implements CacheProvider {
 			if (error.code === 'ENOENT') {
 				return null;
 			}
-			console.error(
-				'[FileCache] Failed to get key:',
+			log.error('FileCache failed to get key', {
 				key,
-				error instanceof Error ? error.message : error
-			);
+				error: error instanceof Error ? error.message : error,
+			});
 			return null;
 		}
 	}
@@ -193,11 +190,10 @@ export class FileCache implements CacheProvider {
 
 			await fs.writeFile(filePath, JSON.stringify(entry), 'utf-8');
 		} catch (error) {
-			console.error(
-				'[FileCache] Failed to set key:',
+			log.error('FileCache failed to set key', {
 				key,
-				error instanceof Error ? error.message : error
-			);
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
@@ -208,11 +204,10 @@ export class FileCache implements CacheProvider {
 			await fs.unlink(filePath);
 		} catch (error: any) {
 			if (error.code !== 'ENOENT') {
-				console.error(
-					'[FileCache] Failed to delete key:',
+				log.error('FileCache failed to delete key', {
 					key,
-					error instanceof Error ? error.message : error
-				);
+					error: error instanceof Error ? error.message : error,
+				});
 			}
 		}
 	}
@@ -262,10 +257,9 @@ export class FileCache implements CacheProvider {
 				}
 			}
 		} catch (error) {
-			console.error(
-				'[FileCache] Failed to clear cache:',
-				error instanceof Error ? error.message : error
-			);
+			log.error('FileCache failed to clear cache', {
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
@@ -312,7 +306,7 @@ export class FileCache implements CacheProvider {
 				cacheDir: this.cacheDir,
 			};
 		} catch (error) {
-			console.error('[FileCache] Failed to get stats:', error);
+			log.error('[FileCache] Failed to get stats:', error);
 			return {
 				keys: 0,
 				maxKeys: this.maxKeys,

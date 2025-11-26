@@ -2,11 +2,18 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"outDir": "./dist",
+		"rootDir": "./src",
 		"declaration": true,
 		"declarationMap": true,
 		"sourceMap": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"composite": true
 	},
-	"include": ["src/**/*"],
-	"exclude": ["node_modules", "dist", "__tests__"]
+	"include": ["src/**/*.ts"],
+	"exclude": ["node_modules", "dist", "**/__tests__", "**/*.test.ts", "**/*.spec.ts"],
+	"references": [
+		{ "path": "../protocol" },
+		{ "path": "../provenance" },
+		{ "path": "../runtime" }
+	]
 }

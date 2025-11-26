@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid';
+import { log } from '@mondaydotcomorg/atp-runtime';
 import type {
 	ProvenanceMetadata,
 	SourceMetadata,
@@ -51,7 +52,7 @@ export function markPrimitiveTainted(value: unknown, sourceMetadata: ProvenanceM
 	primitiveProvenanceMap.set(key, sourceMetadata);
 
 	globalStore.setPrimitive(key, sourceMetadata, currentExecutionId || undefined).catch((err) => {
-		console.warn('Failed to save primitive taint to provenance store', err);
+		log.warn('Failed to save primitive taint to provenance store', { error: err });
 	});
 }
 
@@ -152,7 +153,7 @@ export function registerProvenanceMetadata(
 		primitiveProvenanceMap.set(id, metadata);
 
 		globalStore.setPrimitive(id, metadata, executionId).catch((err) => {
-			console.warn('Failed to save primitive provenance to store', err);
+			log.warn('Failed to save primitive provenance to store', { error: err });
 		});
 
 		if (id.startsWith('tainted:')) {
@@ -169,7 +170,7 @@ export function registerProvenanceMetadata(
 	} else {
 		provenanceRegistry.set(id, metadata);
 		globalStore.set(id, metadata, executionId).catch((err) => {
-			console.warn('Failed to save provenance to store', err);
+			log.warn('Failed to save provenance to store', { error: err });
 		});
 	}
 
@@ -209,7 +210,7 @@ export function cleanupProvenanceForExecution(executionId: string): void {
 
 	// Cleanup from persistent store
 	globalStore.cleanupExecution(executionId).catch((err) => {
-		console.warn('Failed to cleanup provenance store', err);
+		log.warn('Failed to cleanup provenance store', { error: err });
 	});
 }
 
@@ -327,7 +328,9 @@ export function restoreProvenanceState(
 	for (const [id, metadata] of state) {
 		provenanceRegistry.set(id, metadata);
 		ids.add(id);
-		globalStore.set(id, metadata, executionId).catch(console.error);
+		globalStore.set(id, metadata, executionId).catch((err) => {
+		log.error('Failed to save provenance to store', { error: err });
+	});
 	}
 }
 
@@ -346,7 +349,9 @@ export function restoreProvenanceSnapshot(
 
 	for (const [key, meta] of snapshot.primitives) {
 		primitiveProvenanceMap.set(key, meta);
-		globalStore.setPrimitive(key, meta, executionId).catch(console.error);
+		globalStore.setPrimitive(key, meta, executionId).catch((err) => {
+			log.error('Failed to save primitive provenance to store', { error: err });
+		});
 
 		if (key.startsWith('tainted:')) {
 			const value = key.slice('tainted:'.length);
@@ -400,7 +405,7 @@ export function createProvenanceProxy<T>(
 	}
 
 	globalStore.set(id, metadata, currentExecutionId || undefined).catch((err) => {
-		console.warn('Failed to persist provenance to store', err);
+		log.warn('Failed to persist provenance to store', { error: err });
 	});
 
 	try {
@@ -437,7 +442,9 @@ export function createProvenanceProxy<T>(
 					primitiveProvenanceMap.set(primitiveKey, metadata);
 					globalStore
 						.setPrimitive(primitiveKey, metadata, currentExecutionId || undefined)
-						.catch(console.error);
+						.catch((err) => {
+							log.error('Failed to save primitive provenance to store', { error: err });
+						});
 				}
 			}
 		}

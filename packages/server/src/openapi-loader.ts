@@ -7,6 +7,7 @@ import type {
 	BasicAuthConfig,
 	APIKeyAuthConfig,
 } from '@mondaydotcomorg/atp-protocol';
+import { log } from '@mondaydotcomorg/atp-runtime';
 import { readFile } from 'node:fs/promises';
 import yaml from 'js-yaml';
 
@@ -358,23 +359,23 @@ function convertOperation(
 				let token: string | null = null;
 				if (options.authProvider) {
 					token = await options.authProvider.getCredential(auth.envVar);
-					console.log(
-						`[AUTH DEBUG] Got token from authProvider for ${auth.envVar}: ${token ? 'YES (' + token.substring(0, 20) + '...)' : 'NO'}`
-					);
+					log.debug(`Got token from authProvider for ${auth.envVar}`, {
+						found: !!token,
+						preview: token ? token.substring(0, 20) + '...' : undefined,
+					});
 				}
 				if (!token) {
 					token = process.env[auth.envVar] || null;
-					console.log(
-						`[AUTH DEBUG] Got token from process.env[${auth.envVar}]: ${token ? 'YES (' + token.substring(0, 20) + '...)' : 'NO'}`
-					);
+					log.debug(`Got token from process.env[${auth.envVar}]`, {
+						found: !!token,
+						preview: token ? token.substring(0, 20) + '...' : undefined,
+					});
 				}
 
 				if (token) {
 					headers['Authorization'] = `Bearer ${token}`;
 				} else {
-					console.warn(
-						`[AUTH WARNING] ${auth.envVar} not found! Set it in authProvider or environment.`
-					);
+					log.warn(`${auth.envVar} not found! Set it in authProvider or environment.`);
 				}
 			} else if (auth.scheme === 'basic') {
 				let username: string | null = null;
@@ -698,9 +699,7 @@ function detectAuth(spec: APISpec, authProvider?: AuthProvider): AuthConfig | un
 		const schemes = Object.keys(securitySchemes);
 		if (schemes.length > 0) {
 			schemeName = schemes[0];
-			console.log(
-				`[AUTH] No security requirements found, using first securityScheme: ${schemeName}`
-			);
+			log.debug(`No security requirements found, using first securityScheme: ${schemeName}`);
 		}
 	}
 
@@ -723,7 +722,7 @@ function detectAuth(spec: APISpec, authProvider?: AuthProvider): AuthConfig | un
 					scheme: 'bearer',
 					envVar: `${apiName}_TOKEN`,
 				};
-				console.log(`[AUTH] Detected Bearer token auth: envVar=${authConfig.envVar}`);
+				log.debug(`Detected Bearer token auth`, { envVar: authConfig.envVar });
 				return authConfig;
 			} else if (scheme.scheme === 'basic') {
 				const authConfig: BasicAuthConfig = {
@@ -731,9 +730,10 @@ function detectAuth(spec: APISpec, authProvider?: AuthProvider): AuthConfig | un
 					usernameEnvVar: `${apiName}_USERNAME`,
 					passwordEnvVar: `${apiName}_PASSWORD`,
 				};
-				console.log(
-					`[AUTH] Detected Basic auth: username=${authConfig.usernameEnvVar}, password=${authConfig.passwordEnvVar}`
-				);
+				log.debug(`Detected Basic auth`, {
+					usernameEnvVar: authConfig.usernameEnvVar,
+					passwordEnvVar: authConfig.passwordEnvVar,
+				});
 				return authConfig;
 			}
 			break;

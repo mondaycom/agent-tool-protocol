@@ -1,0 +1,14 @@
+{
+	"name": "openapi-example",
+	"version": "1.0.0",
+	"type": "module",
+	"scripts": {
+		"start": "tsx server.ts",
+		"test:usage": "tsx test-usage-field.ts"
+	},
+	"dependencies": {
+		"@mondaydotcomorg/atp-client": "workspace:*",
+		"@mondaydotcomorg/atp-server": "workspace:*",
+		"tsx": "^4.7.0"
+	}
+}

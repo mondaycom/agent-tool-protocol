@@ -6,6 +6,7 @@
  * - Types auto-detected from TypeScript signatures
  */
 import { RuntimeAPI, RuntimeMethod } from '../metadata/decorators.js';
+import { log } from '../log/index.js';
 import type { ProgressCallback } from './types.js';
 
 export type { ProgressCallback } from './types.js';
@@ -41,7 +42,7 @@ class ProgressAPI {
 			try {
 				progressCallback(message, fraction);
 			} catch (error) {
-				console.error('Progress callback error:', error);
+				log.error('Progress callback error', { error });
 			}
 		}
 	}

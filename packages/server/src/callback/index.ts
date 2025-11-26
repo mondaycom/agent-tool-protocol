@@ -4,6 +4,7 @@
  * Handles callbacks to clients for LLM, approval, and embedding requests
  */
 import type { ClientServices } from '@mondaydotcomorg/atp-protocol';
+import { log } from '@mondaydotcomorg/atp-runtime';
 
 /**
  * Callback request types
@@ -54,7 +55,7 @@ export class ClientCallbackManager {
 				() => {
 					const cleaned = this.cleanupStaleClients();
 					if (cleaned > 0) {
-						console.log(`[ClientCallback] Cleaned up ${cleaned} stale clients`);
+						log.debug(`Cleaned up ${cleaned} stale clients`);
 					}
 				},
 				5 * 60 * 1000

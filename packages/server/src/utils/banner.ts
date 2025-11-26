@@ -1,4 +1,5 @@
 import type { CacheProvider, AuthProvider, AuditSink } from '@mondaydotcomorg/atp-protocol';
+import { log } from '@mondaydotcomorg/atp-runtime';
 
 export interface BannerOptions {
 	port: number;
@@ -13,13 +14,12 @@ export interface BannerOptions {
 export function printBanner(options: BannerOptions): void {
 	const { port, cacheProvider, authProvider, auditSink } = options;
 
-	console.log('\n✨ ATP Server ready!');
-	console.log(`📍 http://localhost:${port}/`);
-	console.log(`📚 Type definitions: http://localhost:${port}/openapi.json`);
-	console.log(`🔍 API search: http://localhost:${port}/explorer`);
+	log.info('ATP Server ready!');
+	log.info(`Server running at http://localhost:${port}/`);
+	log.info(`Type definitions: http://localhost:${port}/openapi.json`);
+	log.info(`API search: http://localhost:${port}/explorer`);
 
-	if (cacheProvider) console.log(`💾 Cache: ${cacheProvider.name}`);
-	if (authProvider) console.log(`🔒 Auth: ${authProvider.name}`);
-	if (auditSink) console.log(`📝 Audit: ${auditSink.name}`);
-	console.log();
+	if (cacheProvider) log.info(`Cache: ${cacheProvider.name}`);
+	if (authProvider) log.info(`Auth: ${authProvider.name}`);
+	if (auditSink) log.info(`Audit: ${auditSink.name}`);
 }

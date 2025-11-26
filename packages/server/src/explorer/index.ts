@@ -204,7 +204,7 @@ export class ExplorerService {
 			}
 
 			const { func, group } = current.functionDef;
-			const definition = this.generateFunctionDefinition(func);
+			const definition = this.generateFunctionDefinition(func, group);
 
 			return {
 				type: 'function',
@@ -237,13 +237,16 @@ export class ExplorerService {
 	}
 
 	/**
-	 * Generates TypeScript function signature
+	 * Generates function definition showing how to call it.
+	 * Handles hierarchical group names (e.g., "monday/boards" → "api.monday.boards.func_name()")
 	 */
-	private generateFunctionDefinition(func: CustomFunctionDef): string {
-		const inputType = this.generateInputType(func.inputSchema);
+	private generateFunctionDefinition(func: CustomFunctionDef, group: string): string {
+		const hasParams =
+			func.inputSchema?.properties && Object.keys(func.inputSchema.properties).length > 0;
+		const paramsPlaceholder = hasParams ? '{ ... }' : '{}';
+		const groupPath = group.replace(/\//g, '.');
 		const outputType = func.outputSchema ? this.generateOutputType(func.outputSchema) : 'unknown';
-
-		return `async function ${func.name}(params: ${inputType}): Promise<${outputType}>`;
+		return `api.${groupPath}.${func.name}(${paramsPlaceholder}): Promise<${outputType}>`;
 	}
 
 	/**

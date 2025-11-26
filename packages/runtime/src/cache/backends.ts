@@ -1,6 +1,7 @@
 /**
  */
 import NodeCache from 'node-cache';
+import { log } from '../log/index.js';
 import type { CacheBackend, CacheConfig } from './types';
 
 /**
@@ -84,25 +85,24 @@ export class RedisCacheBackend implements CacheBackend {
 
 	async get<T>(key: string): Promise<T | null> {
 		if (!this.connected) {
-			console.warn('[Redis Cache] Not connected, cannot get key:', key);
+			log.warn('Redis Cache not connected, cannot get key', { key });
 			return null;
 		}
 		try {
 			const value = await this.client.get(key);
 			return value ? JSON.parse(value) : null;
 		} catch (error) {
-			console.error(
-				'[Redis Cache] Failed to get key:',
+			log.error('Redis Cache failed to get key', {
 				key,
-				error instanceof Error ? error.message : error
-			);
+				error: error instanceof Error ? error.message : error,
+			});
 			return null;
 		}
 	}
 
 	async set(key: string, value: unknown, ttl?: number): Promise<void> {
 		if (!this.connected) {
-			console.warn('[Redis Cache] Not connected, cannot set key:', key);
+			log.warn('Redis Cache not connected, cannot set key', { key });
 			return;
 		}
 		try {
@@ -113,60 +113,56 @@ export class RedisCacheBackend implements CacheBackend {
 				await this.client.set(key, serialized);
 			}
 		} catch (error) {
-			console.error(
-				'[Redis Cache] Failed to set key:',
+			log.error('Redis Cache failed to set key', {
 				key,
-				error instanceof Error ? error.message : error
-			);
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
 	async delete(key: string): Promise<void> {
 		if (!this.connected) {
-			console.warn('[Redis Cache] Not connected, cannot delete key:', key);
+			log.warn('Redis Cache not connected, cannot delete key', { key });
 			return;
 		}
 		try {
 			await this.client.del(key);
 		} catch (error) {
-			console.error(
-				'[Redis Cache] Failed to delete key:',
+			log.error('Redis Cache failed to delete key', {
 				key,
-				error instanceof Error ? error.message : error
-			);
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 
 	async has(key: string): Promise<boolean> {
 		if (!this.connected) {
-			console.warn('[Redis Cache] Not connected, cannot check key:', key);
+			log.warn('Redis Cache not connected, cannot check key', { key });
 			return false;
 		}
 		try {
 			const exists = await this.client.exists(key);
 			return exists === 1;
 		} catch (error) {
-			console.error(
-				'[Redis Cache] Failed to check key:',
+			log.error('Redis Cache failed to check key', {
 				key,
-				error instanceof Error ? error.message : error
-			);
+				error: error instanceof Error ? error.message : error,
+			});
 			return false;
 		}
 	}
 
 	async clear(): Promise<void> {
 		if (!this.connected) {
-			console.warn('[Redis Cache] Not connected, cannot clear cache');
+			log.warn('Redis Cache not connected, cannot clear cache');
 			return;
 		}
 		try {
 			await this.client.flushdb();
 		} catch (error) {
-			console.error(
-				'[Redis Cache] Failed to clear cache:',
-				error instanceof Error ? error.message : error
-			);
+			log.error('Redis Cache failed to clear cache', {
+				error: error instanceof Error ? error.message : error,
+			});
 		}
 	}
 }
