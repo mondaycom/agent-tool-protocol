@@ -2,8 +2,12 @@
  * AST Provenance Tracking Runtime for isolated-vm
  * This code is injected into the isolate and runs INSIDE the sandbox
  * It must be plain JavaScript with no imports
+ * 
+ * This runtime provides comprehensive taint tracking by:
+ * 1. Deep-tainting all primitives from tool results
+ * 2. Intercepting native methods with re-entry protection
+ * 3. Supporting cross-execution tracking via hints
  */
-// TODO: need to create atp.internal with internal functions like has to reduce complexity
 export const AST_TRACKING_RUNTIME = `
 // Pure JavaScript SHA-256 implementation for digest computation
 function sha256(str) {
@@ -98,18 +102,26 @@ function sha256(str) {
 	return base64.replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=/g, '');
 }
 
+// Re-entry guard to prevent infinite recursion in wrapped methods
+let __inTrackingCall = false;
+
 const __astTracker = {
 	metadata: new Map(),
 	nextId: 0,
 	hints: new Map(globalThis.__provenance_hints || []),
 	hintValues: new Map(globalThis.__provenance_hint_values || []),
+	// Track tainted objects via WeakMap for O(1) lookup
+	taintedObjects: new WeakMap(),
 	
-	// SHA-256 digest computation to match server-side
 	computeDigest(value) {
+		if (__inTrackingCall) return null;
 		try {
+			__inTrackingCall = true;
 			const str = JSON.stringify(value);
+			__inTrackingCall = false;
 			return sha256(str);
 		} catch (e) {
+			__inTrackingCall = false;
 			return null;
 		}
 	},
@@ -117,7 +129,7 @@ const __astTracker = {
 	getId(value) {
 		if (typeof value === 'object' && value !== null) {
 			if (!value.__prov_id__) {
-				const id = 'tracked_' + this.nextId++;
+				const id = 'tracked_' + Date.now() + '_' + (Math.random().toString(36).substring(2, 8));
 				try {
 					Object.defineProperty(value, '__prov_id__', {
 						value: id,
@@ -135,20 +147,87 @@ const __astTracker = {
 		return 'primitive_' + Date.now() + '_' + Math.random();
 	},
 	
+	// Register a primitive value as tainted
+	registerTaintedPrimitive(value, metadata) {
+		// Accept any non-empty string or any valid number (including 0)
+		const isValidString = typeof value === 'string' && value !== '';
+		const isValidNumber = typeof value === 'number' && !Number.isNaN(value);
+		
+		if (isValidString || isValidNumber) {
+			const taintedKey = 'tainted:' + String(value);
+			this.metadata.set(taintedKey, {
+				...metadata,
+				readers: metadata.readers || { type: 'restricted', readers: [] },
+				dependencies: metadata.dependencies || metadata.deps || []
+			});
+		}
+	},
+	
+	// Deep taint an object - register all nested primitives
+	deepTaintObject(obj, metadata, visited = new WeakSet()) {
+		if (!obj || typeof obj !== 'object') return;
+		if (visited.has(obj)) return;
+		visited.add(obj);
+		
+		// Mark object in WeakMap for fast lookup
+		this.taintedObjects.set(obj, metadata);
+		
+		// Set __prov_id__ and register in metadata
+		const id = this.getId(obj);
+		this.metadata.set(id, metadata);
+		
+		// Register all primitive properties
+		const keys = Object.keys(obj);
+		for (let i = 0; i < keys.length; i++) {
+			const key = keys[i];
+			const value = obj[key];
+			
+			if (typeof value === 'string' || typeof value === 'number') {
+				this.registerTaintedPrimitive(value, metadata);
+				// Also store by object:key:value for additional lookup
+				const primitiveKey = id + ':' + key + ':' + String(value);
+				this.metadata.set(primitiveKey, metadata);
+			} else if (Array.isArray(value)) {
+				// Taint array and its elements
+				this.deepTaintObject(value, metadata, visited);
+				for (let j = 0; j < value.length; j++) {
+					const elem = value[j];
+					if (typeof elem === 'string' || typeof elem === 'number') {
+						this.registerTaintedPrimitive(elem, metadata);
+					} else if (typeof elem === 'object' && elem !== null) {
+						this.deepTaintObject(elem, metadata, visited);
+					}
+				}
+			} else if (typeof value === 'object' && value !== null) {
+				this.deepTaintObject(value, metadata, visited);
+			}
+		}
+	},
+	
 	track(value, source, deps) {
 		try {
 			const id = this.getId(value);
-			this.metadata.set(id, { id, source, deps: deps || [] });
-			console.log('[__track] Stored metadata:', id, 'source:', source.type, 'metadataSize:', this.metadata.size);
+			const metadata = { 
+				id, 
+				source, 
+				deps: deps || [],
+				readers: source.readers || { type: 'restricted', readers: ['tool:' + (source.tool || source.operation || 'unknown')] },
+				dependencies: []
+			};
+			this.metadata.set(id, metadata);
+			
+			// Deep taint all nested primitives
+			if (value && typeof value === 'object') {
+				this.deepTaintObject(value, metadata);
+			}
+			
 			return value;
 		} catch (error) {
-			console.error('[__track] Error:', error);
 			return value;
 		}
 	},
 	
 	trackBinary(left, right, operator) {
-		// Perform the actual operation
 		let result;
 		switch (operator) {
 			case '+': result = left + right; break;
@@ -169,88 +248,13 @@ const __astTracker = {
 			default: result = left;
 		}
 		
-		// Check if either operand has provenance
-		let hasToolSource = false;
-		let toolMetadata = null;
+		// Propagate taint from operands to result
+		const leftMeta = this.checkProvenance(left);
+		const rightMeta = this.checkProvenance(right);
+		const toolMetadata = leftMeta || rightMeta;
 		
-		// Helper to check primitive provenance
-		const checkPrimitive = (value) => {
-			if (typeof value !== 'string' && typeof value !== 'number') {
-				return null;
-			}
-			
-			// Check tainted key first
-			const taintedKey = 'tainted:' + String(value);
-			const taintedMeta = this.metadata.get(taintedKey);
-			if (taintedMeta && taintedMeta.source && taintedMeta.source.type === 'tool') {
-				return taintedMeta;
-			}
-			
-			// Check hint-based tracking
-			const digest = this.computeDigest(value);
-			const hintMeta = this.hints.get(digest);
-			if (hintMeta && hintMeta.source && hintMeta.source.type === 'tool') {
-				return hintMeta;
-			}
-			
-			// Check primitive map (id:key:value format)
-			for (const [key, meta] of this.metadata.entries()) {
-				if (!key.startsWith('tainted:') && key.includes(':')) {
-					const parts = key.split(':');
-					if (parts.length >= 3) {
-						const primitiveValue = parts.slice(2).join(':');
-						if (primitiveValue === String(value) && meta.source && meta.source.type === 'tool') {
-							return meta;
-						}
-					}
-				}
-			}
-			
-			return null;
-		};
-		
-		// Check left operand
-		if (typeof left === 'object' && left && left.__prov_id__) {
-			const leftMeta = this.metadata.get(left.__prov_id__);
-			if (leftMeta && leftMeta.source && leftMeta.source.type === 'tool') {
-				hasToolSource = true;
-				toolMetadata = leftMeta;
-			}
-		} else {
-			const primMeta = checkPrimitive(left);
-			if (primMeta) {
-				hasToolSource = true;
-				toolMetadata = primMeta;
-			}
-		}
-		
-		// Check right operand
-		if (!hasToolSource) {
-			if (typeof right === 'object' && right && right.__prov_id__) {
-				const rightMeta = this.metadata.get(right.__prov_id__);
-				if (rightMeta && rightMeta.source && rightMeta.source.type === 'tool') {
-					hasToolSource = true;
-					toolMetadata = rightMeta;
-				}
-			} else {
-				const primMeta = checkPrimitive(right);
-				if (primMeta) {
-					hasToolSource = true;
-					toolMetadata = primMeta;
-				}
-			}
-		}
-		
-		// If result is a string and has tool-sourced operand, mark it as tainted
-		if (hasToolSource && toolMetadata && (typeof result === 'string' || typeof result === 'number')) {
-			const taintedKey = 'tainted:' + String(result);
-			// Ensure metadata has all required fields, preserving readers from source
-			const fullMetadata = {
-				...toolMetadata,
-				readers: toolMetadata.readers || { type: 'restricted', readers: [] },
-				dependencies: toolMetadata.dependencies || toolMetadata.deps || []
-			};
-			this.metadata.set(taintedKey, fullMetadata);
+		if (toolMetadata && (typeof result === 'string' || typeof result === 'number')) {
+			this.registerTaintedPrimitive(result, toolMetadata);
 		}
 		
 		return result;
@@ -261,28 +265,27 @@ const __astTracker = {
 	},
 	
 	async trackMethod(object, method, args) {
-		// Recursively wrap tainted primitives in arguments before calling the method
+		// Wrap tainted primitives in arguments before calling API methods
+		const self = this;
 		function wrapTaintedInArgs(val, visited = new WeakSet()) {
 			if (val === null || val === undefined) return val;
 			
-			// Check if this value has provenance
-			const prov = this.checkProvenance(val);
+			const prov = self.checkProvenance(val);
 			if (prov && (typeof val === 'string' || typeof val === 'number')) {
-				// Wrap tainted primitive
 				return { __tainted_value: val, __prov_meta: prov };
 			}
 			
-			// Recursively process objects/arrays
 			if (typeof val === 'object') {
 				if (visited.has(val)) return val;
 				visited.add(val);
 				
 				if (Array.isArray(val)) {
-					return val.map(item => wrapTaintedInArgs.call(this, item, visited));
+					return val.map(item => wrapTaintedInArgs(item, visited));
 				} else {
 					const wrapped = {};
-					for (const [key, v] of Object.entries(val)) {
-						wrapped[key] = wrapTaintedInArgs.call(this, v, visited);
+					const keys = Object.keys(val);
+					for (let i = 0; i < keys.length; i++) {
+						wrapped[keys[i]] = wrapTaintedInArgs(val[keys[i]], visited);
 					}
 					return wrapped;
 				}
@@ -291,72 +294,38 @@ const __astTracker = {
 			return val;
 		}
 		
-		// Wrap arguments
-		const wrappedArgs = args.map(arg => wrapTaintedInArgs.call(this, arg));
+		const wrappedArgs = args.map(arg => wrapTaintedInArgs(arg));
 		
-		// Call the method with wrapped arguments
 		if (typeof object === 'object' && object !== null && method in object) {
 			const result = await object[method](...wrappedArgs);
 			
-			// Track the result
 			if (result && typeof result === 'object') {
 				const id = this.getId(result);
 				
-				// Extract authorized readers from common param patterns (email, userId, username, user)
-				// Match server-side logic in sandbox-builder.ts (lines 459-470)
 				let authorizedReaders = [];
 				for (const arg of args) {
 					if (arg && typeof arg === 'object') {
-						// Check for user identifier fields (email, user, userId only - no generic 'id')
 						const value = arg.email || arg.user || arg.userId;
 						if (typeof value === 'string' && value.length > 0) {
 							authorizedReaders.push(value);
-							break; // Only take first identifier
+							break;
 						}
 					}
 				}
 				
-				// If no email found, use tool-scoped authorization (matches server logic line 467-470)
 				if (authorizedReaders.length === 0) {
 					authorizedReaders = ['tool:' + method];
 				}
 				
-				// Tool data should be restricted by default to prevent exfiltration
 				const metadata = { 
 					id, 
-					source: { 
-						type: 'tool', 
-						operation: method, 
-						toolName: method, 
-						timestamp: Date.now() 
-					},
+					source: { type: 'tool', operation: method, toolName: method, timestamp: Date.now() },
 					readers: { type: 'restricted', readers: authorizedReaders },
-					deps: [this.getId(object), ...args.map(a => this.getId(a))],
+					deps: [],
 					dependencies: []
 				};
 				this.metadata.set(id, metadata);
-				
-						// Track primitive properties for token emission
-						for (const key in result) {
-							if (Object.prototype.hasOwnProperty.call(result, key)) {
-								const value = result[key];
-								if (typeof value === 'string' || typeof value === 'number') {
-									// Check if this primitive matches any hints
-									const digest = this.computeDigest(value);
-									const hintMeta = this.hints.get(digest);
-									
-									const primitiveKey = id + ':' + key + ':' + String(value);
-									// Use hint metadata if available, otherwise use result metadata
-									this.metadata.set(primitiveKey, hintMeta || metadata);
-									
-									// Also store by digest for cross-execution matching
-									if (hintMeta) {
-										const taintedKey = 'tainted:' + String(value);
-										this.metadata.set(taintedKey, hintMeta);
-									}
-								}
-							}
-						}
+				this.deepTaintObject(result, metadata);
 			}
 			
 			return result;
@@ -366,44 +335,7 @@ const __astTracker = {
 	
 	trackTemplate(expressions, quasis) {
 		let result = '';
-		let hasToolSource = false;
 		let toolMetadata = null;
-		
-		// Helper to check primitive provenance
-		const checkPrimitive = (value) => {
-			if (typeof value !== 'string' && typeof value !== 'number') {
-				return null;
-			}
-			
-			// Check tainted key first
-			const taintedKey = 'tainted:' + String(value);
-			const taintedMeta = this.metadata.get(taintedKey);
-			if (taintedMeta && taintedMeta.source && taintedMeta.source.type === 'tool') {
-				return taintedMeta;
-			}
-			
-			// Check hint-based tracking
-			const digest = this.computeDigest(value);
-			const hintMeta = this.hints.get(digest);
-			if (hintMeta && hintMeta.source && hintMeta.source.type === 'tool') {
-				return hintMeta;
-			}
-			
-			// Check primitive map (id:key:value format)
-			for (const [key, meta] of this.metadata.entries()) {
-				if (!key.startsWith('tainted:') && key.includes(':')) {
-					const parts = key.split(':');
-					if (parts.length >= 3) {
-						const primitiveValue = parts.slice(2).join(':');
-						if (primitiveValue === String(value) && meta.source && meta.source.type === 'tool') {
-							return meta;
-						}
-					}
-				}
-			}
-			
-			return null;
-		};
 		
 		for (let i = 0; i < quasis.length; i++) {
 			result += quasis[i] || '';
@@ -411,36 +343,47 @@ const __astTracker = {
 				const expr = expressions[i];
 				result += String(expr);
 				
-				// Check if expression has provenance
-				if (!hasToolSource) {
-					// Check object provenance
-					if (typeof expr === 'object' && expr && expr.__prov_id__) {
-						const exprMeta = this.metadata.get(expr.__prov_id__);
-						if (exprMeta && exprMeta.source && exprMeta.source.type === 'tool') {
-							hasToolSource = true;
-							toolMetadata = exprMeta;
-						}
-					} else {
-						const primMeta = checkPrimitive(expr);
-						if (primMeta) {
-							hasToolSource = true;
-							toolMetadata = primMeta;
-						}
-					}
+				if (!toolMetadata) {
+					toolMetadata = this.checkProvenance(expr);
 				}
 			}
 		}
 		
-		// If template contains tool-sourced data, mark result as tainted
-		if (hasToolSource && toolMetadata) {
-			const taintedKey = 'tainted:' + result;
-			// Ensure metadata has all required fields, preserving readers from source
-			const fullMetadata = {
-				...toolMetadata,
-				readers: toolMetadata.readers || { type: 'restricted', readers: [] },
-				dependencies: toolMetadata.dependencies || toolMetadata.deps || []
-			};
-			this.metadata.set(taintedKey, fullMetadata);
+		if (toolMetadata) {
+			this.registerTaintedPrimitive(result, toolMetadata);
+		}
+		
+		return result;
+	},
+	
+	// Propagate taint from source to result for native method calls
+	propagateTaint(source, args, result) {
+		if (__inTrackingCall) return result;
+		
+		__inTrackingCall = true;
+		try {
+			// Check if source or any arg is tainted
+			let metadata = this.checkProvenanceInternal(source);
+			
+			if (!metadata && args) {
+				for (let i = 0; i < args.length; i++) {
+					metadata = this.checkProvenanceInternal(args[i]);
+					if (metadata) break;
+				}
+			}
+			
+			// Propagate taint to result
+			if (metadata) {
+				if (typeof result === 'string' || typeof result === 'number') {
+					this.registerTaintedPrimitive(result, metadata);
+				} else if (Array.isArray(result)) {
+					this.deepTaintObject(result, metadata);
+				} else if (typeof result === 'object' && result !== null) {
+					this.deepTaintObject(result, metadata);
+				}
+			}
+		} finally {
+			__inTrackingCall = false;
 		}
 		
 		return result;
@@ -455,13 +398,16 @@ const __astTracker = {
 		return Array.from(this.metadata.entries());
 	},
 	
-	// Check if a value or any nested value has tool-sourced provenance
-	checkProvenance(value) {
-		if (value === null || value === undefined) {
-			return null;
+	// Internal provenance check (no re-entry guard - caller must set it)
+	checkProvenanceInternal(value) {
+		if (value === null || value === undefined) return null;
+		
+		// Fast path: check WeakMap for objects
+		if (typeof value === 'object' && this.taintedObjects.has(value)) {
+			return this.taintedObjects.get(value);
 		}
 		
-		// Check if it's an object with __prov_id__
+		// Check object __prov_id__
 		if (typeof value === 'object' && value.__prov_id__) {
 			const meta = this.metadata.get(value.__prov_id__);
 			if (meta && meta.source && meta.source.type === 'tool') {
@@ -469,7 +415,7 @@ const __astTracker = {
 			}
 		}
 		
-		// Check if it's a primitive with tainted metadata
+		// Check primitive taint
 		if (typeof value === 'string' || typeof value === 'number') {
 			const taintedKey = 'tainted:' + String(value);
 			const taintedMeta = this.metadata.get(taintedKey);
@@ -477,8 +423,10 @@ const __astTracker = {
 				return taintedMeta;
 			}
 			
-			// Check primitive map
+			// Check primitive map (object:key:value format)
 			for (const [key, meta] of this.metadata.entries()) {
+				// Skip non-string keys (could be Symbols)
+				if (typeof key !== 'string') continue;
 				if (!key.startsWith('tainted:') && key.includes(':')) {
 					const parts = key.split(':');
 					if (parts.length >= 3) {
@@ -490,31 +438,362 @@ const __astTracker = {
 				}
 			}
 			
-			// Check hints
+			// Check hints (cross-execution)
 			const digest = this.computeDigest(value);
-			const hintMeta = this.hints.get(digest);
-			if (hintMeta && hintMeta.source && hintMeta.source.type === 'tool') {
-				return hintMeta;
+			if (digest) {
+				const hintMeta = this.hints.get(digest);
+				if (hintMeta && hintMeta.source && hintMeta.source.type === 'tool') {
+					return hintMeta;
+				}
 			}
-		}
-		
-		// For objects/arrays, recursively check all values
-		if (typeof value === 'object') {
-			for (const key in value) {
-				if (Object.prototype.hasOwnProperty.call(value, key)) {
-					const nestedMeta = this.checkProvenance(value[key]);
-					if (nestedMeta) {
-						return nestedMeta;
+			
+			// Check substring containment in hint values
+			if (typeof value === 'string' && this.hintValues && this.hintValues.size > 0) {
+				for (const [hintValue, meta] of this.hintValues.entries()) {
+					if (value.includes(hintValue) && meta.source && meta.source.type === 'tool') {
+						return meta;
 					}
 				}
 			}
 		}
 		
+		// Recursively check object properties
+		if (typeof value === 'object') {
+			const keys = Object.keys(value);
+			for (let i = 0; i < keys.length; i++) {
+				const nestedMeta = this.checkProvenanceInternal(value[keys[i]]);
+				if (nestedMeta) return nestedMeta;
+			}
+		}
+		
 		return null;
+	},
+	
+	// Public provenance check with re-entry guard
+	checkProvenance(value) {
+		if (__inTrackingCall) return null;
+		
+		__inTrackingCall = true;
+		try {
+			return this.checkProvenanceInternal(value);
+		} finally {
+			__inTrackingCall = false;
+		}
 	}
 };
 
-// Expose tracking functions globally
+// ============================================================================
+// NATIVE METHOD INTERCEPTION
+// We store originals and wrap methods with taint propagation
+// ============================================================================
+
+const __originals = {
+	String_toUpperCase: String.prototype.toUpperCase,
+	String_toLowerCase: String.prototype.toLowerCase,
+	String_slice: String.prototype.slice,
+	String_substring: String.prototype.substring,
+	String_substr: String.prototype.substr,
+	String_trim: String.prototype.trim,
+	String_trimStart: String.prototype.trimStart,
+	String_trimEnd: String.prototype.trimEnd,
+	String_replace: String.prototype.replace,
+	String_replaceAll: String.prototype.replaceAll,
+	String_split: String.prototype.split,
+	String_charAt: String.prototype.charAt,
+	String_concat: String.prototype.concat,
+	String_padStart: String.prototype.padStart,
+	String_padEnd: String.prototype.padEnd,
+	String_repeat: String.prototype.repeat,
+	String_normalize: String.prototype.normalize,
+	
+	Array_map: Array.prototype.map,
+	Array_filter: Array.prototype.filter,
+	Array_reduce: Array.prototype.reduce,
+	Array_reduceRight: Array.prototype.reduceRight,
+	Array_join: Array.prototype.join,
+	Array_slice: Array.prototype.slice,
+	Array_concat: Array.prototype.concat,
+	Array_flat: Array.prototype.flat,
+	Array_flatMap: Array.prototype.flatMap,
+	Array_find: Array.prototype.find,
+	Array_every: Array.prototype.every,
+	Array_some: Array.prototype.some,
+	
+	Number_toFixed: Number.prototype.toFixed,
+	Number_toPrecision: Number.prototype.toPrecision,
+	Number_toExponential: Number.prototype.toExponential,
+	
+	JSON_stringify: JSON.stringify,
+	JSON_parse: JSON.parse,
+	
+	String_ctor: String,
+	Number_ctor: Number,
+	parseInt_fn: parseInt,
+	parseFloat_fn: parseFloat,
+};
+
+// String method wrappers - use this.valueOf() to get primitive for provenance check
+String.prototype.toUpperCase = function() {
+	const result = __originals.String_toUpperCase.call(this);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.toLowerCase = function() {
+	const result = __originals.String_toLowerCase.call(this);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.slice = function(start, end) {
+	const result = __originals.String_slice.call(this, start, end);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.substring = function(start, end) {
+	const result = __originals.String_substring.call(this, start, end);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.substr = function(start, length) {
+	const result = __originals.String_substr.call(this, start, length);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.trim = function() {
+	const result = __originals.String_trim.call(this);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.trimStart = function() {
+	const result = __originals.String_trimStart.call(this);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.trimEnd = function() {
+	const result = __originals.String_trimEnd.call(this);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.replace = function(searchValue, replaceValue) {
+	const result = __originals.String_replace.call(this, searchValue, replaceValue);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.replaceAll = function(searchValue, replaceValue) {
+	const result = __originals.String_replaceAll.call(this, searchValue, replaceValue);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.split = function(separator, limit) {
+	const result = __originals.String_split.call(this, separator, limit);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.charAt = function(index) {
+	const result = __originals.String_charAt.call(this, index);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.concat = function(...args) {
+	const result = __originals.String_concat.apply(this, args);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, args, result);
+};
+
+String.prototype.padStart = function(targetLength, padString) {
+	const result = __originals.String_padStart.call(this, targetLength, padString);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.padEnd = function(targetLength, padString) {
+	const result = __originals.String_padEnd.call(this, targetLength, padString);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.repeat = function(count) {
+	const result = __originals.String_repeat.call(this, count);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+String.prototype.normalize = function(form) {
+	const result = __originals.String_normalize.call(this, form);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+// Array method wrappers
+Array.prototype.map = function(callback, thisArg) {
+	const result = __originals.Array_map.call(this, callback, thisArg);
+	return __astTracker.propagateTaint(this, [], result);
+};
+
+Array.prototype.filter = function(callback, thisArg) {
+	const result = __originals.Array_filter.call(this, callback, thisArg);
+	return __astTracker.propagateTaint(this, [], result);
+};
+
+Array.prototype.reduce = function(callback, initialValue) {
+	const result = arguments.length > 1 
+		? __originals.Array_reduce.call(this, callback, initialValue)
+		: __originals.Array_reduce.call(this, callback);
+	return __astTracker.propagateTaint(this, [], result);
+};
+
+Array.prototype.reduceRight = function(callback, initialValue) {
+	const result = arguments.length > 1
+		? __originals.Array_reduceRight.call(this, callback, initialValue)
+		: __originals.Array_reduceRight.call(this, callback);
+	return __astTracker.propagateTaint(this, [], result);
+};
+
+Array.prototype.join = function(separator) {
+	const result = __originals.Array_join.call(this, separator);
+	return __astTracker.propagateTaint(this, [], result);
+};
+
+Array.prototype.slice = function(start, end) {
+	const result = __originals.Array_slice.call(this, start, end);
+	return __astTracker.propagateTaint(this, [], result);
+};
+
+Array.prototype.concat = function(...args) {
+	const result = __originals.Array_concat.apply(this, args);
+	return __astTracker.propagateTaint(this, args, result);
+};
+
+Array.prototype.flat = function(depth) {
+	const result = __originals.Array_flat.call(this, depth);
+	return __astTracker.propagateTaint(this, [], result);
+};
+
+Array.prototype.flatMap = function(callback, thisArg) {
+	const result = __originals.Array_flatMap.call(this, callback, thisArg);
+	return __astTracker.propagateTaint(this, [], result);
+};
+
+Array.prototype.find = function(callback, thisArg) {
+	const result = __originals.Array_find.call(this, callback, thisArg);
+	return __astTracker.propagateTaint(this, [], result);
+};
+
+Array.prototype.every = function(callback, thisArg) {
+	return __originals.Array_every.call(this, callback, thisArg);
+};
+
+Array.prototype.some = function(callback, thisArg) {
+	return __originals.Array_some.call(this, callback, thisArg);
+};
+
+// Number method wrappers - use this.valueOf() to get primitive for provenance check
+Number.prototype.toFixed = function(digits) {
+	const result = __originals.Number_toFixed.call(this, digits);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+Number.prototype.toPrecision = function(precision) {
+	const result = __originals.Number_toPrecision.call(this, precision);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+Number.prototype.toExponential = function(fractionDigits) {
+	const result = __originals.Number_toExponential.call(this, fractionDigits);
+	const primitiveThis = typeof this === 'object' ? this.valueOf() : this;
+	return __astTracker.propagateTaint(primitiveThis, [], result);
+};
+
+// JSON wrappers
+JSON.stringify = function(value, replacer, space) {
+	const result = __originals.JSON_stringify(value, replacer, space);
+	return __astTracker.propagateTaint(value, [], result);
+};
+
+JSON.parse = function(text, reviver) {
+	const result = __originals.JSON_parse(text, reviver);
+	// If input was tainted, taint the parsed object
+	if (!__inTrackingCall) {
+		__inTrackingCall = true;
+		try {
+			const inputMeta = __astTracker.checkProvenanceInternal(text);
+			if (inputMeta && result && typeof result === 'object') {
+				__astTracker.deepTaintObject(result, inputMeta);
+			}
+		} finally {
+			__inTrackingCall = false;
+		}
+	}
+	return result;
+};
+
+// Global function wrappers
+const __OrigString = __originals.String_ctor;
+globalThis.String = function(value) {
+	if (new.target) {
+		return new __OrigString(value);
+	}
+	const result = __OrigString(value);
+	return __astTracker.propagateTaint(value, [], result);
+};
+Object.setPrototypeOf(globalThis.String, __OrigString);
+globalThis.String.prototype = __OrigString.prototype;
+globalThis.String.fromCharCode = __OrigString.fromCharCode;
+globalThis.String.fromCodePoint = __OrigString.fromCodePoint;
+globalThis.String.raw = __OrigString.raw;
+
+const __OrigNumber = __originals.Number_ctor;
+globalThis.Number = function(value) {
+	if (new.target) {
+		return new __OrigNumber(value);
+	}
+	const result = __OrigNumber(value);
+	return __astTracker.propagateTaint(value, [], result);
+};
+Object.setPrototypeOf(globalThis.Number, __OrigNumber);
+globalThis.Number.prototype = __OrigNumber.prototype;
+globalThis.Number.isNaN = __OrigNumber.isNaN;
+globalThis.Number.isFinite = __OrigNumber.isFinite;
+globalThis.Number.isInteger = __OrigNumber.isInteger;
+globalThis.Number.isSafeInteger = __OrigNumber.isSafeInteger;
+globalThis.Number.parseFloat = __OrigNumber.parseFloat;
+globalThis.Number.parseInt = __OrigNumber.parseInt;
+globalThis.Number.MAX_VALUE = __OrigNumber.MAX_VALUE;
+globalThis.Number.MIN_VALUE = __OrigNumber.MIN_VALUE;
+globalThis.Number.NaN = __OrigNumber.NaN;
+globalThis.Number.NEGATIVE_INFINITY = __OrigNumber.NEGATIVE_INFINITY;
+globalThis.Number.POSITIVE_INFINITY = __OrigNumber.POSITIVE_INFINITY;
+globalThis.Number.MAX_SAFE_INTEGER = __OrigNumber.MAX_SAFE_INTEGER;
+globalThis.Number.MIN_SAFE_INTEGER = __OrigNumber.MIN_SAFE_INTEGER;
+globalThis.Number.EPSILON = __OrigNumber.EPSILON;
+
+globalThis.parseInt = function(string, radix) {
+	const result = __originals.parseInt_fn(string, radix);
+	return __astTracker.propagateTaint(string, [], result);
+};
+
+globalThis.parseFloat = function(string) {
+	const result = __originals.parseFloat_fn(string);
+	return __astTracker.propagateTaint(string, [], result);
+};
+
+// ============================================================================
+// GLOBAL TRACKING FUNCTIONS
+// ============================================================================
+
 globalThis.__track = (v, s, d) => __astTracker.track(v, s, d);
 globalThis.__track_binary = (l, r, o) => __astTracker.trackBinary(l, r, o);
 globalThis.__track_assign = (n, v) => __astTracker.trackAssign(n, v);
@@ -524,35 +803,30 @@ globalThis.__get_provenance = (v) => __astTracker.getMetadata(v);
 globalThis.__get_all_metadata = () => __astTracker.getAllMetadata();
 globalThis.__check_provenance = (v) => __astTracker.checkProvenance(v);
 
-// Mark a string literal as tainted (for cross-execution tracking)
 globalThis.__mark_tainted = (value) => {
-	// Check if this value matches a hint by exact digest
-	const digest = __astTracker.computeDigest(value);
-	const hintMeta = __astTracker.hints.get(digest);
-	if (hintMeta) {
-		const taintedKey = 'tainted:' + String(value);
-		__astTracker.metadata.set(taintedKey, hintMeta);
-		return value;
-	}
-	
-	// ALSO check if this value CONTAINS any hint values (substring match)
-	// This enables cross-execution tracking for template literals/concatenation
-	if (typeof value === 'string' && __astTracker.hintValues && __astTracker.hintValues.size > 0) {
-		for (const [hintValue, metadata] of __astTracker.hintValues.entries()) {
-			if (value.includes(hintValue)) {
-				const taintedKey = 'tainted:' + String(value);
-				// Ensure metadata has all required fields, use restricted readers for tool data
-				const fullMetadata = {
-					...metadata,
-					readers: metadata.readers || { type: 'restricted', readers: [] },
-					dependencies: metadata.dependencies || metadata.deps || []
-				};
-				__astTracker.metadata.set(taintedKey, fullMetadata);
+	if (__inTrackingCall) return value;
+	__inTrackingCall = true;
+	try {
+		const digest = __astTracker.computeDigest(value);
+		if (digest) {
+			const hintMeta = __astTracker.hints.get(digest);
+			if (hintMeta) {
+				__astTracker.registerTaintedPrimitive(value, hintMeta);
 				return value;
 			}
 		}
+		
+		if (typeof value === 'string' && __astTracker.hintValues && __astTracker.hintValues.size > 0) {
+			for (const [hintValue, metadata] of __astTracker.hintValues.entries()) {
+				if (value.includes(hintValue)) {
+					__astTracker.registerTaintedPrimitive(value, metadata);
+					return value;
+				}
+			}
+		}
+	} finally {
+		__inTrackingCall = false;
 	}
-	
 	return value;
 };
 `;
