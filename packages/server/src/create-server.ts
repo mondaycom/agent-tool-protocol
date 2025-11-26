@@ -76,9 +76,18 @@ export class AgentToolProtocolServer {
 	private customLogger?: any;
 
 	constructor(config: ServerConfig = {}) {
-		// Initialize DynamicPolicyRegistry with policies from config
 		const initialPolicies = config.execution?.securityPolicies ?? [];
 		this.policyRegistry = new DynamicPolicyRegistry(initialPolicies);
+
+		const logLevel = typeof config.logger === 'string' ? config.logger : 'info';
+		if (typeof config.logger !== 'object') {
+			initializeLogger({
+				level: logLevel,
+				pretty: process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test',
+			});
+		} else {
+			this.customLogger = config.logger;
+		}
 
 		this.config = {
 			execution: {
@@ -176,15 +185,6 @@ export class AgentToolProtocolServer {
 				this.auditSink = auditSinks[0];
 				log.info('Audit sink configured', { sink: auditSinks[0]?.name });
 			}
-		}
-
-		if (typeof this.config.logger === 'string') {
-			initializeLogger({
-				level: this.config.logger,
-				pretty: process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test',
-			});
-		} else {
-			this.customLogger = this.config.logger;
 		}
 
 		// Store compiler if provided (defaults handled in transformCodeWithCompiler)

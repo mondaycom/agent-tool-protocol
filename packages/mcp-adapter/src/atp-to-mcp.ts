@@ -9,15 +9,14 @@ export interface MCPToolResult {
 }
 
 /**
- * MCP Server interface (minimal subset needed for tool registration)
+ * MCP Server interface - supports both legacy (v0.x) and modern (v1.x) SDK.
+ * 
+ * Uses minimal duck-typing to avoid TypeScript variance issues with the 
+ * MCP SDK's complex generic callback signatures.
  */
 export interface MCPServerLike {
-	tool(
-		name: string,
-		description: string,
-		schema: Record<string, unknown>,
-		handler: (args: Record<string, unknown>) => Promise<MCPToolResult>
-	): void;
+	registerTool?: Function;
+	tool?: Function;
 }
 
 /**
@@ -45,6 +44,7 @@ export function registerATPTools(client: AgentToolProtocolClient, mcpServer: MCP
 /**
  * Registers an array of ATP tools with an MCP server.
  * Use this if you want more control over which tools to register.
+ * Supports both MCP SDK v0.x and v1.x APIs.
  *
  * @example
  * ```typescript
@@ -54,13 +54,7 @@ export function registerATPTools(client: AgentToolProtocolClient, mcpServer: MCP
  */
 export function registerToolsWithMCP(tools: Tool[], mcpServer: MCPServerLike): void {
 	for (const tool of tools) {
-		const schema = {
-			type: tool.inputSchema.type,
-			properties: tool.inputSchema.properties || {},
-			required: tool.inputSchema.required || [],
-		};
-
-		mcpServer.tool(tool.name, tool.description || '', schema, async (args: Record<string, unknown>) => {
+		const handler = async (args: Record<string, unknown>): Promise<MCPToolResult> => {
 			try {
 				const result = await tool.func(args);
 				const resultText = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
@@ -74,7 +68,32 @@ export function registerToolsWithMCP(tools: Tool[], mcpServer: MCPServerLike): v
 					isError: true,
 				};
 			}
-		});
+		};
+
+		if (typeof mcpServer.registerTool === 'function') {
+			mcpServer.registerTool(
+				tool.name,
+				{
+					description: tool.description || '',
+					inputSchema: tool.zodSchema,
+				},
+				handler
+			);
+		} else if (typeof mcpServer.tool === 'function') {
+			const jsonSchema = {
+				type: tool.inputSchema.type,
+				properties: tool.inputSchema.properties || {},
+				required: tool.inputSchema.required || [],
+			};
+			mcpServer.tool(
+				tool.name,
+				tool.description || '',
+				jsonSchema,
+				handler
+			);
+		} else {
+			throw new Error('MCP server does not have a compatible tool registration method. Expected registerTool() or tool() method.');
+		}
 	}
 }
 
