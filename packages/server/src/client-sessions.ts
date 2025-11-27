@@ -4,11 +4,14 @@
 import { randomBytes } from 'node:crypto';
 import { nanoid } from 'nanoid';
 import jwt from 'jsonwebtoken';
+import { log } from '@mondaydotcomorg/atp-runtime';
 import type {
 	CacheProvider,
 	ClientToolDefinition,
 	ClientServices,
 } from '@mondaydotcomorg/atp-protocol';
+
+const DEFAULT_JWT_SECRET = 'atp-default-development-secret';
 
 export interface ClientSession {
 	clientId: string;
@@ -62,12 +65,14 @@ export class ClientSessionManager {
 
 		const secret = process.env.ATP_JWT_SECRET;
 		if (!secret) {
-			throw new Error(
-				'ATP_JWT_SECRET environment variable is required. Generate one with: openssl rand -base64 32'
+			log.warn(
+				'ATP_JWT_SECRET not set - using default secret. This is insecure for production! ' +
+				'Generate a secure secret with: openssl rand -base64 32'
 			);
+			this.jwtSecret = DEFAULT_JWT_SECRET;
+		} else {
+			this.jwtSecret = secret;
 		}
-
-		this.jwtSecret = secret;
 	}
 
 	/**

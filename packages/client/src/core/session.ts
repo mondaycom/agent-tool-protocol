@@ -1,7 +1,26 @@
 import type { ClientHooks } from './types.js';
 import type { ClientToolDefinition } from '@mondaydotcomorg/atp-protocol';
 
-export class ClientSession {
+export interface ISession {
+	init(
+		clientInfo?: { name?: string; version?: string; [key: string]: unknown },
+		tools?: ClientToolDefinition[],
+		services?: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean }
+	): Promise<{
+		clientId: string;
+		token: string;
+		expiresAt: number;
+		tokenRotateAt: number;
+	}>;
+	getClientId(): string;
+	ensureInitialized(): Promise<void>;
+	getHeaders(): Record<string, string>;
+	getBaseUrl(): string;
+	updateToken(response: Response): void;
+	prepareHeaders(method: string, url: string, body?: unknown): Promise<Record<string, string>>;
+}
+
+export class ClientSession implements ISession {
 	private baseUrl: string;
 	private customHeaders: Record<string, string>;
 	private clientId?: string;

@@ -1,13 +1,16 @@
 import type { SearchOptions, SearchResult, ExploreResult } from '@mondaydotcomorg/atp-protocol';
 import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
-import type { ClientSession } from './session.js';
+import type { ISession } from './session.js';
+import type { InProcessSession } from './in-process-session.js';
 
 export class APIOperations {
-	private session: ClientSession;
+	private session: ISession;
+	private inProcessSession?: InProcessSession;
 	private apiDefinitions?: string;
 
-	constructor(session: ClientSession) {
+	constructor(session: ISession, inProcessSession?: InProcessSession) {
 		this.session = session;
+		this.inProcessSession = inProcessSession;
 	}
 
 	/**
@@ -19,6 +22,16 @@ export class APIOperations {
 		apiGroups: string[];
 	}> {
 		await this.session.ensureInitialized();
+
+		if (this.inProcessSession) {
+			const data = await this.inProcessSession.getDefinitions(options);
+			this.apiDefinitions = data.typescript;
+			return {
+				serverVersion: data.version,
+				capabilities: {},
+				apiGroups: data.apiGroups,
+			};
+		}
 
 		const params = new URLSearchParams();
 		if (options?.apiGroups) {
@@ -64,6 +77,11 @@ export class APIOperations {
 	async searchAPI(query: string, options?: SearchOptions): Promise<SearchResult[]> {
 		await this.session.ensureInitialized();
 
+		if (this.inProcessSession) {
+			const data = await this.inProcessSession.search(query, options as unknown as Record<string, unknown>);
+			return data.results as SearchResult[];
+		}
+
 		const url = `${this.session.getBaseUrl()}/api/search`;
 		const body = JSON.stringify({ query, ...options });
 		const headers = await this.session.prepareHeaders('POST', url, body);
@@ -87,6 +105,10 @@ export class APIOperations {
 	 */
 	async exploreAPI(path: string): Promise<ExploreResult> {
 		await this.session.ensureInitialized();
+
+		if (this.inProcessSession) {
+			return (await this.inProcessSession.explore(path)) as ExploreResult;
+		}
 
 		const url = `${this.session.getBaseUrl()}/api/explore`;
 		const body = JSON.stringify({ path });
@@ -113,6 +135,10 @@ export class APIOperations {
 		capabilities: Record<string, boolean>;
 	}> {
 		await this.session.ensureInitialized();
+
+		if (this.inProcessSession) {
+			return await this.inProcessSession.getServerInfo();
+		}
 
 		const url = `${this.session.getBaseUrl()}/api/info`;
 		const headers = await this.session.prepareHeaders('GET', url);
@@ -144,6 +170,12 @@ export class APIOperations {
 	 */
 	async getRuntimeDefinitions(options?: { apis?: RuntimeAPIName[] }): Promise<string> {
 		await this.session.ensureInitialized();
+
+		if (this.inProcessSession) {
+			return await this.inProcessSession.getRuntimeDefinitions(
+				options?.apis ? { apis: options.apis } : undefined
+			);
+		}
 
 		const params = new URLSearchParams();
 		if (options?.apis && options.apis.length > 0) {
