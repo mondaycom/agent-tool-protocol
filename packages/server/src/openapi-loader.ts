@@ -522,31 +522,52 @@ function buildInputSchema(operation: OpenAPIOperation, spec: APISpec): unknown {
 		for (const param of operation.parameters) {
 			if (param.schema) {
 				const paramSchema = resolveSchema(param.schema, spec);
-				if (typeof paramSchema === 'object' && paramSchema !== null) {
-					properties[param.name] = {
-						...paramSchema,
-						description: param.description || (paramSchema as any).description,
-					};
-				} else {
-					properties[param.name] = paramSchema;
-				}
-				if (param.required) {
-					required.push(param.name);
-				}
+				properties[param.name] =
+					typeof paramSchema === 'object' && paramSchema !== null
+						? { ...paramSchema, description: param.description || (paramSchema as any).description }
+						: paramSchema;
+			} else {
+				properties[param.name] = { type: 'string', description: param.description };
+			}
+			if (param.required) {
+				required.push(param.name);
 			}
 		}
 	}
 
 	if (operation.requestBody?.content?.['application/json']?.schema) {
-		const bodySchema = resolveSchema(
-			operation.requestBody.content['application/json'].schema,
-			spec
-		);
+		const bodySchema = resolveSchema(operation.requestBody.content['application/json'].schema, spec);
 
-		if (typeof bodySchema === 'object' && bodySchema !== null && 'properties' in bodySchema) {
-			Object.assign(properties, (bodySchema as any).properties);
-			if ('required' in bodySchema && Array.isArray((bodySchema as any).required)) {
-				required.push(...(bodySchema as any).required);
+		if (typeof bodySchema === 'object' && bodySchema !== null) {
+			if ('allOf' in bodySchema) {
+				if (Object.keys(properties).length > 0) {
+					return {
+						type: 'object',
+						properties,
+						required: required.length > 0 ? required : undefined,
+						allOf: (bodySchema as any).allOf,
+					};
+				}
+				return bodySchema;
+			}
+
+			if ('additionalProperties' in bodySchema && !('properties' in bodySchema)) {
+				if (Object.keys(properties).length > 0) {
+					return {
+						type: 'object',
+						properties,
+						required: required.length > 0 ? required : undefined,
+						additionalProperties: (bodySchema as any).additionalProperties,
+					};
+				}
+				return bodySchema;
+			}
+
+			if ('properties' in bodySchema) {
+				Object.assign(properties, (bodySchema as any).properties);
+				if ('required' in bodySchema && Array.isArray((bodySchema as any).required)) {
+					required.push(...(bodySchema as any).required);
+				}
 			}
 		}
 	}
@@ -575,7 +596,8 @@ function buildOutputSchema(operation: OpenAPIOperation, spec: APISpec): unknown 
 }
 
 /**
- * Resolve schema references ($ref) with circular reference detection
+ * Resolve schema references ($ref) with circular reference detection.
+ * Preserves all JSON Schema fields.
  */
 function resolveSchema(
 	schema: OpenAPISchema,
@@ -583,15 +605,12 @@ function resolveSchema(
 	visited: Set<string> = new Set()
 ): unknown {
 	if (schema.$ref) {
-		// Check for circular reference
 		if (visited.has(schema.$ref)) {
-			// Return a placeholder for circular references
 			return { type: 'object', description: 'Circular reference: ' + schema.$ref };
 		}
 
 		const refPath = schema.$ref.split('/').slice(1);
 		let resolved: unknown = spec;
-
 		for (const part of refPath) {
 			resolved = (resolved as Record<string, unknown>)?.[part];
 		}
@@ -604,7 +623,21 @@ function resolveSchema(
 		}
 	}
 
-	const jsonSchema: Record<string, unknown> = { type: schema.type || 'object' };
+	if (schema.allOf) {
+		const result: Record<string, unknown> = {
+			allOf: (schema.allOf as OpenAPISchema[]).map((s) => resolveSchema(s, spec, visited)),
+		};
+		if (schema.description) result.description = schema.description;
+		return result;
+	}
+
+	const jsonSchema: Record<string, unknown> = {};
+
+	if (schema.type) {
+		jsonSchema.type = schema.type;
+	} else if (!schema.oneOf && !schema.anyOf) {
+		jsonSchema.type = 'object';
+	}
 
 	if (schema.properties) {
 		const properties: Record<string, unknown> = {};
@@ -618,16 +651,49 @@ function resolveSchema(
 		jsonSchema.items = resolveSchema(schema.items, spec, visited);
 	}
 
-	if (schema.required) {
-		jsonSchema.required = schema.required;
+	if (schema.oneOf) {
+		jsonSchema.oneOf = (schema.oneOf as OpenAPISchema[]).map((s) => resolveSchema(s, spec, visited));
 	}
 
-	if (schema.enum) {
-		jsonSchema.enum = schema.enum;
+	if (schema.anyOf) {
+		jsonSchema.anyOf = (schema.anyOf as OpenAPISchema[]).map((s) => resolveSchema(s, spec, visited));
 	}
 
-	if (schema.description) {
-		jsonSchema.description = schema.description;
+	if (schema.additionalProperties !== undefined) {
+		jsonSchema.additionalProperties =
+			typeof schema.additionalProperties === 'object'
+				? resolveSchema(schema.additionalProperties as OpenAPISchema, spec, visited)
+				: schema.additionalProperties;
+	}
+
+	const directCopyFields = [
+		'required',
+		'enum',
+		'description',
+		'format',
+		'nullable',
+		'default',
+		'minimum',
+		'maximum',
+		'exclusiveMinimum',
+		'exclusiveMaximum',
+		'multipleOf',
+		'minLength',
+		'maxLength',
+		'pattern',
+		'minItems',
+		'maxItems',
+		'uniqueItems',
+		'readOnly',
+		'writeOnly',
+		'example',
+		'deprecated',
+	] as const;
+
+	for (const field of directCopyFields) {
+		if (schema[field] !== undefined) {
+			jsonSchema[field] = schema[field];
+		}
 	}
 
 	return jsonSchema;

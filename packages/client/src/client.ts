@@ -15,7 +15,9 @@ import {
 	type ClientEmbeddingHandler,
 	type ClientServiceProviders,
 	type ClientHooks,
+	type ISession,
 	ClientSession,
+	InProcessSession,
 	APIOperations,
 	ExecutionOperations,
 	ServiceProviders,
@@ -28,12 +30,26 @@ import {
 	createExploreApiTool,
 } from './tools/index.js';
 
+interface InProcessServer {
+	start(): Promise<void>;
+	handleInit(ctx: unknown): Promise<unknown>;
+	getDefinitions(ctx?: unknown): Promise<unknown>;
+	getRuntimeDefinitions(ctx?: unknown): Promise<string>;
+	getInfo(): unknown;
+	handleSearch(ctx: unknown): Promise<unknown>;
+	handleExplore(ctx: unknown): Promise<unknown>;
+	handleExecute(ctx: unknown): Promise<unknown>;
+	handleResume(ctx: unknown, executionId: string): Promise<unknown>;
+}
+
 /**
  * Options for creating an AgentToolProtocolClient
  */
 export interface AgentToolProtocolClientOptions {
-	/** Base URL of the Agent Tool Protocol server */
-	baseUrl: string;
+	/** Base URL of the Agent Tool Protocol server (HTTP mode) */
+	baseUrl?: string;
+	/** Server instance for in-process mode (no HTTP, no port binding) */
+	server?: InProcessServer;
 	/** Optional headers for authentication (e.g., { Authorization: 'Bearer token' }) */
 	headers?: Record<string, string>;
 	/** Optional client-provided services (LLM, approval, embedding) */
@@ -47,7 +63,8 @@ export interface AgentToolProtocolClientOptions {
  * Agent Tool Protocol servers and executing code.
  */
 export class AgentToolProtocolClient {
-	private session: ClientSession;
+	private session: ISession;
+	private inProcessSession?: InProcessSession;
 	private apiOps: APIOperations;
 	private execOps: ExecutionOperations;
 	private serviceProviders: ServiceProviders;
@@ -57,6 +74,7 @@ export class AgentToolProtocolClient {
 	 *
 	 * @example
 	 * ```typescript
+	 * // HTTP mode
 	 * const client = new AgentToolProtocolClient({
 	 *   baseUrl: 'http://localhost:3333',
 	 *   headers: { Authorization: 'Bearer token' },
@@ -67,14 +85,36 @@ export class AgentToolProtocolClient {
 	 *     }
 	 *   }
 	 * });
+	 *
+	 * // In-process mode (no port binding)
+	 * const server = createServer();
+	 * server.use(myApiGroup);
+	 * const client = new AgentToolProtocolClient({ server });
 	 * ```
 	 */
 	constructor(options: AgentToolProtocolClientOptions) {
-		const { baseUrl, headers, serviceProviders, hooks } = options;
-		this.session = new ClientSession(baseUrl, headers, hooks);
+		const { baseUrl, server, headers, serviceProviders, hooks } = options;
+
+		if (!baseUrl && !server) {
+			throw new Error('Either baseUrl or server must be provided');
+		}
+
+		if (baseUrl && server) {
+			throw new Error('Cannot provide both baseUrl and server');
+		}
+
 		this.serviceProviders = new ServiceProviders(serviceProviders);
-		this.apiOps = new APIOperations(this.session);
-		this.execOps = new ExecutionOperations(this.session, this.serviceProviders);
+
+		if (server) {
+			this.inProcessSession = new InProcessSession(server);
+			this.session = this.inProcessSession;
+			this.apiOps = new APIOperations(this.session, this.inProcessSession);
+			this.execOps = new ExecutionOperations(this.session, this.serviceProviders, this.inProcessSession);
+		} else {
+			this.session = new ClientSession(baseUrl!, headers, hooks);
+			this.apiOps = new APIOperations(this.session);
+			this.execOps = new ExecutionOperations(this.session, this.serviceProviders);
+		}
 	}
 
 	/**

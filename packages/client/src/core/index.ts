@@ -1,4 +1,5 @@
 export * from './session.js';
+export * from './in-process-session.js';
 export * from './api-operations.js';
 export * from './execution-operations.js';
 export * from './service-providers.js';

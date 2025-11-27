@@ -1,19 +1,22 @@
 import type { ExecutionResult, ExecutionConfig } from '@mondaydotcomorg/atp-protocol';
 import { ExecutionStatus, CallbackType } from '@mondaydotcomorg/atp-protocol';
 import { log } from '@mondaydotcomorg/atp-runtime';
-import type { ClientSession } from './session.js';
+import type { ISession } from './session.js';
+import type { InProcessSession } from './in-process-session.js';
 import type { ServiceProviders } from './service-providers';
 import { ClientCallbackError } from '../errors.js';
 import { ProvenanceTokenRegistry } from './provenance-registry.js';
 
 export class ExecutionOperations {
-	private session: ClientSession;
+	private session: ISession;
+	private inProcessSession?: InProcessSession;
 	private serviceProviders: ServiceProviders;
 	private tokenRegistry: ProvenanceTokenRegistry;
 	private lastExecutionConfig: Partial<ExecutionConfig> | null = null;
 
-	constructor(session: ClientSession, serviceProviders: ServiceProviders) {
+	constructor(session: ISession, serviceProviders: ServiceProviders, inProcessSession?: InProcessSession) {
 		this.session = session;
+		this.inProcessSession = inProcessSession;
 		this.serviceProviders = serviceProviders;
 		this.tokenRegistry = new ProvenanceTokenRegistry();
 	}
@@ -132,24 +135,30 @@ export class ExecutionOperations {
 
 		this.lastExecutionConfig = executionConfig;
 
-		const url = `${this.session.getBaseUrl()}/api/execute`;
-		const body = JSON.stringify({ code, config: executionConfig });
-		const headers = await this.session.prepareHeaders('POST', url, body);
+		let result: ExecutionResult;
 
-		const response = await fetch(url, {
-			method: 'POST',
-			headers,
-			body,
-		});
+		if (this.inProcessSession) {
+			result = (await this.inProcessSession.execute(code, executionConfig)) as ExecutionResult;
+		} else {
+			const url = `${this.session.getBaseUrl()}/api/execute`;
+			const body = JSON.stringify({ code, config: executionConfig });
+			const headers = await this.session.prepareHeaders('POST', url, body);
 
-		this.session.updateToken(response);
+			const response = await fetch(url, {
+				method: 'POST',
+				headers,
+				body,
+			});
 
-		if (!response.ok) {
-			const error = (await response.json()) as { error: string };
-			throw new Error(`Execution failed: ${error.error || response.statusText}`);
+			this.session.updateToken(response);
+
+			if (!response.ok) {
+				const error = (await response.json()) as { error: string };
+				throw new Error(`Execution failed: ${error.error || response.statusText}`);
+			}
+
+			result = (await response.json()) as ExecutionResult;
 		}
-
-		const result = (await response.json()) as ExecutionResult;
 
 		if (result.provenanceTokens && result.provenanceTokens.length > 0) {
 			for (const { token } of result.provenanceTokens) {
@@ -383,24 +392,30 @@ export class ExecutionOperations {
 	async resume(executionId: string, callbackResult: unknown): Promise<ExecutionResult> {
 		await this.session.ensureInitialized();
 
-		const url = `${this.session.getBaseUrl()}/api/resume/${executionId}`;
-		const body = JSON.stringify({ result: callbackResult });
-		const headers = await this.session.prepareHeaders('POST', url, body);
+		let result: ExecutionResult;
 
-		const response = await fetch(url, {
-			method: 'POST',
-			headers,
-			body,
-		});
+		if (this.inProcessSession) {
+			result = (await this.inProcessSession.resume(executionId, callbackResult)) as ExecutionResult;
+		} else {
+			const url = `${this.session.getBaseUrl()}/api/resume/${executionId}`;
+			const body = JSON.stringify({ result: callbackResult });
+			const headers = await this.session.prepareHeaders('POST', url, body);
 
-		this.session.updateToken(response);
+			const response = await fetch(url, {
+				method: 'POST',
+				headers,
+				body,
+			});
 
-		if (!response.ok) {
-			const error = (await response.json()) as { error: string };
-			throw new Error(`Resume failed: ${error.error || response.statusText}`);
+			this.session.updateToken(response);
+
+			if (!response.ok) {
+				const error = (await response.json()) as { error: string };
+				throw new Error(`Resume failed: ${error.error || response.statusText}`);
+			}
+
+			result = (await response.json()) as ExecutionResult;
 		}
-
-		const result = (await response.json()) as ExecutionResult;
 
 		if (result.provenanceTokens && result.provenanceTokens.length > 0) {
 			for (const { token } of result.provenanceTokens) {
@@ -428,24 +443,33 @@ export class ExecutionOperations {
 	): Promise<ExecutionResult> {
 		await this.session.ensureInitialized();
 
-		const url = `${this.session.getBaseUrl()}/api/resume/${executionId}`;
-		const body = JSON.stringify({ results: batchResults });
-		const headers = await this.session.prepareHeaders('POST', url, body);
+		let result: ExecutionResult;
 
-		const response = await fetch(url, {
-			method: 'POST',
-			headers,
-			body,
-		});
+		if (this.inProcessSession) {
+			result = (await this.inProcessSession.resumeWithBatchResults(
+				executionId,
+				batchResults
+			)) as ExecutionResult;
+		} else {
+			const url = `${this.session.getBaseUrl()}/api/resume/${executionId}`;
+			const body = JSON.stringify({ results: batchResults });
+			const headers = await this.session.prepareHeaders('POST', url, body);
 
-		this.session.updateToken(response);
+			const response = await fetch(url, {
+				method: 'POST',
+				headers,
+				body,
+			});
 
-		if (!response.ok) {
-			const error = (await response.json()) as { error: string };
-			throw new Error(`Batch resume failed: ${error.error || response.statusText}`);
+			this.session.updateToken(response);
+
+			if (!response.ok) {
+				const error = (await response.json()) as { error: string };
+				throw new Error(`Batch resume failed: ${error.error || response.statusText}`);
+			}
+
+			result = (await response.json()) as ExecutionResult;
 		}
-
-		const result = (await response.json()) as ExecutionResult;
 
 		if (result.provenanceTokens && result.provenanceTokens.length > 0) {
 			for (const { token } of result.provenanceTokens) {

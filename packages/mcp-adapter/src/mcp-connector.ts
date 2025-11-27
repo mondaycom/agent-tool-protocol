@@ -1,6 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import type { APIGroupConfig, CustomFunctionDef } from '@mondaydotcomorg/atp-protocol';
+import { convertMCPInputSchema } from './schema-utils.js';
 
 interface MCPServerConfig {
 	name: string;
@@ -49,27 +50,12 @@ export class MCPConnector {
 
 		const functions: CustomFunctionDef[] = tools.map(
 			(tool: { name: string; description?: string; inputSchema: unknown }) => {
-				const schema = tool.inputSchema as
-					| {
-							type?: string;
-							properties?: Record<string, any>;
-							required?: string[];
-					  }
-					| undefined;
-
-				const inputSchema = schema || { type: 'object', properties: {} };
-				if (!inputSchema.type) {
-					inputSchema.type = 'object';
-				}
+				const inputSchema = convertMCPInputSchema(tool.inputSchema);
 
 				return {
 					name: tool.name,
 					description: tool.description || `MCP tool: ${tool.name}`,
-					inputSchema: inputSchema as {
-						type: string;
-						properties?: Record<string, any>;
-						required?: string[];
-					},
+					inputSchema,
 					handler: async (input: unknown) => {
 						const result = await client.callTool({
 							name: tool.name,
