@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-client",
-	"version": "0.19.6",
+	"version": "0.19.7",
 	"description": "Client SDK for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.cjs",
@@ -48,8 +48,8 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@mondaydotcomorg/atp-protocol": "0.19.6",
-		"@mondaydotcomorg/atp-runtime": "0.19.6",
+		"@mondaydotcomorg/atp-protocol": "0.19.7",
+		"@mondaydotcomorg/atp-runtime": "0.19.7",
 		"undici": "*",
 		"zod-to-json-schema": "^3.24.6"
 	},
