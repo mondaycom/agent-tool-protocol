@@ -14,7 +14,11 @@ export class ExecutionOperations {
 	private tokenRegistry: ProvenanceTokenRegistry;
 	private lastExecutionConfig: Partial<ExecutionConfig> | null = null;
 
-	constructor(session: ISession, serviceProviders: ServiceProviders, inProcessSession?: InProcessSession) {
+	constructor(
+		session: ISession,
+		serviceProviders: ServiceProviders,
+		inProcessSession?: InProcessSession
+	) {
 		this.session = session;
 		this.inProcessSession = inProcessSession;
 		this.serviceProviders = serviceProviders;

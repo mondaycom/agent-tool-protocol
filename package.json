@@ -4,8 +4,7 @@
 	"private": true,
 	"workspaces": [
 		"packages/*",
-		"examples/*",
-		"services/enterprise-admin/*"
+		"examples/*"
 	],
 	"scripts": {
 		"build": "nx run-many -t build",

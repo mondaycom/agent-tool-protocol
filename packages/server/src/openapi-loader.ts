@@ -536,7 +536,10 @@ function buildInputSchema(operation: OpenAPIOperation, spec: APISpec): unknown {
 	}
 
 	if (operation.requestBody?.content?.['application/json']?.schema) {
-		const bodySchema = resolveSchema(operation.requestBody.content['application/json'].schema, spec);
+		const bodySchema = resolveSchema(
+			operation.requestBody.content['application/json'].schema,
+			spec
+		);
 
 		if (typeof bodySchema === 'object' && bodySchema !== null) {
 			if ('allOf' in bodySchema) {
@@ -652,11 +655,15 @@ function resolveSchema(
 	}
 
 	if (schema.oneOf) {
-		jsonSchema.oneOf = (schema.oneOf as OpenAPISchema[]).map((s) => resolveSchema(s, spec, visited));
+		jsonSchema.oneOf = (schema.oneOf as OpenAPISchema[]).map((s) =>
+			resolveSchema(s, spec, visited)
+		);
 	}
 
 	if (schema.anyOf) {
-		jsonSchema.anyOf = (schema.anyOf as OpenAPISchema[]).map((s) => resolveSchema(s, spec, visited));
+		jsonSchema.anyOf = (schema.anyOf as OpenAPISchema[]).map((s) =>
+			resolveSchema(s, spec, visited)
+		);
 	}
 
 	if (schema.additionalProperties !== undefined) {

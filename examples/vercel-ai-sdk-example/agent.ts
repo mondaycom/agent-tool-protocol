@@ -17,7 +17,7 @@ async function main() {
 			if (context) {
 				console.log('Context:', JSON.stringify(context, null, 2));
 			}
-			
+
 			return new Promise((resolve) => {
 				process.stdin.once('data', (data) => {
 					const answer = data.toString().trim().toLowerCase();
@@ -65,4 +65,3 @@ main().catch((error) => {
 	console.error('❌ Error:', error);
 	process.exit(1);
 });
-

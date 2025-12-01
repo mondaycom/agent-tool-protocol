@@ -2,7 +2,7 @@
  * AST Provenance Tracking Runtime for isolated-vm
  * This code is injected into the isolate and runs INSIDE the sandbox
  * It must be plain JavaScript with no imports
- * 
+ *
  * This runtime provides comprehensive taint tracking by:
  * 1. Deep-tainting all primitives from tool results
  * 2. Intercepting native methods with re-entry protection

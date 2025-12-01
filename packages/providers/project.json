@@ -8,8 +8,7 @@
 			"executor": "nx:run-commands",
 			"outputs": ["{workspaceRoot}/packages/providers/dist"],
 			"options": {
-				"command": "tsc --build packages/providers/tsconfig.json",
-				"cwd": "{workspaceRoot}"
+				"command": "cd packages/providers && npm run build"
 			}
 		},
 		"clean": {

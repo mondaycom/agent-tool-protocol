@@ -5,10 +5,10 @@ async function main() {
 		baseUrl: 'http://localhost:3000',
 	});
 
-    await client.init({
-        name: 'monday-graphql-agent',
-        version: '1.0.0'
-    });
+	await client.init({
+		name: 'monday-graphql-agent',
+		version: '1.0.0',
+	});
 
 	console.log('🤖 Connecting to Monday.com GraphQL Agent...');
 
@@ -57,11 +57,9 @@ async function main() {
 
 		console.log('\n✅ Execution Result:');
 		console.log(JSON.stringify(result, null, 2));
-
 	} catch (error) {
 		console.error('❌ Error executing script:', error);
 	}
 }
 
 main();
-

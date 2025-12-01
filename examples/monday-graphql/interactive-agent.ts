@@ -1,15 +1,15 @@
 /**
  * Monday.com GraphQL Interactive Agent
- * 
+ *
  * This agent uses ATP's execute_code to write TypeScript code
  * that can call multiple Monday.com GraphQL tools in a single execution block.
- * 
+ *
  * Features:
  * - Full access to Monday.com GraphQL API (boards, items, users, workspaces, etc.)
  * - Writes and executes TypeScript code
  * - Can call multiple tools in one code block
  * - Interactive console interface
- * 
+ *
  * Run: npm run chat
  */
 
@@ -18,12 +18,7 @@ import { createATPTools } from '@mondaydotcomorg/atp-langchain';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { MemorySaver } from '@langchain/langgraph';
 import * as dotenv from 'dotenv';
-import {
-	ChatFormatter,
-	CodeExecutionHandler,
-	InteractiveChatRunner,
-	colors,
-} from '../utils';
+import { ChatFormatter, CodeExecutionHandler, InteractiveChatRunner, colors } from '../utils';
 
 dotenv.config({ path: '../../.env' });
 
@@ -43,7 +38,9 @@ async function main() {
 
 	if (!process.env.MONDAY_API_TOKEN) {
 		formatter.showError('MONDAY_API_TOKEN not set in .env');
-		console.log(`${colors.dim}Get your token from: https://monday.com/developers/v2#authentication-section-api-key${colors.reset}`);
+		console.log(
+			`${colors.dim}Get your token from: https://monday.com/developers/v2#authentication-section-api-key${colors.reset}`
+		);
 		process.exit(1);
 	}
 
@@ -64,7 +61,9 @@ async function main() {
 	formatter.showConnected(allTools.length);
 
 	// Get only the tools we need for this agent
-	const tools = allTools.filter((tool) => ['atp_execute_code', 'atp_explore_api'].includes(tool.name));
+	const tools = allTools.filter((tool) =>
+		['atp_execute_code', 'atp_explore_api'].includes(tool.name)
+	);
 
 	const customInstructions = `You are a helpful Monday.com assistant. Your goal is to COMPLETE tasks, not ask for clarification.
 
@@ -213,19 +212,20 @@ EXPLORATION EXAMPLES:
 - To see mutation operations: atp_explore_api with path="/monday/mutation"
 - To see operation details: atp_explore_api with path="/monday/query/boards"`;
 
-
 	const checkpointer = new MemorySaver();
 	const agent = createReactAgent({
 		llm,
 		tools: tools as any,
 		checkpointSaver: checkpointer,
-		messageModifier: customInstructions,    
+		messageModifier: customInstructions,
 	});
 
 	const handler = new CodeExecutionHandler(formatter);
 	const chatRunner = new InteractiveChatRunner(formatter, handler);
 
-	console.log(`${colors.dim}💡 Try asking: "Show me my boards" or "Who am I?" or "Create a new item"${colors.reset}\n`);
+	console.log(
+		`${colors.dim}💡 Try asking: "Show me my boards" or "Who am I?" or "Create a new item"${colors.reset}\n`
+	);
 
 	await chatRunner.run({
 		agent,
@@ -241,4 +241,3 @@ main().catch((error) => {
 	formatter.showError(`Fatal error: ${error.message || error}`);
 	process.exit(1);
 });
-

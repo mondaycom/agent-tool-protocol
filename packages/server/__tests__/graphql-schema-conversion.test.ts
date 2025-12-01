@@ -24,10 +24,7 @@ describe('GraphQL Schema Conversion', () => {
 
 	describe('Scalar types', () => {
 		it('should convert Int to number', async () => {
-			const schemaPath = await writeSchema(
-				'scalar-int',
-				`type Query { count: Int }`
-			);
+			const schemaPath = await writeSchema('scalar-int', `type Query { count: Int }`);
 			const apiGroup = await loadGraphQL(schemaPath);
 			const func = apiGroup.functions?.find((f) => f.name === 'query_count');
 
@@ -36,10 +33,7 @@ describe('GraphQL Schema Conversion', () => {
 		});
 
 		it('should convert Float to number', async () => {
-			const schemaPath = await writeSchema(
-				'scalar-float',
-				`type Query { price: Float }`
-			);
+			const schemaPath = await writeSchema('scalar-float', `type Query { price: Float }`);
 			const apiGroup = await loadGraphQL(schemaPath);
 			const func = apiGroup.functions?.find((f) => f.name === 'query_price');
 
@@ -48,10 +42,7 @@ describe('GraphQL Schema Conversion', () => {
 		});
 
 		it('should convert Boolean to boolean', async () => {
-			const schemaPath = await writeSchema(
-				'scalar-boolean',
-				`type Query { active: Boolean }`
-			);
+			const schemaPath = await writeSchema('scalar-boolean', `type Query { active: Boolean }`);
 			const apiGroup = await loadGraphQL(schemaPath);
 			const func = apiGroup.functions?.find((f) => f.name === 'query_active');
 
@@ -69,10 +60,7 @@ describe('GraphQL Schema Conversion', () => {
 		});
 
 		it('should convert String to string', async () => {
-			const schemaPath = await writeSchema(
-				'scalar-string',
-				`type Query { name: String }`
-			);
+			const schemaPath = await writeSchema('scalar-string', `type Query { name: String }`);
 			const apiGroup = await loadGraphQL(schemaPath);
 			const func = apiGroup.functions?.find((f) => f.name === 'query_name');
 
@@ -83,10 +71,7 @@ describe('GraphQL Schema Conversion', () => {
 
 	describe('List types', () => {
 		it('should convert List to array with items', async () => {
-			const schemaPath = await writeSchema(
-				'list-string',
-				`type Query { names: [String] }`
-			);
+			const schemaPath = await writeSchema('list-string', `type Query { names: [String] }`);
 			const apiGroup = await loadGraphQL(schemaPath);
 			const func = apiGroup.functions?.find((f) => f.name === 'query_names');
 
@@ -96,10 +81,7 @@ describe('GraphQL Schema Conversion', () => {
 		});
 
 		it('should handle nested lists', async () => {
-			const schemaPath = await writeSchema(
-				'list-nested',
-				`type Query { matrix: [[Int]] }`
-			);
+			const schemaPath = await writeSchema('list-nested', `type Query { matrix: [[Int]] }`);
 			const apiGroup = await loadGraphQL(schemaPath);
 			const func = apiGroup.functions?.find((f) => f.name === 'query_matrix');
 
@@ -169,11 +151,11 @@ describe('GraphQL Schema Conversion', () => {
 
 			expect(func).toBeDefined();
 			// Currently the graphql-loader doesn't track required at the nested object level
-			// This test documents the current behavior - if required is undefined, 
+			// This test documents the current behavior - if required is undefined,
 			// that's a potential issue to fix
 			const outputSchema = func?.outputSchema as any;
 			expect(outputSchema?.type).toBe('object');
-			
+
 			// NOTE: This is checking if required fields are tracked
 			// If this fails, it indicates an issue in the GraphQL loader
 			// The GraphQL loader should ideally track NonNull fields as required
@@ -204,7 +186,7 @@ describe('GraphQL Schema Conversion', () => {
 			// Union types should ideally be converted to oneOf
 			// Currently falls back to string - this documents the issue
 			const outputSchema = func?.outputSchema as any;
-			
+
 			// If this is { type: 'string' }, it's a bug
 			// The expected behavior is oneOf with the union types
 			if (outputSchema?.oneOf) {
@@ -238,7 +220,7 @@ describe('GraphQL Schema Conversion', () => {
 			// Interface types should be converted to object with their fields
 			// Currently falls back to string - this documents the issue
 			const outputSchema = func?.outputSchema as any;
-			
+
 			if (outputSchema?.type === 'object' && outputSchema?.properties) {
 				expect(outputSchema.properties.id).toBeDefined();
 			} else {
@@ -307,11 +289,11 @@ describe('GraphQL Schema Conversion', () => {
 				type Query { user: User }
 			`
 			);
-			
+
 			// Should not throw or hang
 			const apiGroup = await loadGraphQL(schemaPath, { depthLimit: 3 });
 			const func = apiGroup.functions?.find((f) => f.name === 'query_user');
-			
+
 			expect(func).toBeDefined();
 			expect(func?.outputSchema?.type).toBe('object');
 		});

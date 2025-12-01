@@ -328,14 +328,14 @@ const { tools } = await createATPTools({
 
 ## Comparison with LangChain Integration
 
-| Feature                  | Vercel AI SDK       | LangChain               |
-| ------------------------ | ------------------- | ----------------------- |
-| Tool Format              | `tool()` function   | Tool classes            |
-| Agent Type               | ToolLoopAgent       | ReActAgent              |
-| Approval Mechanism       | Async callbacks     | Interrupts + Checkpoints|
-| State Persistence        | Custom              | Built-in (LangGraph)    |
-| Streaming                | Native support      | Via LangChain           |
-| Model Integration        | `generateText`      | `ChatModel.invoke`      |
+| Feature            | Vercel AI SDK     | LangChain                |
+| ------------------ | ----------------- | ------------------------ |
+| Tool Format        | `tool()` function | Tool classes             |
+| Agent Type         | ToolLoopAgent     | ReActAgent               |
+| Approval Mechanism | Async callbacks   | Interrupts + Checkpoints |
+| State Persistence  | Custom            | Built-in (LangGraph)     |
+| Streaming          | Native support    | Via LangChain            |
+| Model Integration  | `generateText`    | `ChatModel.invoke`       |
 
 ## Examples
 
@@ -413,4 +413,3 @@ MIT
 - [ATP Documentation](../../README.md)
 - [Vercel AI SDK Documentation](https://sdk.vercel.ai/docs)
 - [Examples](../../examples/vercel-ai-sdk-example/)
-

@@ -46,4 +46,3 @@ export interface ATPToolsResult {
 	client: any;
 	tools: Record<string, any>;
 }
-

@@ -2,13 +2,15 @@
 	"name": "@mondaydotcomorg/atp-provenance",
 	"version": "0.19.6",
 	"description": "CAMEL-inspired provenance security for LLM applications - track data origin and enforce security policies",
-	"main": "./dist/index.js",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"type": "module",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
 		}
 	},
 	"publishConfig": {
@@ -19,7 +21,8 @@
 		"README.md"
 	],
 	"scripts": {
-		"build": "tsc",
+		"build": "npx tsc --build tsconfig.json && tsup",
+		"build:tsc": "tsc",
 		"test": "jest",
 		"lint": "tsc --noEmit",
 		"clean": "rm -rf dist"
@@ -49,6 +52,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "^20.10.0",
+		"tsup": "^8.5.1",
 		"typescript": "^5.3.0",
 		"zod": "^3.25.0"
 	},

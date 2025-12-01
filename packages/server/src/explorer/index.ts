@@ -49,9 +49,10 @@ export class ExplorerService {
 		for (const group of apiGroups) {
 			if (!group.functions || group.functions.length === 0) continue;
 
-			const groupFolder = group.type === 'graphql'
-				? this.ensureDirectory(this.root, group.name)
-				: this.ensureDirectory(this.ensureDirectory(this.root, group.type), group.name);
+			const groupFolder =
+				group.type === 'graphql'
+					? this.ensureDirectory(this.root, group.name)
+					: this.ensureDirectory(this.ensureDirectory(this.root, group.type), group.name);
 
 			for (const func of group.functions) {
 				const segments = this.extractSegments(func, group);

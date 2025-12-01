@@ -142,4 +142,3 @@ export const IN_ISOLATE_IMPLEMENTATIONS: Record<string, string> = {
 export function getInIsolateImplementation(name: string): string | undefined {
 	return IN_ISOLATE_IMPLEMENTATIONS[name];
 }
-

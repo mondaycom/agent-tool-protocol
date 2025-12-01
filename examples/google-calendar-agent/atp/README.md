@@ -52,6 +52,7 @@ npm run chat:atp
 ```
 
 This automatically:
+
 1. Starts the ATP server in the background
 2. Waits for it to be ready
 3. Starts the agent
@@ -78,14 +79,14 @@ You: What meetings do I have today?
  3 │ });
  4 │ const timeData = JSON.parse(timeResult[0].text);
  5 │ const currentTime = new Date(timeData.currentTime);
- 6 │ 
+ 6 │
  7 │ const eventsResult = await api['google-calendar']['list-events']({
  8 │   calendarId: 'primary',
  9 │   timeMin: formatForAPI(startOfDay),
 10 │   timeMax: formatForAPI(endOfDay)
 11 │ });
 12 │ const eventsData = JSON.parse(eventsResult[0].text);
-13 │ 
+13 │
 14 │ return {
 15 │   events: eventsData.events.map(e => ({
 16 │     summary: e.summary,
@@ -127,6 +128,7 @@ Agent: You have 3 meetings today:
 ## Server Configuration
 
 The ATP server (`mcp-server.ts`):
+
 - Wraps the Google Calendar MCP using `MCPConnector`
 - Exposes tools via ATP protocol on port 3334
 - Filters out `get-freebusy` tool by removing it from the function list
@@ -136,6 +138,7 @@ The ATP server (`mcp-server.ts`):
 ## Troubleshooting
 
 If the agent fails to start:
+
 1. Check `atp/server.log` for server errors
 2. Make sure port 3334 is available (kill any process using it)
 3. Verify `.env` file exists in the project root with required credentials:
@@ -149,4 +152,3 @@ If the agent fails to start:
 - [MCP Agent](../mcp/) - Direct MCP connection
 - [Authentication](../auth/) - OAuth setup
 - [ATP Chat Utilities](../../utils/) - Reusable utilities used here
-

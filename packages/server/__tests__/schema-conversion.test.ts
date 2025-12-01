@@ -67,9 +67,7 @@ describe('Schema Conversion - OpenAPI Loader', () => {
 						patch: {
 							operationId: 'updateUser',
 							summary: 'Update a user',
-							parameters: [
-								{ name: 'id', in: 'path', required: true, schema: { type: 'string' } },
-							],
+							parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
 							requestBody: {
 								content: {
 									'application/json': {
@@ -654,5 +652,3 @@ describe('Schema Conversion - Aggregator TypeScript Generation', () => {
 		});
 	});
 });
-
-

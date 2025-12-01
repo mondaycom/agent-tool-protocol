@@ -1,6 +1,6 @@
 /**
  * Simple example of using ATP chat utilities
- * 
+ *
  * This is a minimal example showing how to create an interactive
  * code execution agent using the generic utilities.
  */
@@ -10,11 +10,7 @@ import { createATPTools } from '@mondaydotcomorg/atp-langchain';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { MemorySaver } from '@langchain/langgraph';
 import * as dotenv from 'dotenv';
-import {
-	ChatFormatter,
-	CodeExecutionHandler,
-	InteractiveChatRunner,
-} from '../utils';
+import { ChatFormatter, CodeExecutionHandler, InteractiveChatRunner } from '../utils';
 
 dotenv.config();
 
@@ -126,4 +122,3 @@ main().catch((error) => {
 	formatter.showError(`Fatal error: ${error.message || error}`);
 	process.exit(1);
 });
-

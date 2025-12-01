@@ -736,12 +736,12 @@ export class AgentToolProtocolServer {
 		return async (request: unknown, reply: unknown) => {
 			const req = (request as { raw: IncomingMessage }).raw;
 			const res = (reply as { raw: ServerResponse }).raw;
-			
+
 			const fastifyReq = request as { body?: unknown };
 			if (fastifyReq.body !== undefined) {
 				(req as IncomingMessage & { body?: unknown }).body = fastifyReq.body;
 			}
-			
+
 			await requestHandler(req, res);
 		};
 	}

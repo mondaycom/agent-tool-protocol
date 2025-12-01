@@ -10,8 +10,8 @@ export interface MCPToolResult {
 
 /**
  * MCP Server interface - supports both legacy (v0.x) and modern (v1.x) SDK.
- * 
- * Uses minimal duck-typing to avoid TypeScript variance issues with the 
+ *
+ * Uses minimal duck-typing to avoid TypeScript variance issues with the
  * MCP SDK's complex generic callback signatures.
  */
 export interface MCPServerLike {
@@ -86,15 +86,11 @@ export function registerToolsWithMCP(tools: Tool[], mcpServer: MCPServerLike): v
 				properties: tool.inputSchema.properties || {},
 				required: tool.inputSchema.required || [],
 			};
-			mcpServer.tool(
-				tool.name,
-				tool.description || '',
-				jsonSchema,
-				handler
-			);
+			mcpServer.tool(tool.name, tool.description || '', jsonSchema, handler);
 		} else {
-			throw new Error('MCP server does not have a compatible tool registration method. Expected registerTool() or tool() method.');
+			throw new Error(
+				'MCP server does not have a compatible tool registration method. Expected registerTool() or tool() method.'
+			);
 		}
 	}
 }
-

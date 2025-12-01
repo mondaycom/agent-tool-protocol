@@ -19,17 +19,20 @@ This example demonstrates how to use the Agent Tool Protocol (ATP) server to exp
 ## Setup
 
 1. Install dependencies (from root):
+
    ```bash
    yarn install
    ```
 
 2. Create a `.env` file in the project root with:
+
    ```bash
    MONDAY_API_TOKEN=your_monday_token_here
    OPENAI_API_KEY=your_openai_key_here
    ```
 
    Or set environment variables:
+
    ```bash
    export MONDAY_API_TOKEN=your_token_here
    export OPENAI_API_KEY=your_openai_key_here
@@ -40,18 +43,21 @@ This example demonstrates how to use the Agent Tool Protocol (ATP) server to exp
 ### Option 1: Interactive Agent (Recommended)
 
 Start the ATP server in one terminal:
+
 ```bash
 cd examples/monday-graphql
 yarn start
 ```
 
 Then run the interactive agent in another terminal:
+
 ```bash
 cd examples/monday-graphql
 yarn chat
 ```
 
 **Debug Mode** - To see the actual GraphQL queries being generated:
+
 ```bash
 cd examples/monday-graphql
 yarn start:debug     # Start server with query logging
@@ -61,12 +67,14 @@ yarn chat:debug      # Run agent with query logging
 ```
 
 The interactive agent provides a chat interface where you can:
+
 - Ask natural language questions about your Monday.com workspace
 - Execute operations like creating boards, items, updates
 - Query users, workspaces, boards, and more
 - Get help and guidance on API usage
 
 Example queries:
+
 - "Show me my boards"
 - "Who am I?"
 - "List all users in my workspace"
@@ -75,6 +83,7 @@ Example queries:
 ### Option 2: Simple Script Agent
 
 Run the basic example script:
+
 ```bash
 cd examples/monday-graphql
 yarn agent
@@ -105,8 +114,8 @@ const users = await client.execute('monday', 'query_users', { limit: 10 });
 
 // Create an item
 const newItem = await client.execute('monday', 'mutation_create_item', {
-  board_id: 123456,
-  item_name: "New Task"
+	board_id: 123456,
+	item_name: 'New Task',
 });
 ```
 
@@ -126,6 +135,7 @@ The integration provides access to 218 GraphQL operations including:
 ## Type Safety
 
 All operations are fully typed with TypeScript interfaces generated from the GraphQL schema. Your IDE will provide autocomplete and type checking for:
+
 - Input parameters
 - Output types
 - Nested objects
@@ -136,56 +146,61 @@ All operations are fully typed with TypeScript interfaces generated from the Gra
 The GraphQL loader supports multiple authentication options:
 
 ### Static Headers (Simple)
+
 ```typescript
 await server.loadGraphQL('https://api.example.com/graphql', {
-  headers: {
-    'Authorization': 'Bearer your-token',
-    'X-Custom-Header': 'value'
-  }
+	headers: {
+		Authorization: 'Bearer your-token',
+		'X-Custom-Header': 'value',
+	},
 });
 ```
 
 ### Dynamic Header Provider
+
 For tokens that need to be refreshed or fetched dynamically:
+
 ```typescript
 await server.loadGraphQL('https://api.example.com/graphql', {
-  headerProvider: async () => {
-    const token = await getTokenFromSecureVault();
-    return {
-      'Authorization': token,
-      'X-Request-Id': generateRequestId()
-    };
-  }
+	headerProvider: async () => {
+		const token = await getTokenFromSecureVault();
+		return {
+			Authorization: token,
+			'X-Request-Id': generateRequestId(),
+		};
+	},
 });
 ```
 
 ### Auth Config with AuthProvider
+
 For integration with custom credential management:
+
 ```typescript
 import { EnvAuthProvider } from '@mondaydotcomorg/atp-providers';
 
 const authProvider = new EnvAuthProvider();
 
 await server.loadGraphQL('https://api.example.com/graphql', {
-  authProvider,
-  auth: {
-    scheme: 'bearer',
-    envVar: 'API_TOKEN'
-  }
+	authProvider,
+	auth: {
+		scheme: 'bearer',
+		envVar: 'API_TOKEN',
+	},
 });
 ```
 
 ### Combined Static + Dynamic Headers
+
 ```typescript
 await server.loadGraphQL('https://api.example.com/graphql', {
-  headers: {
-    'X-Static-Header': 'static-value'
-  },
-  headerProvider: async () => ({
-    'Authorization': await refreshToken()
-  })
+	headers: {
+		'X-Static-Header': 'static-value',
+	},
+	headerProvider: async () => ({
+		Authorization: await refreshToken(),
+	}),
 });
 ```
 
 Note: `headerProvider` takes precedence over `authProvider`/`auth`, which takes precedence over static `headers`.
-

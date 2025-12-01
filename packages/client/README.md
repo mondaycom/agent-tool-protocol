@@ -189,7 +189,10 @@ const client = new AgentToolProtocolClient({
 await client.init(); // Registers tools with server
 
 const tools = client.getClientTools();
-console.log('Available tools:', tools.map((t) => t.name));
+console.log(
+	'Available tools:',
+	tools.map((t) => t.name)
+);
 
 const toolDefs = client.getClientToolDefinitions();
 console.log('Tool definitions:', JSON.stringify(toolDefs, null, 2));

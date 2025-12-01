@@ -11,9 +11,5 @@
 	},
 	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules", "dist", "**/__tests__", "**/*.test.ts", "**/*.spec.ts"],
-	"references": [
-		{ "path": "../protocol" },
-		{ "path": "../provenance" },
-		{ "path": "../runtime" }
-	]
+	"references": [{ "path": "../protocol" }, { "path": "../provenance" }, { "path": "../runtime" }]
 }

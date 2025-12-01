@@ -67,7 +67,7 @@ export class ClientSessionManager {
 		if (!secret) {
 			log.warn(
 				'ATP_JWT_SECRET not set - using default secret. This is insecure for production! ' +
-				'Generate a secure secret with: openssl rand -base64 32'
+					'Generate a secure secret with: openssl rand -base64 32'
 			);
 			this.jwtSecret = DEFAULT_JWT_SECRET;
 		} else {

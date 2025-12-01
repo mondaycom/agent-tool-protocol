@@ -109,7 +109,11 @@ export class AgentToolProtocolClient {
 			this.inProcessSession = new InProcessSession(server);
 			this.session = this.inProcessSession;
 			this.apiOps = new APIOperations(this.session, this.inProcessSession);
-			this.execOps = new ExecutionOperations(this.session, this.serviceProviders, this.inProcessSession);
+			this.execOps = new ExecutionOperations(
+				this.session,
+				this.serviceProviders,
+				this.inProcessSession
+			);
 		} else {
 			this.session = new ClientSession(baseUrl!, headers, hooks);
 			this.apiOps = new APIOperations(this.session);

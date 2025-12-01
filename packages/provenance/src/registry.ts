@@ -329,8 +329,8 @@ export function restoreProvenanceState(
 		provenanceRegistry.set(id, metadata);
 		ids.add(id);
 		globalStore.set(id, metadata, executionId).catch((err) => {
-		log.error('Failed to save provenance to store', { error: err });
-	});
+			log.error('Failed to save provenance to store', { error: err });
+		});
 	}
 }
 

@@ -43,7 +43,7 @@ export class ChatFormatter {
 		console.log(paddedTitle);
 		console.log('╚════════════════════════════════════════════════════════════╝');
 		console.log(colors.reset);
-		
+
 		if (options.subtitle) {
 			console.log(`${colors.dim}${options.subtitle}${colors.reset}`);
 		}
@@ -84,7 +84,7 @@ export class ChatFormatter {
 
 	showExploreResult(result: any) {
 		console.log(`${colors.green}✅ Explore Result:${colors.reset}`);
-		
+
 		if (result.type === 'directory') {
 			console.log(`${colors.dim}   Path: ${result.path}${colors.reset}`);
 			if (result.items && result.items.length > 0) {
@@ -97,7 +97,7 @@ export class ChatFormatter {
 		} else if (result.type === 'function') {
 			console.log(`${colors.dim}   Name: ${result.name}${colors.reset}`);
 			console.log(`${colors.dim}   Description: ${result.description || 'N/A'}${colors.reset}`);
-			
+
 			// Show parameters with descriptions if available
 			if (result.inputSchema && result.inputSchema.properties) {
 				console.log(`${colors.dim}   Parameters:${colors.reset}`);
@@ -108,31 +108,44 @@ export class ChatFormatter {
 					const optional = isRequired ? '' : ' (optional)';
 					const description = prop.description ? ` - ${prop.description}` : '';
 					const type = prop.type || (prop.enum ? 'enum' : 'any');
-					console.log(`${colors.dim}     • ${key}${optional} (${type})${description}${colors.reset}`);
+					console.log(
+						`${colors.dim}     • ${key}${optional} (${type})${description}${colors.reset}`
+					);
 				}
 			}
-			
+
 			if (result.definition) {
 				console.log(`${colors.dim}   Signature: ${result.definition}${colors.reset}`);
 			}
 		} else {
 			// Legacy format
 			if (result.folders && result.folders.length > 0) {
-				console.log(`${colors.dim}   Folders: ${result.folders.map((f: any) => f.name).join(', ')}${colors.reset}`);
+				console.log(
+					`${colors.dim}   Folders: ${result.folders.map((f: any) => f.name).join(', ')}${colors.reset}`
+				);
 			}
-			
+
 			if (result.functions && result.functions.length > 0) {
-				console.log(`${colors.dim}   Functions: ${result.functions.length} available${colors.reset}`);
-				const functionNames = result.functions.slice(0, 5).map((f: any) => f.name).join(', ');
-				console.log(`${colors.dim}   Examples: ${functionNames}${result.functions.length > 5 ? '...' : ''}${colors.reset}`);
+				console.log(
+					`${colors.dim}   Functions: ${result.functions.length} available${colors.reset}`
+				);
+				const functionNames = result.functions
+					.slice(0, 5)
+					.map((f: any) => f.name)
+					.join(', ');
+				console.log(
+					`${colors.dim}   Examples: ${functionNames}${result.functions.length > 5 ? '...' : ''}${colors.reset}`
+				);
 			}
 		}
-		
+
 		console.log();
 	}
 
 	showCodeExecution(code: string) {
-		console.log(`\n${colors.bright}${colors.cyan}📝 TypeScript Code Being Executed:${colors.reset}`);
+		console.log(
+			`\n${colors.bright}${colors.cyan}📝 TypeScript Code Being Executed:${colors.reset}`
+		);
 		console.log(`${colors.cyan}${'═'.repeat(80)}${colors.reset}`);
 
 		const lines = code.split('\n');
@@ -185,12 +198,13 @@ export class ChatFormatter {
 			console.log(`${colors.red}${error}${colors.reset}`);
 		} else if (typeof error === 'object' && error !== null) {
 			const errorObj = error as Record<string, unknown>;
-			const errorMsg =
-				errorObj.message || errorObj.error || JSON.stringify(error, null, 2);
+			const errorMsg = errorObj.message || errorObj.error || JSON.stringify(error, null, 2);
 			console.log(`${colors.red}${errorMsg}${colors.reset}`);
 
 			if (errorObj.details) {
-				console.log(`${colors.dim}Details: ${JSON.stringify(errorObj.details, null, 2)}${colors.reset}`);
+				console.log(
+					`${colors.dim}Details: ${JSON.stringify(errorObj.details, null, 2)}${colors.reset}`
+				);
 			}
 			if (errorObj.stack) {
 				console.log(`${colors.dim}Stack: ${errorObj.stack}${colors.reset}`);
@@ -204,15 +218,18 @@ export class ChatFormatter {
 	}
 
 	showExecutionSummary(count: number) {
-		console.log(`${colors.dim}💡 Executed ${count} code block(s) with multiple tool calls${colors.reset}\n`);
+		console.log(
+			`${colors.dim}💡 Executed ${count} code block(s) with multiple tool calls${colors.reset}\n`
+		);
 	}
 
 	showRecursionLimitHint() {
-		console.log(`${colors.yellow}💡 The agent got stuck. Try rephrasing your question.${colors.reset}\n`);
+		console.log(
+			`${colors.yellow}💡 The agent got stuck. Try rephrasing your question.${colors.reset}\n`
+		);
 	}
 
 	promptUser(prompt: string): string {
 		return `${colors.bright}${colors.green}${prompt}${colors.reset}`;
 	}
 }
-

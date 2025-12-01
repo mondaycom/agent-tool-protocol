@@ -79,4 +79,3 @@ Agent: You have 3 meetings today:
 
 - [ATP Agent](../atp/) - Code execution with multiple tools
 - [Authentication](../auth/) - OAuth setup
-

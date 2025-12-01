@@ -291,4 +291,3 @@ export class InProcessSession implements ISession {
 		};
 	}
 }
-

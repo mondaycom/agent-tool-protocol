@@ -26,12 +26,14 @@ google-calendar-agent/
 ## 🆚 MCP vs ATP Comparison
 
 ### MCP Agent (`npm run chat:mcp`)
+
 - **Direct Connection**: Agent → MCP Server
 - **Individual Tool Calls**: One operation at a time
 - **Simple Setup**: No intermediate server needed
 - **Use Case**: Straightforward task automation
 
 ### ATP Agent (`npm run chat:atp`)
+
 - **Code Execution**: Agent writes TypeScript code
 - **Multi-Tool Operations**: Multiple calls in one execution
 - **Shows Code**: See the generated code with syntax highlighting
@@ -66,6 +68,7 @@ npm run chat:mcp
 ```
 
 **Features:**
+
 - Simple and straightforward
 - Direct connection to Google Calendar
 - Easy to debug
@@ -80,6 +83,7 @@ npm run chat:atp
 ```
 
 **Features:**
+
 - Multi-tool code execution
 - Syntax-highlighted code display
 - Powerful data processing
@@ -98,18 +102,21 @@ npm run chat:atp    # Run ATP agent (code execution)
 ## 💬 Example Interactions
 
 ### Simple Query
+
 ```
 You: What meetings do I have today?
 Agent: [Lists your meetings]
 ```
 
 ### Complex Query
+
 ```
 You: Find a 30-minute slot for me and doronna@monday.com next week
 Agent: [Analyzes both calendars and suggests available times]
 ```
 
 ### Calendar Management
+
 ```
 You: Create a meeting tomorrow at 2pm with the team
 Agent: [Creates the event with attendees]
@@ -118,11 +125,13 @@ Agent: [Creates the event with attendees]
 ## 🏗️ Architecture
 
 ### MCP Agent Architecture
+
 ```
 Agent (LangChain) → MCP Server (@cocal/google-calendar-mcp) → Google Calendar API
 ```
 
 ### ATP Agent Architecture
+
 ```
 Agent (LangChain) → ATP Server (execute_code) → MCP Adapter → MCP Server → Google Calendar API
 ```
@@ -139,6 +148,7 @@ Agent (LangChain) → ATP Server (execute_code) → MCP Adapter → MCP Server �
 ## 🔧 Configuration
 
 The example is configured for:
+
 - **Timezone**: Asia/Jerusalem
 - **Working Days**: Sunday-Thursday
 - **Working Hours**: 9:00 AM - 6:00 PM
@@ -164,6 +174,7 @@ The ATP agent uses the [ATP Chat Utilities](../utils/) - a set of reusable compo
 ## 🤝 Contributing
 
 This example demonstrates best practices for:
+
 - OAuth authentication with external APIs
 - MCP server integration
 - ATP code execution

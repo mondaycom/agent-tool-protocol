@@ -102,11 +102,7 @@ export class CodeExecutionHandler {
 	private extractCode(args?: Record<string, unknown>): string {
 		if (!args) return '';
 
-		let code =
-			(args.code as string) ||
-			(args.sourceCode as string) ||
-			(args.input as string) ||
-			'';
+		let code = (args.code as string) || (args.sourceCode as string) || (args.input as string) || '';
 
 		if (typeof code === 'string') {
 			code = code.replace(/\\n/g, '\n').replace(/\\t/g, '  ');
@@ -127,8 +123,7 @@ export class CodeExecutionHandler {
 	}
 
 	private handleToolResult(content: string | unknown) {
-		const contentStr =
-			typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+		const contentStr = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
 
 		try {
 			const result = JSON.parse(contentStr);
@@ -173,4 +168,3 @@ export class CodeExecutionHandler {
 		}
 	}
 }
-

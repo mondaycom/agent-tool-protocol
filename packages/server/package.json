@@ -3,12 +3,14 @@
 	"version": "0.19.7",
 	"description": "Server implementation for Agent Tool Protocol",
 	"type": "module",
-	"main": "./dist/index.js",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
 		}
 	},
 	"files": [
@@ -16,7 +18,8 @@
 		"src"
 	],
 	"scripts": {
-		"build": "npm run generate:bootstrap && tsc -p tsconfig.json",
+		"build": "npx tsc --build tsconfig.json && tsup",
+		"build:tsc": "npm run generate:bootstrap && tsc -p tsconfig.json",
 		"generate:bootstrap": "tsx scripts/generate-bootstrap.ts",
 		"dev": "tsc -p tsconfig.json --watch",
 		"clean": "rm -rf dist *.tsbuildinfo",
@@ -76,6 +79,7 @@
 	"devDependencies": {
 		"@types/node": "^20.11.5",
 		"graphql": "^16.12.0",
+		"tsup": "^8.5.1",
 		"typescript": "^5.3.3",
 		"vitest": "^1.2.1"
 	}

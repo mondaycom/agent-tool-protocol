@@ -3,16 +3,19 @@
 	"version": "0.19.6",
 	"description": "Built-in providers for Agent Tool Protocol (cache, auth, audit)",
 	"type": "module",
-	"main": "./dist/index.js",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
 		}
 	},
 	"scripts": {
-		"build": "tsc",
+		"build": "npx tsc --build tsconfig.json && tsup",
+		"build:tsc": "tsc",
 		"clean": "rm -rf dist",
 		"lint": "tsc --noEmit",
 		"test": "vitest run"
@@ -37,6 +40,8 @@
 		"@opentelemetry/api": "^1.9.0"
 	},
 	"devDependencies": {
-		"typescript": "^5.7.2"
+		"tsup": "^8.5.1",
+		"typescript": "^5.7.2",
+		"vitest": "^1.2.1"
 	}
 }

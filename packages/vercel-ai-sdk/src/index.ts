@@ -9,4 +9,3 @@ export type {
 	ApprovalResponse,
 	EmbeddingProvider,
 } from './types.js';
-
