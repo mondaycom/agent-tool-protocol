@@ -4007,6 +4007,7 @@ __metadata:
   resolution: "@mondaydotcomorg/atp-protocol@workspace:packages/protocol"
   dependencies:
     "@mondaydotcomorg/atp-provenance": "npm:0.19.7"
+    tsup: "npm:^8.5.1"
     typescript: "npm:^5.3.3"
     vitest: "npm:^1.2.1"
     zod: "npm:^3.25.0"
