@@ -3,12 +3,14 @@
 	"version": "0.19.7",
 	"description": "Core protocol types and interfaces for Agent Tool Protocol",
 	"type": "module",
-	"main": "./dist/index.js",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
 		}
 	},
 	"files": [
@@ -16,7 +18,8 @@
 		"src"
 	],
 	"scripts": {
-		"build": "tsc -p tsconfig.json",
+		"build": "npx tsc --build tsconfig.json && tsup",
+		"build:tsc": "tsc -p tsconfig.json",
 		"dev": "tsc -p tsconfig.json --watch",
 		"clean": "rm -rf dist *.tsbuildinfo",
 		"test": "vitest run",
@@ -46,6 +49,7 @@
 		"access": "public"
 	},
 	"devDependencies": {
+		"tsup": "^8.5.1",
 		"typescript": "^5.3.3",
 		"vitest": "^1.2.1",
 		"zod": "^3.25.0"

@@ -86,14 +86,14 @@ export class APIAggregator {
 		typescript += `}\n`;
 
 		typescript += `\ninterface ${outputTypeName} {\n`;
-		
+
 		if (func.outputSchema) {
 			const outputType = this.jsonSchemaToTSInterface(func.outputSchema);
 			typescript += outputType;
 		} else {
-		typescript += `  [key: string]: unknown;\n`;
+			typescript += `  [key: string]: unknown;\n`;
 		}
-		
+
 		typescript += `}\n`;
 
 		return typescript;
@@ -121,7 +121,7 @@ export class APIAggregator {
 				return 'unknown';
 		}
 	}
-	
+
 	/**
 	 * Converts a full JSON Schema to TypeScript interface properties
 	 * @param schema - JSON Schema object
@@ -133,33 +133,33 @@ export class APIAggregator {
 		if (depth > 3) {
 			return '  [key: string]: unknown;\n';
 		}
-		
+
 		// Handle array types - for arrays, we treat the interface as array-indexable
 		if (schema.type === 'array' && schema.items) {
 			const itemType = this.schemaToTSType(schema.items, depth + 1);
 			// Generate array-like interface
 			return `  [index: number]: ${itemType};\n  length: number;\n`;
 		}
-		
+
 		// Handle object types with properties
 		if (schema.type === 'object' && schema.properties) {
 			const required = schema.required || [];
 			let result = '';
-			
+
 			for (const [key, value] of Object.entries(schema.properties)) {
 				const prop = value as any;
 				const optional = required.includes(key) ? '' : '?';
 				const tsType = this.schemaToTSType(prop, depth + 1);
 				result += `  ${key}${optional}: ${tsType};\n`;
 			}
-			
+
 			return result || '  [key: string]: unknown;\n';
 		}
-		
+
 		// Fallback for simple types or unknown structures
 		return '  [key: string]: unknown;\n';
 	}
-	
+
 	/**
 	 * Converts any JSON Schema to a TypeScript type expression
 	 * @param schema - JSON Schema object
@@ -168,12 +168,12 @@ export class APIAggregator {
 	 */
 	private schemaToTSType(schema: any, depth = 0): string {
 		if (!schema) return 'unknown';
-		
+
 		// Prevent infinite recursion
 		if (depth > 3) {
 			return 'unknown';
 		}
-		
+
 		// Handle array types
 		if (schema.type === 'array') {
 			if (schema.items) {
@@ -182,35 +182,35 @@ export class APIAggregator {
 			}
 			return 'unknown[]';
 		}
-		
+
 		// Handle enum types
 		if (schema.enum) {
 			return schema.enum.map((v: any) => `"${v}"`).join(' | ') || 'string';
 		}
-		
+
 		// Handle object types with properties
 		if (schema.type === 'object' && schema.properties) {
 			const required = schema.required || [];
 			const props: string[] = [];
-			
+
 			for (const [key, value] of Object.entries(schema.properties)) {
 				const prop = value as any;
 				const optional = required.includes(key) ? '' : '?';
 				const tsType = this.schemaToTSType(prop, depth + 1);
 				props.push(`${key}${optional}: ${tsType}`);
 			}
-			
+
 			if (props.length > 0) {
 				return `{ ${props.join('; ')} }`;
 			}
 			return 'Record<string, unknown>';
 		}
-		
+
 		// Handle simple types
 		if (schema.type) {
 			return this.jsonSchemaTypeToTS(schema.type);
 		}
-		
+
 		return 'unknown';
 	}
 

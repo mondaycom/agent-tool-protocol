@@ -78,7 +78,10 @@ export class APIOperations {
 		await this.session.ensureInitialized();
 
 		if (this.inProcessSession) {
-			const data = await this.inProcessSession.search(query, options as unknown as Record<string, unknown>);
+			const data = await this.inProcessSession.search(
+				query,
+				options as unknown as Record<string, unknown>
+			);
 			return data.results as SearchResult[];
 		}
 

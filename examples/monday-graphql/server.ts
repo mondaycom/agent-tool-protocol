@@ -16,10 +16,10 @@ await server.loadGraphQL('https://api.monday.com/v2/get_schema?version=2025-10&f
 	name: 'monday',
 	url: 'https://api.monday.com/v2',
 	headers: {
-		'Authorization': token,
-		'API-Version': '2025-10'
+		Authorization: token,
+		'API-Version': '2025-10',
 	},
-	queryDepthLimit: 2
+	queryDepthLimit: 2,
 });
 
 // Alternative: Use headerProvider for dynamic auth (e.g., token refresh)
@@ -45,7 +45,7 @@ await server.loadGraphQL('https://api.monday.com/v2/get_schema?version=2025-10&f
 // 		// params contains all arguments passed to the GraphQL function
 // 		// e.g., { boardId: 123, _accountId: 'abc123' }
 // 		const accountId = params?._accountId;
-// 		const token = accountId 
+// 		const token = accountId
 // 			? await getTokenForAccount(accountId)  // Multi-tenant: get token per account
 // 			: process.env.MONDAY_API_TOKEN;
 // 		return {

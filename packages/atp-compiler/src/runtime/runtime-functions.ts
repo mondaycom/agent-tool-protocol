@@ -61,4 +61,3 @@ export const IN_ISOLATE_RUNTIME_FUNCTIONS: readonly RuntimeFunctionType[] = [
 export function isInIsolateRuntimeFunction(name: string): boolean {
 	return IN_ISOLATE_RUNTIME_FUNCTIONS.includes(name as RuntimeFunctionType);
 }
-

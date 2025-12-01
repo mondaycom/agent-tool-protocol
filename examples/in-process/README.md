@@ -8,11 +8,12 @@ In standard HTTP mode, the ATP server binds to a port:
 
 ```typescript
 const server = createServer();
-await server.listen(3333);  // Binds to port 3333
+await server.listen(3333); // Binds to port 3333
 const client = new AgentToolProtocolClient({ baseUrl: 'http://localhost:3333' });
 ```
 
 This causes problems when:
+
 - **Multiple MCP stdio processes** run simultaneously - they all try to bind to the same port
 - **Testing** requires isolated client-server pairs running in parallel
 - **Embedded scenarios** where HTTP overhead is unnecessary
@@ -29,6 +30,7 @@ await client.init();
 ```
 
 This allows:
+
 - **Multiple instances** running in the same process without port conflicts
 - **Zero network overhead** - direct function calls
 - **Perfect isolation** - each client-server pair is independent
@@ -45,11 +47,11 @@ npx ts-node multi-instance.ts
 
 ## Key API Difference
 
-| HTTP Mode | In-Process Mode |
-|-----------|-----------------|
+| HTTP Mode                                                           | In-Process Mode                           |
+| ------------------------------------------------------------------- | ----------------------------------------- |
 | `new AgentToolProtocolClient({ baseUrl: 'http://localhost:3333' })` | `new AgentToolProtocolClient({ server })` |
-| Requires `server.listen(port)` | No `listen()` needed |
-| One server per port | Unlimited instances |
+| Requires `server.listen(port)`                                      | No `listen()` needed                      |
+| One server per port                                                 | Unlimited instances                       |
 
 ## Use Cases
 
@@ -57,5 +59,3 @@ npx ts-node multi-instance.ts
 2. **Parallel testing** - Run multiple isolated tests simultaneously
 3. **Embedded agents** - ATP inside your application without network
 4. **Microservices** - Service-like isolation without HTTP overhead
-
-

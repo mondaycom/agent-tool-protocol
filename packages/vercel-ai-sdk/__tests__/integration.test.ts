@@ -224,4 +224,3 @@ describe('Vercel AI SDK Integration', () => {
 		expect(result.result.approved).toBe(false);
 	});
 });
-

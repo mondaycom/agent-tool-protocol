@@ -8,8 +8,7 @@
 			"executor": "nx:run-commands",
 			"outputs": ["{workspaceRoot}/packages/atp-compiler/dist"],
 			"options": {
-				"command": "tsc --build packages/atp-compiler/tsconfig.json",
-				"cwd": "{workspaceRoot}"
+				"command": "cd packages/atp-compiler && npm run build"
 			}
 		},
 		"clean": {

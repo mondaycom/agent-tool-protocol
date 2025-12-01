@@ -10,24 +10,27 @@ This folder contains authentication-related files for Google Calendar OAuth.
 ## Setup
 
 1. **Copy the environment template to the project root:**
+
    ```bash
    # From the project root (google-calendar-agent/)
    cp auth/env.example .env
    ```
 
 2. **Edit `.env` in the project root and add your credentials:**
+
    ```bash
    OPENAI_API_KEY=your-openai-api-key
    GOOGLE_OAUTH_CREDENTIALS=/path/to/gcp-oauth.keys.json
    ```
-   
+
    Note: The `.env` file should be in the project root, not in the `auth/` folder.
 
 3. **Generate OAuth token:**
+
    ```bash
    npm run auth
    ```
-   
+
    This will:
    - Open your browser for Google OAuth consent
    - Save the token to `~/.config/google-calendar-mcp/tokens.json`
@@ -46,4 +49,3 @@ This folder contains authentication-related files for Google Calendar OAuth.
 Tokens are stored in: `~/.config/google-calendar-mcp/tokens.json`
 
 Both the MCP and ATP agents use the same token location.
-

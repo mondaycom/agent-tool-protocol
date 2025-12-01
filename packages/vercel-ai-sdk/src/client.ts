@@ -101,7 +101,6 @@ export class VercelAIATPClient {
 		categories: string[],
 		options?: any
 	): Promise<string> {
-
 		const promptText = `Classify the following text into one of these categories: ${categories.join(', ')}\n\nText: ${text}\n\nRespond with ONLY the category name, nothing else.`;
 
 		const result = await generateText({
@@ -157,4 +156,3 @@ export class VercelAIATPClient {
 		};
 	}
 }
-

@@ -12,12 +12,14 @@ A minimal example demonstrating how to use ATP chat utilities to build an intera
 ## Setup
 
 1. Make sure you have an ATP server running:
+
    ```bash
    cd path/to/your/atp-server
    npm start
    ```
 
 2. Create a `.env` file:
+
    ```bash
    OPENAI_API_KEY=your-openai-api-key
    ATP_SERVER_URL=http://localhost:3334
@@ -77,4 +79,3 @@ await chatRunner.run({ agent, threadId: 'session-id', formatter, handler });
 
 - [ATP Chat Utilities](../utils) - Documentation for the utilities
 - [Google Calendar Agent](../google-calendar-agent) - More complex example
-

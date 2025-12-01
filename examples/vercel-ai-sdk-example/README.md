@@ -36,6 +36,7 @@ npm run agent
 ```
 
 This demonstrates:
+
 - Creating ATP tools for Vercel AI SDK
 - Using `generateText` with multi-step execution
 - Human-in-the-loop approvals via CLI
@@ -50,6 +51,7 @@ npm run streaming
 ```
 
 This demonstrates:
+
 - Streaming responses with ATP tools
 - Using `streamText` from Vercel AI SDK
 - Real-time output
@@ -63,6 +65,7 @@ npm run webhook
 ```
 
 This demonstrates:
+
 - Production-ready async approval pattern
 - Webhook-based approval system
 - Timeout handling
@@ -94,4 +97,3 @@ When you run these examples, the Vercel AI SDK agent:
 5. Returns the result back to the agent
 
 This creates a powerful loop where your AI agent can execute arbitrary code with access to LLMs, approvals, and other runtime capabilities.
-

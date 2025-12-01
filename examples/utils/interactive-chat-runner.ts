@@ -37,7 +37,7 @@ export class InteractiveChatRunner {
 
 	async run(config: InteractiveAgentConfig) {
 		const { agent, threadId, recursionLimit } = config;
-		const agentConfig = { 
+		const agentConfig = {
 			configurable: { thread_id: threadId },
 			recursionLimit: recursionLimit || 25,
 		};
@@ -69,7 +69,7 @@ export class InteractiveChatRunner {
 			} catch (error: unknown) {
 				const errorMessage = error instanceof Error ? error.message : String(error);
 				this.formatter.showError(errorMessage);
-				
+
 				if (errorMessage.includes('Recursion limit')) {
 					this.formatter.showRecursionLimitHint();
 				}
@@ -83,4 +83,3 @@ export class InteractiveChatRunner {
 		this.rl.close();
 	}
 }
-

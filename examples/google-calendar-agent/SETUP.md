@@ -17,6 +17,7 @@ Complete step-by-step guide to get the Google Calendar scheduling agent running.
 ### 1. Google Cloud Setup (15 minutes)
 
 #### A. Create Project
+
 1. Go to https://console.cloud.google.com
 2. Click project dropdown (top left)
 3. Click "New Project"
@@ -24,6 +25,7 @@ Complete step-by-step guide to get the Google Calendar scheduling agent running.
 5. Click "Create"
 
 #### B. Enable Calendar API
+
 1. Select your project from dropdown
 2. Navigate to: "APIs & Services" > "Library"
 3. Search: "Google Calendar API"
@@ -31,6 +33,7 @@ Complete step-by-step guide to get the Google Calendar scheduling agent running.
 5. Wait for activation (~30 seconds)
 
 #### C. Configure OAuth Consent Screen
+
 1. Go to: "APIs & Services" > "OAuth consent screen"
 2. Select "External" user type
 3. Click "Create"
@@ -54,6 +57,7 @@ Complete step-by-step guide to get the Google Calendar scheduling agent running.
 ⚠️ **Important**: Wait 2-5 minutes for test user to propagate before proceeding!
 
 #### D. Create OAuth Credentials
+
 1. Go to: "APIs & Services" > "Credentials"
 2. Click "+ Create Credentials" > "OAuth client ID"
 3. Application type: **Desktop app** (CRITICAL!)
@@ -64,11 +68,13 @@ Complete step-by-step guide to get the Google Calendar scheduling agent running.
 8. Note the file path (you'll need it for .env)
 
 Example downloaded file location:
+
 ```
 /Users/yourname/credentials/gcp-oauth.keys.json
 ```
 
 #### E. Publish App (Optional - Avoids Weekly Re-auth)
+
 1. Go to: "OAuth consent screen"
 2. Click "PUBLISH APP" button
 3. Confirm the dialog
@@ -133,6 +139,7 @@ npm run server
 ```
 
 Expected output:
+
 ```
 🚀 Starting ATP Server with Google Calendar MCP Integration
 ✅ MCP Adapter created
@@ -153,6 +160,7 @@ npm start
 ```
 
 **First time only**: OAuth authentication flow will begin:
+
 1. Browser opens automatically to Google sign-in
 2. Sign in with the email you added as test user
 3. You'll see a warning: "Google hasn't verified this app"
@@ -200,6 +208,7 @@ I need to check calendar availability...
 ## Troubleshooting
 
 ### "OAuth Credentials File Not Found"
+
 ```bash
 # Check file exists
 ls -la /path/to/gcp-oauth.keys.json
@@ -209,21 +218,25 @@ ls -la /path/to/gcp-oauth.keys.json
 ```
 
 ### Browser Shows "Access Blocked"
+
 - **Cause**: Test user not added or not propagated yet
 - **Fix**: Wait 5 more minutes, try again
 - **Verify**: Google Cloud Console > OAuth consent screen > Test users
 
 ### Browser Shows "Something Went Wrong"
+
 - **Cause**: Using wrong browser or credentials issue
 - **Fix**: Try Chrome/Edge browser
 - **Verify**: Credentials are for "Desktop App" type (not Web or Mobile)
 
 ### "User Rate Limit Exceeded"
+
 - **Cause**: OAuth credentials missing project_id
 - **Fix**: Re-download credentials from Google Cloud Console
 - **Check**: File should contain `"project_id": "your-project"`
 
 ### Tokens Expire After 7 Days
+
 - **Cause**: App in test mode
 - **Solution 1**: Re-authenticate
   ```bash
@@ -233,6 +246,7 @@ ls -la /path/to/gcp-oauth.keys.json
 - **Solution 2**: Publish app (see step 1.E above)
 
 ### Port 3334 Already in Use
+
 ```bash
 # Find what's using it
 lsof -i :3334
@@ -243,6 +257,7 @@ ATP_SERVER_URL=http://localhost:3335
 ```
 
 ### Agent Can't Find Available Slots
+
 - **Check**: Do you have free time tomorrow?
 - **Check**: Working hours match your schedule
 - **Try**: Adjust `WORKING_HOURS_START/END` in .env
@@ -269,13 +284,13 @@ Modify `agent.ts` to test specific functionality:
 
 ```typescript
 // Test 1: Just list calendars
-const userQuery = "List all my Google calendars";
+const userQuery = 'List all my Google calendars';
 
 // Test 2: Check tomorrow's schedule
-const userQuery = "What events do I have tomorrow?";
+const userQuery = 'What events do I have tomorrow?';
 
 // Test 3: Check availability
-const userQuery = "Am I free tomorrow at 2pm?";
+const userQuery = 'Am I free tomorrow at 2pm?';
 ```
 
 ## Next Steps
@@ -315,4 +330,3 @@ If you're still stuck:
 - ✅ All API calls authenticated
 - ⚠️ Keep `gcp-oauth.keys.json` secure (don't commit!)
 - ⚠️ Add `.env` to `.gitignore`
-

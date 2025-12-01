@@ -1,9 +1,9 @@
 /**
  * ATP Server with Google Calendar MCP Integration
- * 
+ *
  * This server wraps the google-calendar-mcp server and exposes it through ATP.
  * It handles OAuth authentication and provides calendar management tools.
- * 
+ *
  * Run: npx tsx mcp-server.ts
  */
 
@@ -35,9 +35,10 @@ async function startServer() {
 
 	const port = 3334;
 
-	const npxPath = process.env.npm_execpath?.replace(/yarn(js)?$/, 'npx') || 
-	                process.env.NVM_BIN ? `${process.env.NVM_BIN}/npx` : 
-	                'npx';
+	const npxPath =
+		process.env.npm_execpath?.replace(/yarn(js)?$/, 'npx') || process.env.NVM_BIN
+			? `${process.env.NVM_BIN}/npx`
+			: 'npx';
 
 	const mcpConfig = {
 		name: 'google-calendar',
@@ -62,7 +63,7 @@ async function startServer() {
 
 	// Filter out get-freebusy tool
 	if (apiGroup.functions) {
-		apiGroup.functions = apiGroup.functions.filter(func => func.name !== 'get-freebusy');
+		apiGroup.functions = apiGroup.functions.filter((func) => func.name !== 'get-freebusy');
 	}
 
 	// Add output schemas for better agent understanding
@@ -75,7 +76,7 @@ async function startServer() {
 				offset: { type: 'string', description: 'UTC offset (e.g., -05:00)' },
 				isDST: { type: 'boolean', description: 'Whether daylight saving time is active' },
 			},
-			description: 'Returns MCP content array: [{ type: "text", text: JSON.stringify(result) }]'
+			description: 'Returns MCP content array: [{ type: "text", text: JSON.stringify(result) }]',
 		},
 		'list-calendars': {
 			type: 'object',
@@ -93,7 +94,7 @@ async function startServer() {
 					},
 				},
 			},
-			description: 'Returns MCP content array: [{ type: "text", text: JSON.stringify(result) }]'
+			description: 'Returns MCP content array: [{ type: "text", text: JSON.stringify(result) }]',
 		},
 		'list-events': {
 			type: 'object',
@@ -127,7 +128,7 @@ async function startServer() {
 					},
 				},
 			},
-			description: 'Returns MCP content array: [{ type: "text", text: JSON.stringify(result) }]'
+			description: 'Returns MCP content array: [{ type: "text", text: JSON.stringify(result) }]',
 		},
 	};
 
@@ -178,4 +179,3 @@ startServer().catch((error) => {
 	console.error('❌ Failed to start server:', error);
 	process.exit(1);
 });
-

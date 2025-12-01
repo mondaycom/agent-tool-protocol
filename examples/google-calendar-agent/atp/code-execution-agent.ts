@@ -1,15 +1,15 @@
 /**
  * Code Execution Calendar Agent
- * 
+ *
  * This agent uses ATP's execute_code to write TypeScript code
  * that can call multiple calendar tools in a single execution block.
- * 
+ *
  * Features:
  * - Blacklists get-freebusy tool
  * - Writes and executes TypeScript code
  * - Can call multiple tools in one code block
  * - Interactive console interface
- * 
+ *
  * Run: npm run chat:code
  */
 
@@ -18,11 +18,7 @@ import { createATPTools } from '@mondaydotcomorg/atp-langchain';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { MemorySaver } from '@langchain/langgraph';
 import * as dotenv from 'dotenv';
-import {
-	ChatFormatter,
-	CodeExecutionHandler,
-	InteractiveChatRunner,
-} from '../../utils';
+import { ChatFormatter, CodeExecutionHandler, InteractiveChatRunner } from '../../utils';
 
 dotenv.config({ path: '../.env' });
 
@@ -257,5 +253,3 @@ main().catch((error) => {
 	formatter.showError(`Fatal error: ${error.message || error}`);
 	process.exit(1);
 });
-
-

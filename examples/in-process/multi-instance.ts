@@ -13,7 +13,10 @@
 import { createServer } from '@mondaydotcomorg/atp-server';
 import { AgentToolProtocolClient } from '@mondaydotcomorg/atp-client';
 
-async function createInstance(name: string, tools: Array<{ name: string; handler: (input: any) => Promise<any> }>) {
+async function createInstance(
+	name: string,
+	tools: Array<{ name: string; handler: (input: any) => Promise<any> }>
+) {
 	const server = createServer();
 
 	for (const tool of tools) {
@@ -38,7 +41,12 @@ async function main() {
 		createInstance('database-agent', [
 			{
 				name: 'query',
-				handler: async () => ({ rows: [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }] }),
+				handler: async () => ({
+					rows: [
+						{ id: 1, name: 'Alice' },
+						{ id: 2, name: 'Bob' },
+					],
+				}),
 			},
 		]),
 		createInstance('email-agent', [
@@ -73,5 +81,3 @@ async function main() {
 }
 
 main().catch(console.error);
-
-

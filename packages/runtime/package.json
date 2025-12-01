@@ -3,12 +3,14 @@
 	"version": "0.19.7",
 	"description": "Runtime SDK injected into sandbox for Agent Tool Protocol",
 	"type": "module",
-	"main": "./dist/index.js",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
 		}
 	},
 	"files": [
@@ -24,7 +26,8 @@
 		"directory": "packages/runtime"
 	},
 	"scripts": {
-		"build": "npm run generate:metadata && tsc -p tsconfig.json",
+		"build": "npm run generate:metadata && npx tsc --build tsconfig.json && tsup",
+		"build:tsc": "npm run generate:metadata && tsc -p tsconfig.json",
 		"generate:metadata": "tsx scripts/generate-metadata.ts",
 		"dev": "tsc -p tsconfig.json --watch",
 		"clean": "rm -rf dist *.tsbuildinfo src/metadata/generated.ts",
@@ -53,6 +56,7 @@
 		"@types/node": "^20.11.5",
 		"ts-json-schema-generator": "^2.4.0",
 		"ts-morph": "^21.0.1",
+		"tsup": "^8.5.1",
 		"tsx": "^4.7.0",
 		"typescript": "^5.3.3",
 		"vitest": "^1.2.1"

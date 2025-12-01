@@ -3,10 +3,7 @@ import type { Logger } from '@mondaydotcomorg/atp-runtime';
 import { isPauseError, runInExecutionContext } from '@mondaydotcomorg/atp-runtime';
 import { isBatchPauseError } from '@mondaydotcomorg/atp-compiler';
 import { PAUSE_EXECUTION_MARKER } from './constants.js';
-import {
-	isInIsolateFunction,
-	getInIsolateImplementation,
-} from './in-isolate-runtime.js';
+import { isInIsolateFunction, getInIsolateImplementation } from './in-isolate-runtime.js';
 
 export async function injectTimerPolyfills(ivmContext: ivm.Context): Promise<void> {
 	await ivmContext.eval(`

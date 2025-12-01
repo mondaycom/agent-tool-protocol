@@ -219,12 +219,18 @@ export async function verifyProvenanceToken(
 		}
 
 		if (payload.clientId !== clientId) {
-			log.error('Token clientId mismatch', { tokenClientId: payload.clientId, expectedClientId: clientId });
+			log.error('Token clientId mismatch', {
+				tokenClientId: payload.clientId,
+				expectedClientId: clientId,
+			});
 			return null;
 		}
 
 		if (payload.executionId !== executionId) {
-			log.error('Token executionId mismatch', { tokenExecutionId: payload.executionId, expectedExecutionId: executionId });
+			log.error('Token executionId mismatch', {
+				tokenExecutionId: payload.executionId,
+				expectedExecutionId: executionId,
+			});
 			return null;
 		}
 

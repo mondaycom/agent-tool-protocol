@@ -1,12 +1,12 @@
 /**
  * Interactive Console Calendar Agent
- * 
+ *
  * Chat with an AI agent that can:
  * - Access your Google Calendar
  * - List events, check availability
  * - Schedule meetings
  * - Remember your conversation
- * 
+ *
  * Run: npm run chat
  */
 
@@ -55,91 +55,97 @@ async function createCalendarTools() {
 	});
 
 	// Convert MCP functions to LangChain tools
-	const tools = apiGroup.functions?.map((func) => {
-		// Build schema more carefully
-		const zodFields: Record<string, any> = {};
-		const properties = func.inputSchema?.properties || {};
-		const required = func.inputSchema?.required || [];
+	const tools =
+		apiGroup.functions?.map((func) => {
+			// Build schema more carefully
+			const zodFields: Record<string, any> = {};
+			const properties = func.inputSchema?.properties || {};
+			const required = func.inputSchema?.required || [];
 
-		for (const [key, prop] of Object.entries(properties)) {
-			const p = prop as any;
-			let field: any;
+			for (const [key, prop] of Object.entries(properties)) {
+				const p = prop as any;
+				let field: any;
 
-			// Handle different types properly
-			if (p.type === 'string') {
-				field = z.string();
-				if (p.description) field = field.describe(p.description);
-			} else if (p.type === 'number' || p.type === 'integer') {
-				field = z.number();
-				if (p.description) field = field.describe(p.description);
-			} else if (p.type === 'boolean') {
-				field = z.boolean();
-				if (p.description) field = field.describe(p.description);
-			} else if (p.type === 'array') {
-				// Handle arrays properly - this was the bug!
-				// Just use z.array(z.string()) as a safe default
-				field = z.array(z.string());
-				if (p.description) field = field.describe(p.description);
-			} else {
-				// For objects or unknown types, use z.any()
-				field = z.any();
-				if (p.description) field = field.describe(p.description);
-			}
-
-			// Make optional if not required (use .nullish() instead of .optional())
-			if (!required.includes(key)) {
-				field = field.nullish();
-			}
-
-			zodFields[key] = field;
-		}
-
-		const schema = Object.keys(zodFields).length > 0 ? z.object(zodFields) : z.object({});
-
-		return new DynamicStructuredTool({
-			name: func.name.replace(/-/g, '_'),
-			description: func.description || `Calendar tool: ${func.name}`,
-			schema,
-			func: async (input) => {
-				// Clean up input - remove null/undefined values
-				const cleanInput: Record<string, any> = {};
-				for (const [key, value] of Object.entries(input)) {
-					if (value !== null && value !== undefined) {
-						cleanInput[key] = value;
-					}
+				// Handle different types properly
+				if (p.type === 'string') {
+					field = z.string();
+					if (p.description) field = field.describe(p.description);
+				} else if (p.type === 'number' || p.type === 'integer') {
+					field = z.number();
+					if (p.description) field = field.describe(p.description);
+				} else if (p.type === 'boolean') {
+					field = z.boolean();
+					if (p.description) field = field.describe(p.description);
+				} else if (p.type === 'array') {
+					// Handle arrays properly - this was the bug!
+					// Just use z.array(z.string()) as a safe default
+					field = z.array(z.string());
+					if (p.description) field = field.describe(p.description);
+				} else {
+					// For objects or unknown types, use z.any()
+					field = z.any();
+					if (p.description) field = field.describe(p.description);
 				}
-				
-				console.log(`\n${colors.cyan}🔧 Executing: ${func.name}${colors.reset}`);
-				console.log(`${colors.dim}Parameters: ${JSON.stringify(cleanInput, null, 2)}${colors.reset}`);
-				
-				try {
-					const result = await connector.callTool(func.name, cleanInput);
-					
-					// Parse the MCP response
-					let parsedResult = result;
-					if (Array.isArray(result) && result[0]?.type === 'text') {
-						try {
-							parsedResult = JSON.parse(result[0].text);
-						} catch {
-							parsedResult = result[0].text;
+
+				// Make optional if not required (use .nullish() instead of .optional())
+				if (!required.includes(key)) {
+					field = field.nullish();
+				}
+
+				zodFields[key] = field;
+			}
+
+			const schema = Object.keys(zodFields).length > 0 ? z.object(zodFields) : z.object({});
+
+			return new DynamicStructuredTool({
+				name: func.name.replace(/-/g, '_'),
+				description: func.description || `Calendar tool: ${func.name}`,
+				schema,
+				func: async (input) => {
+					// Clean up input - remove null/undefined values
+					const cleanInput: Record<string, any> = {};
+					for (const [key, value] of Object.entries(input)) {
+						if (value !== null && value !== undefined) {
+							cleanInput[key] = value;
 						}
 					}
-					
-					console.log(`${colors.green}✅ Result:${colors.reset}`);
-					const resultStr = typeof parsedResult === 'string' 
-						? parsedResult 
-						: JSON.stringify(parsedResult, null, 2);
-					console.log(resultStr.substring(0, 500) + (resultStr.length > 500 ? '...(truncated)' : ''));
-					console.log();
-					
-					return JSON.stringify(parsedResult);
-				} catch (error: any) {
-					console.log(`${colors.red}❌ Error: ${error.message}${colors.reset}\n`);
-					return JSON.stringify({ error: error.message });
-				}
-			},
-		});
-	}) || [];
+
+					console.log(`\n${colors.cyan}🔧 Executing: ${func.name}${colors.reset}`);
+					console.log(
+						`${colors.dim}Parameters: ${JSON.stringify(cleanInput, null, 2)}${colors.reset}`
+					);
+
+					try {
+						const result = await connector.callTool(func.name, cleanInput);
+
+						// Parse the MCP response
+						let parsedResult = result;
+						if (Array.isArray(result) && result[0]?.type === 'text') {
+							try {
+								parsedResult = JSON.parse(result[0].text);
+							} catch {
+								parsedResult = result[0].text;
+							}
+						}
+
+						console.log(`${colors.green}✅ Result:${colors.reset}`);
+						const resultStr =
+							typeof parsedResult === 'string'
+								? parsedResult
+								: JSON.stringify(parsedResult, null, 2);
+						console.log(
+							resultStr.substring(0, 500) + (resultStr.length > 500 ? '...(truncated)' : '')
+						);
+						console.log();
+
+						return JSON.stringify(parsedResult);
+					} catch (error: any) {
+						console.log(`${colors.red}❌ Error: ${error.message}${colors.reset}\n`);
+						return JSON.stringify({ error: error.message });
+					}
+				},
+			});
+		}) || [];
 
 	return { tools, connector };
 }
@@ -161,7 +167,9 @@ async function main() {
 	console.log('║       📅 Interactive Google Calendar Agent 🤖              ║');
 	console.log('╚════════════════════════════════════════════════════════════╝');
 	console.log(colors.reset);
-	console.log(`${colors.dim}Type your questions about your calendar. Type 'exit' to quit.${colors.reset}\n`);
+	console.log(
+		`${colors.dim}Type your questions about your calendar. Type 'exit' to quit.${colors.reset}\n`
+	);
 
 	if (!process.env.OPENAI_API_KEY) {
 		console.error(`${colors.red}❌ Error: OPENAI_API_KEY not set in .env${colors.reset}`);
@@ -170,7 +178,9 @@ async function main() {
 
 	console.log(`${colors.yellow}📡 Connecting to Google Calendar...${colors.reset}`);
 	const { tools, connector } = await createCalendarTools();
-	console.log(`${colors.green}✅ Connected! ${tools.length} calendar tools available${colors.reset}\n`);
+	console.log(
+		`${colors.green}✅ Connected! ${tools.length} calendar tools available${colors.reset}\n`
+	);
 
 	// Create LLM
 	const llm = new ChatOpenAI({
@@ -237,7 +247,7 @@ When showing results:
 		try {
 			let finalResponse = '';
 			let stepNumber = 0;
-			
+
 			for await (const event of await agent.stream(
 				{ messages: [new HumanMessage(userInput)] },
 				config
@@ -248,19 +258,24 @@ When showing results:
 					const messages = (event.agent as any).messages || [];
 					if (messages.length > 0) {
 						const lastMessage = messages[messages.length - 1];
-						
+
 						// Show tool calls if present
 						if (lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
-							console.log(`${colors.yellow}💭 Agent Step ${stepNumber}: Planning to call tools${colors.reset}`);
+							console.log(
+								`${colors.yellow}💭 Agent Step ${stepNumber}: Planning to call tools${colors.reset}`
+							);
 							for (const toolCall of lastMessage.tool_calls) {
-								console.log(`${colors.dim}   → ${toolCall.name}(${JSON.stringify(toolCall.args).substring(0, 100)}...)${colors.reset}`);
+								console.log(
+									`${colors.dim}   → ${toolCall.name}(${JSON.stringify(toolCall.args).substring(0, 100)}...)${colors.reset}`
+								);
 							}
 						}
-						
+
 						if (lastMessage.content) {
-							finalResponse = typeof lastMessage.content === 'string'
-								? lastMessage.content
-								: JSON.stringify(lastMessage.content);
+							finalResponse =
+								typeof lastMessage.content === 'string'
+									? lastMessage.content
+									: JSON.stringify(lastMessage.content);
 						}
 					}
 				}
@@ -269,11 +284,12 @@ When showing results:
 			if (finalResponse) {
 				console.log(`${colors.bright}${colors.blue}Agent: ${colors.reset}${finalResponse}\n`);
 			}
-
 		} catch (error: any) {
 			console.error(`\n${colors.red}❌ Error: ${error.message}${colors.reset}\n`);
 			if (error.message.includes('Recursion limit')) {
-				console.log(`${colors.yellow}💡 The agent got stuck. Try rephrasing your question.${colors.reset}\n`);
+				console.log(
+					`${colors.yellow}💡 The agent got stuck. Try rephrasing your question.${colors.reset}\n`
+				);
 			}
 		}
 	}
@@ -286,4 +302,3 @@ main().catch((error) => {
 	console.error(`${colors.red}Fatal error:${colors.reset}`, error);
 	process.exit(1);
 });
-

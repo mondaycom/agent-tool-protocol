@@ -8,8 +8,7 @@
 			"executor": "nx:run-commands",
 			"outputs": ["{workspaceRoot}/packages/provenance/dist"],
 			"options": {
-				"command": "tsc --build packages/provenance/tsconfig.json",
-				"cwd": "{workspaceRoot}"
+				"command": "cd packages/provenance && npm run build"
 			}
 		},
 		"clean": {

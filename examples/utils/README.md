@@ -17,41 +17,37 @@ import { ChatOpenAI } from '@langchain/openai';
 import { createATPTools } from '@mondaydotcomorg/atp-langchain';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { MemorySaver } from '@langchain/langgraph';
-import {
-  ChatFormatter,
-  CodeExecutionHandler,
-  InteractiveChatRunner,
-} from '../utils';
+import { ChatFormatter, CodeExecutionHandler, InteractiveChatRunner } from '../utils';
 
 async function main() {
-  const formatter = new ChatFormatter();
-  formatter.suppressZodWarnings();
+	const formatter = new ChatFormatter();
+	formatter.suppressZodWarnings();
 
-  formatter.showHeader({
-    title: '🤖 My ATP Agent',
-    subtitle: 'An agent that can execute code',
-  });
+	formatter.showHeader({
+		title: '🤖 My ATP Agent',
+		subtitle: 'An agent that can execute code',
+	});
 
-  const serverUrl = process.env.ATP_SERVER_URL || 'http://localhost:3334';
-  formatter.showConnecting(serverUrl);
+	const serverUrl = process.env.ATP_SERVER_URL || 'http://localhost:3334';
+	formatter.showConnecting(serverUrl);
 
-  const llm = new ChatOpenAI({
-    modelName: 'gpt-4',
-    temperature: 0,
-  });
+	const llm = new ChatOpenAI({
+		modelName: 'gpt-4',
+		temperature: 0,
+	});
 
-  const { client: atpClient, tools } = await createATPTools({
-    serverUrl,
-    headers: { Authorization: 'Bearer your-token' },
-    llm,
-  });
+	const { client: atpClient, tools } = await createATPTools({
+		serverUrl,
+		headers: { Authorization: 'Bearer your-token' },
+		llm,
+	});
 
-  formatter.showConnected(tools.length);
+	formatter.showConnected(tools.length);
 
-  const executeCodeTool = tools.find((t) => t.name === 'atp_execute_code');
+	const executeCodeTool = tools.find((t) => t.name === 'atp_execute_code');
 
-  // Build your system prompt inline with domain-specific instructions
-  const systemPrompt = `You are a helpful assistant with access to the ATP runtime.
+	// Build your system prompt inline with domain-specific instructions
+	const systemPrompt = `You are a helpful assistant with access to the ATP runtime.
 
 **Available APIs:**
 ${atpClient.getTypeDefinitions()}
@@ -64,22 +60,22 @@ ${atpClient.getTypeDefinitions()}
 - Show clear, formatted results
 - Be concise and helpful`;
 
-  const agent = createReactAgent({
-    llm,
-    tools: [executeCodeTool!],
-    checkpointSaver: new MemorySaver(),
-    messageModifier: systemPrompt,
-  });
+	const agent = createReactAgent({
+		llm,
+		tools: [executeCodeTool!],
+		checkpointSaver: new MemorySaver(),
+		messageModifier: systemPrompt,
+	});
 
-  const handler = new CodeExecutionHandler(formatter);
-  const chatRunner = new InteractiveChatRunner(formatter, handler);
+	const handler = new CodeExecutionHandler(formatter);
+	const chatRunner = new InteractiveChatRunner(formatter, handler);
 
-  await chatRunner.run({
-    agent,
-    threadId: 'my-session',
-    formatter,
-    handler,
-  });
+	await chatRunner.run({
+		agent,
+		threadId: 'my-session',
+		formatter,
+		handler,
+	});
 }
 
 main();
@@ -99,8 +95,8 @@ formatter.suppressZodWarnings();
 
 // Show header
 formatter.showHeader({
-  title: '🤖 Agent Name',
-  subtitle: 'Optional description',
+	title: '🤖 Agent Name',
+	subtitle: 'Optional description',
 });
 
 // Show connection status
@@ -126,8 +122,8 @@ const handler = new CodeExecutionHandler(formatter);
 
 // Process events
 for await (const event of agentStream) {
-  handler.handleAgentEvent(event);
-  handler.handleToolsEvent(event);
+	handler.handleAgentEvent(event);
+	handler.handleToolsEvent(event);
 }
 
 // Show final response
@@ -145,10 +141,10 @@ Manages the interactive chat loop with readline.
 const runner = new InteractiveChatRunner(formatter, handler);
 
 await runner.run({
-  agent,
-  threadId: 'session-id',
-  formatter,
-  handler,
+	agent,
+	threadId: 'session-id',
+	formatter,
+	handler,
 });
 ```
 
@@ -172,4 +168,3 @@ console.log(`${colors.bright}Bold${colors.reset}`);
 ## See Also
 
 - [Google Calendar Agent Example](../google-calendar-agent) - Full example using these utilities
-

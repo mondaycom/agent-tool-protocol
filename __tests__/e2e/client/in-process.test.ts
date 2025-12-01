@@ -263,4 +263,3 @@ describe('In-Process Client', () => {
 		expect(result2.result).toEqual({ source: 'server2' });
 	});
 });
-
