@@ -277,6 +277,7 @@ export interface ExecutionConfig {
 	provenanceMode?: ProvenanceMode;
 	securityPolicies?: SecurityPolicy[];
 	provenanceHints?: string[];
+	requestContext?: Record<string, unknown>;
 }
 
 /**
@@ -509,12 +510,18 @@ export interface LoggingConfig {
 	auditEnabled: boolean;
 }
 
+/** Context passed to function handlers during execution */
+export interface FunctionHandlerContext {
+	metadata?: ToolMetadata;
+	requestContext?: Record<string, unknown>;
+}
+
 export interface CustomFunctionDef {
 	name: string;
 	description: string;
 	inputSchema: JSONSchema;
 	outputSchema?: JSONSchema;
-	handler: (params: unknown) => Promise<unknown>;
+	handler: (params: unknown, context?: FunctionHandlerContext) => Promise<unknown>;
 	keywords?: string[];
 	metadata?: ToolMetadata; // NEW: Tool metadata for security
 	requiredScopes?: string[]; // OAuth scopes required to use this function
