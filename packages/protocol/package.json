@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-protocol",
-	"version": "0.19.8",
+	"version": "0.19.9",
 	"description": "Core protocol types and interfaces for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.cjs",
