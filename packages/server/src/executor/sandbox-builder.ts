@@ -470,7 +470,11 @@ export class SandboxBuilder {
 							});
 						}
 
-						const result = await handler(input);
+						const handlerContext = {
+							metadata: metadata,
+							requestContext: config.requestContext,
+						};
+						const result = await handler(input, handlerContext);
 
 						try {
 							storeAPICallResult({

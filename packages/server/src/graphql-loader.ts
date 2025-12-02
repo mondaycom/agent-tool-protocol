@@ -43,10 +43,12 @@ export type GraphQLAuthProvider = (
  * Priority: headerProvider > authProvider + auth > static headers
  * @param options - Load options including auth config
  * @param params - Optional request params passed to headerProvider for dynamic resolution
+ * @param executionContext - Optional execution context passed from handler (contains requestContext)
  */
 async function resolveHeaders(
 	options: LoadGraphQLOptions,
-	params?: Record<string, any>
+	params?: Record<string, any>,
+	executionContext?: Record<string, any>
 ): Promise<Record<string, string>> {
 	const headers: Record<string, string> = {};
 
@@ -63,7 +65,9 @@ async function resolveHeaders(
 	}
 
 	if (options.headerProvider) {
-		const context = options.contextProvider ? await options.contextProvider() : undefined;
+		const context = options.contextProvider
+			? await options.contextProvider(executionContext)
+			: undefined;
 		const dynamicHeaders = await options.headerProvider(params, context);
 		Object.assign(headers, dynamicHeaders);
 	}
@@ -191,8 +195,11 @@ export interface LoadGraphQLOptions {
 	authProvider?: AuthProvider;
 	/** Dynamic header provider function - called before each request */
 	headerProvider?: GraphQLAuthProvider;
-	/** Context provider - called before each request to get current context (e.g., auth tokens) */
-	contextProvider?: () => Record<string, any> | Promise<Record<string, any>>;
+	/** Context provider - called before each request to get current context (e.g., auth tokens).
+	 * Receives execution context which may contain requestContext from execute() call. */
+	contextProvider?: (
+		executionContext?: Record<string, any>
+	) => Record<string, any> | Promise<Record<string, any>>;
 	/** Auth configuration for automatic credential injection */
 	auth?: AuthConfig;
 	depthLimit?: number;
@@ -342,7 +349,8 @@ function convertFieldToFunction(
 				context.metadata.graphql_variables = variables;
 			}
 
-			const headers = await resolveHeaders(options, paramsObj);
+			// Pass execution context (including requestContext) to resolveHeaders
+			const headers = await resolveHeaders(options, paramsObj, context);
 
 			const response = await fetch(url, {
 				method: 'POST',

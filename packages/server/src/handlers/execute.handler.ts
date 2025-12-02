@@ -93,6 +93,7 @@ export async function handleExecute(
 			requestConfig.provenanceMode || config.execution.provenanceMode || ProvenanceMode.NONE,
 		securityPolicies: config.execution.securityPolicies || [],
 		provenanceHints: requestConfig.provenanceHints,
+		requestContext: requestConfig.requestContext,
 	};
 
 	// Verify provenance hints if provided
