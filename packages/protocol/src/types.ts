@@ -291,9 +291,7 @@ export interface ExecutionConfig {
 	securityPolicies?: SecurityPolicy[];
 	provenanceHints?: string[];
 	requestContext?: Record<string, unknown>;
-	/** Tool access rules for filtering which APIs/tools can be called */
 	toolRules?: ClientToolRules;
-	/** Callback invoked when an API function is called in the sandbox */
 	onToolCall?: (event: ToolCallEvent) => void;
 }
 

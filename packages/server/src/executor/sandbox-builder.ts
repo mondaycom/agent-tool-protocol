@@ -471,7 +471,6 @@ export class SandboxBuilder {
 							metadata: metadata,
 							requestContext: config.requestContext,
 						};
-
 						const toolCallStartTime = Date.now();
 						let result: unknown;
 						let toolCallError: Error | undefined;
