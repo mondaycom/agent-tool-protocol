@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { loadGraphQL } from '../src/graphql-loader';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';

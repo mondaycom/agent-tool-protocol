@@ -44,8 +44,7 @@
 		"@types/escodegen": "^0.0.10",
 		"acorn": "^8.11.0",
 		"acorn-walk": "^8.3.0",
-		"escodegen": "^2.1.0",
-		"nanoid": "^5.0.0"
+		"escodegen": "^2.1.0"
 	},
 	"peerDependencies": {
 		"zod": "^3.25.0"

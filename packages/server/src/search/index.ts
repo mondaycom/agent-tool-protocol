@@ -5,6 +5,7 @@ import type {
 	AuthProvider,
 	ScopeFilteringConfig,
 } from '@mondaydotcomorg/atp-protocol';
+import { filterApiGroups } from '../core/request-scope.js';
 
 interface IndexedFunction {
 	apiGroup: string;
@@ -24,6 +25,7 @@ interface IndexedFunction {
  */
 export class SearchEngine {
 	private index: IndexedFunction[] = [];
+	private apiGroups: APIGroupConfig[] = [];
 
 	/**
 	 * Creates a new SearchEngine instance.
@@ -31,6 +33,7 @@ export class SearchEngine {
 	 */
 	constructor(apiGroups?: APIGroupConfig[]) {
 		if (apiGroups) {
+			this.apiGroups = apiGroups;
 			this.buildIndex(apiGroups);
 		}
 	}
@@ -67,6 +70,7 @@ export class SearchEngine {
 
 	/**
 	 * Searches for API functions matching the query.
+	 * Tool rules are automatically applied from the request scope.
 	 * @param options - Search options including query and filters
 	 * @param userId - Optional user ID for scope filtering
 	 * @param authProvider - Optional auth provider for checking user scopes
@@ -79,10 +83,24 @@ export class SearchEngine {
 		authProvider?: AuthProvider,
 		scopeFilteringConfig?: ScopeFilteringConfig
 	): Promise<SearchResult[]> {
+		const allowedGroups = filterApiGroups(this.apiGroups);
+		const allowedTools = new Set<string>();
+		for (const group of allowedGroups) {
+			if (group.functions) {
+				for (const func of group.functions) {
+					allowedTools.add(`${group.name}:${func.name}`);
+				}
+			}
+		}
+
 		const queryWords = this.extractKeywords(options.query);
 		const results: Array<{ result: SearchResult; score: number }> = [];
 
 		for (const item of this.index) {
+			if (!allowedTools.has(`${item.apiGroup}:${item.functionName}`)) {
+				continue;
+			}
+
 			if (options.apiGroups && !options.apiGroups.includes(item.apiGroup)) {
 				continue;
 			}

@@ -3,7 +3,7 @@
  * Handles streaming events and displays code execution with formatting
  */
 
-import { ChatFormatter } from './chat-formatter';
+import { ChatFormatter } from './chat-formatter.js';
 
 export interface ToolCall {
 	name: string;

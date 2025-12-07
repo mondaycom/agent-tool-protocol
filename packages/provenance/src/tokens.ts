@@ -4,7 +4,6 @@
  * Cryptographically-signed tokens for multi-step provenance tracking
  */
 import crypto from 'crypto';
-import { nanoid } from 'nanoid';
 import { log } from '@mondaydotcomorg/atp-runtime';
 import type { ProvenanceMetadata } from './types.js';
 
@@ -139,7 +138,7 @@ export async function issueProvenanceToken(
 		return null;
 	}
 
-	const metaId = nanoid();
+	const metaId = crypto.randomUUID();
 	const cacheKey = `prov:meta:${clientId}:${metaId}`;
 
 	try {

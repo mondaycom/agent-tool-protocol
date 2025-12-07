@@ -13,6 +13,7 @@ export type {
 	RequestContext,
 } from './core/config.js';
 export { MB, GB, SECOND, MINUTE, HOUR, DAY } from './core/config.js';
+export type { ToolRulesProvider } from './core/config.js';
 
 export type {
 	ProvenanceMetadata,

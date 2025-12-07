@@ -3,8 +3,8 @@
  */
 
 import * as readline from 'readline';
-import { ChatFormatter } from './chat-formatter';
-import { CodeExecutionHandler } from './code-execution-handler';
+import { ChatFormatter } from './chat-formatter.js';
+import { CodeExecutionHandler } from './code-execution-handler.js';
 import { HumanMessage } from '@langchain/core/messages';
 
 export interface InteractiveAgentConfig {

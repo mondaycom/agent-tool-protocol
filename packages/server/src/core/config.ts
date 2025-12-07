@@ -5,6 +5,7 @@ import type {
 	ProvenanceMode,
 	SecurityPolicy,
 	ScopeFilteringConfig,
+	ClientToolRules,
 } from '@mondaydotcomorg/atp-protocol';
 import type { ICompiler } from '@mondaydotcomorg/atp-compiler';
 
@@ -117,6 +118,20 @@ export interface ProvidersConfig {
 }
 
 /**
+ * Tool rules provider - extracts tool access rules from request context.
+ * This allows server-level configuration of tool filtering that automatically
+ * applies to all requests (explore, execute, etc.)
+ *
+ * @example
+ * // Extract rules from custom headers
+ * const toolRulesProvider = (ctx) => ({
+ *   blockApiGroups: ctx.headers['x-block-groups']?.split(','),
+ *   allowOnlyApiGroups: ctx.headers['x-allow-groups']?.split(','),
+ * });
+ */
+export type ToolRulesProvider = (ctx: RequestContext) => ClientToolRules | undefined;
+
+/**
  * Server configuration (user input - all fields optional)
  */
 export interface ServerConfig {
@@ -133,6 +148,11 @@ export interface ServerConfig {
 	/** Custom compiler implementation (optional, defaults to standard ATPCompiler) */
 	compiler?: ICompiler;
 	logger?: 'none' | 'debug' | 'info' | 'warn' | 'error' | Logger;
+	/**
+	 * Tool rules provider - extracts tool access rules from request context.
+	 * When configured, rules are automatically applied to all requests.
+	 */
+	toolRulesProvider?: ToolRulesProvider;
 }
 
 /**
@@ -172,6 +192,7 @@ export interface RequestContext {
 	logger: Logger;
 	status: number;
 	responseBody: unknown;
+	toolRules?: ClientToolRules;
 	throw(status: number, message: string): never;
 	assert(condition: boolean, message: string): asserts condition;
 	set(header: string, value: string): void;

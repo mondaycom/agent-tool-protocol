@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { convertMCPInputSchema, convertMCPToolToFunction } from '../src/schema-utils';
 
 describe('MCP Schema Conversion', () => {

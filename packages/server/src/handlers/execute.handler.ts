@@ -2,7 +2,7 @@ import type { RequestContext, ResolvedServerConfig } from '../core/config.js';
 import type { SandboxExecutor } from '../executor/index.js';
 import type { ExecutionStateManager } from '../execution-state/index.js';
 import type { ClientSessionManager } from '../client-sessions.js';
-import type { AuditSink, AuditEvent } from '@mondaydotcomorg/atp-protocol';
+import type { AuditSink, AuditEvent, ToolCallEvent } from '@mondaydotcomorg/atp-protocol';
 import { ExecutionStatus, ProvenanceMode } from '@mondaydotcomorg/atp-protocol';
 import { nanoid } from 'nanoid';
 import {
@@ -82,6 +82,33 @@ export async function handleExecute(
 		} catch (error) {}
 	}
 
+	const onToolCall = auditSink
+		? (event: ToolCallEvent) => {
+				const auditEvent: AuditEvent = {
+					eventId: nanoid(),
+					timestamp: Date.now(),
+					clientId: ctx.clientId || 'anonymous',
+					eventType: 'tool_call',
+					action: 'complete',
+					toolName: event.toolName,
+					apiGroup: event.apiGroup,
+					input: event.input,
+					output: event.output,
+					status: event.success ? 'success' : 'failed',
+					error: event.error
+						? {
+								message: event.error.message,
+								stack: event.error.stack,
+							}
+						: undefined,
+					metadata: {
+						duration: event.duration,
+					},
+				};
+				auditSink.write(auditEvent).catch(() => {});
+			}
+		: undefined;
+
 	const executionConfig = {
 		timeout: requestConfig.timeout || config.execution.timeout,
 		maxMemory: memoryInBytes,
@@ -94,6 +121,7 @@ export async function handleExecute(
 		securityPolicies: config.execution.securityPolicies || [],
 		provenanceHints: requestConfig.provenanceHints,
 		requestContext: requestConfig.requestContext,
+		onToolCall,
 	};
 
 	// Verify provenance hints if provided
