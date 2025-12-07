@@ -2,8 +2,9 @@ import type {
 	ExecutionConfig,
 	APIGroupConfig,
 	ClientToolDefinition,
-	ToolMetadata,
+	ToolCallEvent,
 } from '@mondaydotcomorg/atp-protocol';
+import { filterApiGroups } from '../core/request-scope.js';
 import {
 	ToolOperationType,
 	ToolSensitivityLevel,
@@ -276,7 +277,9 @@ export class SandboxBuilder {
 	): Record<string, unknown> {
 		const api: Record<string, unknown> = {};
 
-		for (const group of this.apiGroups) {
+		const allowedGroups = filterApiGroups(this.apiGroups, config.toolRules);
+
+		for (const group of allowedGroups) {
 			if (group.functions) {
 				const groupObj = this.getOrCreateNestedGroup(api, group.name);
 
@@ -317,7 +320,6 @@ export class SandboxBuilder {
 							// Continue without cache
 						}
 
-						// In AST mode, recursively unwrap tainted primitives and register their provenance
 						if (
 							config.provenanceMode === ProvenanceMode.AST &&
 							input &&
@@ -331,7 +333,6 @@ export class SandboxBuilder {
 							function unwrapTaintedValues(obj: any, visited = new WeakSet<object>()): any {
 								if (obj === null || obj === undefined) return obj;
 
-								// Check if this is a wrapped tainted primitive
 								if (typeof obj === 'object' && '__tainted_value' in obj && '__prov_meta' in obj) {
 									const taintedVal = obj.__tainted_value;
 									const provMeta = obj.__prov_meta;
@@ -348,7 +349,6 @@ export class SandboxBuilder {
 										hasProvMeta: !!provMeta,
 									});
 
-									// Register the provenance so host-side checks can find it
 									if (provMeta && provMeta.source) {
 										registerProvenanceMetadata(
 											`tainted:${String(taintedVal)}`,
@@ -368,11 +368,9 @@ export class SandboxBuilder {
 										});
 									}
 
-									// Recursively unwrap in case taintedVal contains more wrapped values
 									return unwrapTaintedValues(taintedVal, visited);
 								}
 
-								// Recursively unwrap objects/arrays
 								if (typeof obj === 'object') {
 									if (visited.has(obj)) return obj;
 									visited.add(obj);
@@ -398,7 +396,6 @@ export class SandboxBuilder {
 							});
 						}
 
-						// Re-attach provenance from hints before policy checks
 						const hintMap = getHintMap(executionId);
 						if (hintMap && hintMap.size > 0 && input && typeof input === 'object') {
 							try {
@@ -474,7 +471,29 @@ export class SandboxBuilder {
 							metadata: metadata,
 							requestContext: config.requestContext,
 						};
-						const result = await handler(input, handlerContext);
+						const toolCallStartTime = Date.now();
+						let result: unknown;
+						let toolCallError: Error | undefined;
+
+						try {
+							result = await handler(input, handlerContext);
+						} catch (error) {
+							toolCallError = error instanceof Error ? error : new Error(String(error));
+							throw error;
+						} finally {
+							if (config.onToolCall) {
+								const duration = Date.now() - toolCallStartTime;
+								config.onToolCall({
+									toolName: func.name,
+									apiGroup: group.name,
+									input,
+									output: toolCallError ? undefined : result,
+									error: toolCallError,
+									duration,
+									success: !toolCallError,
+								});
+							}
+						}
 
 						try {
 							storeAPICallResult({
@@ -489,7 +508,6 @@ export class SandboxBuilder {
 							logger.debug(`Failed to store result in callback history for ${operationName}`, {
 								error: cacheError instanceof Error ? cacheError.message : String(cacheError),
 							});
-							// Continue without caching
 						}
 
 						if (config.provenanceMode === ProvenanceMode.PROXY) {

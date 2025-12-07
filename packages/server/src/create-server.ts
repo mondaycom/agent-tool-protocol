@@ -22,6 +22,7 @@ import type {
 	Middleware,
 	RequestContext,
 	ResolvedServerConfig,
+	ToolRulesProvider,
 } from './core/config.js';
 import { MB, HOUR, MINUTE } from './core/config.js';
 import { ClientSessionManager } from './client-sessions.js';
@@ -74,6 +75,7 @@ export class AgentToolProtocolServer {
 	auditSink?: AuditSink;
 	compiler?: ICompiler;
 	private customLogger?: any;
+	private toolRulesProvider?: ToolRulesProvider;
 
 	constructor(config: ServerConfig = {}) {
 		const initialPolicies = config.execution?.securityPolicies ?? [];
@@ -137,6 +139,12 @@ export class AgentToolProtocolServer {
 			},
 			logger: config.logger ?? 'info',
 		};
+
+		// Store tool rules provider for automatic filtering
+		if (config.toolRulesProvider) {
+			this.toolRulesProvider = config.toolRulesProvider;
+			log.info('Tool rules provider configured');
+		}
 
 		if (config.providers) {
 			if (config.providers.cache) {
@@ -442,6 +450,7 @@ export class AgentToolProtocolServer {
 					middleware: this.middleware,
 					routeHandler: (ctx) => handleRoute(ctx, this),
 					sessionManager: this.sessionManager,
+					toolRulesProvider: this.toolRulesProvider,
 				},
 				this.responseHeaders
 			).catch((error) => {
@@ -704,6 +713,7 @@ export class AgentToolProtocolServer {
 					middleware: this.middleware,
 					routeHandler: (ctx) => handleRoute(ctx, this),
 					sessionManager: this.sessionManager,
+					toolRulesProvider: this.toolRulesProvider,
 				},
 				this.responseHeaders
 			);

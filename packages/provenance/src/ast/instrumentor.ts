@@ -1,7 +1,7 @@
 import * as acorn from 'acorn';
 import * as walk from 'acorn-walk';
 import * as escodegen from 'escodegen';
-import { nanoid } from 'nanoid';
+import crypto from 'crypto';
 import type { ProvenanceMetadata, SourceMetadata } from '../types.js';
 import { ProvenanceSource } from '../types.js';
 import {
@@ -196,7 +196,7 @@ export class ASTProvenanceTracker {
 			this.valueToId.set(value as object, id);
 			return id;
 		}
-		return `primitive_${nanoid()}`;
+		return `primitive_${crypto.randomUUID()}`;
 	}
 
 	track(value: unknown, source: SourceMetadata, dependencies: string[] = []): unknown {

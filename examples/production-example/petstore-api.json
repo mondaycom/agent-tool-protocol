@@ -1,0 +1,118 @@
+{
+	"openapi": "3.0.0",
+	"info": {
+		"title": "Pet Store API",
+		"version": "1.0.0",
+		"description": "A simple pet store API for demonstration"
+	},
+	"paths": {
+		"/pets": {
+			"get": {
+				"operationId": "listPets",
+				"summary": "List all pets",
+				"description": "Returns a list of all pets in the store",
+				"parameters": [
+					{
+						"name": "limit",
+						"in": "query",
+						"description": "Maximum number of pets to return",
+						"schema": {
+							"type": "integer",
+							"default": 10
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successful response"
+					}
+				}
+			},
+			"post": {
+				"operationId": "createPet",
+				"summary": "Create a new pet",
+				"description": "Adds a new pet to the store",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"description": "Pet name"
+									},
+									"species": {
+										"type": "string",
+										"description": "Pet species (dog, cat, bird, etc.)"
+									},
+									"age": {
+										"type": "integer",
+										"description": "Pet age in years"
+									}
+								},
+								"required": ["name", "species"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Pet created successfully"
+					}
+				}
+			}
+		},
+		"/pets/{petId}": {
+			"get": {
+				"operationId": "getPetById",
+				"summary": "Get a pet by ID",
+				"description": "Returns a single pet",
+				"parameters": [
+					{
+						"name": "petId",
+						"in": "path",
+						"required": true,
+						"description": "ID of the pet to retrieve",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successful response"
+					},
+					"404": {
+						"description": "Pet not found"
+					}
+				}
+			},
+			"delete": {
+				"operationId": "deletePet",
+				"summary": "Delete a pet",
+				"description": "Removes a pet from the store",
+				"parameters": [
+					{
+						"name": "petId",
+						"in": "path",
+						"required": true,
+						"description": "ID of the pet to delete",
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Pet deleted successfully"
+					},
+					"404": {
+						"description": "Pet not found"
+					}
+				}
+			}
+		}
+	}
+}

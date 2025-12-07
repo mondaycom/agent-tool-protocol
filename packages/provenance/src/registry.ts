@@ -1,4 +1,4 @@
-import { nanoid } from 'nanoid';
+import crypto from 'crypto';
 import { log } from '@mondaydotcomorg/atp-runtime';
 import type {
 	ProvenanceMetadata,
@@ -386,7 +386,7 @@ export function createProvenanceProxy<T>(
 		return value;
 	}
 
-	const id = nanoid();
+	const id = crypto.randomUUID();
 	const metadata: ProvenanceMetadata = {
 		id,
 		source,

@@ -2519,6 +2519,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@examples/utils@workspace:examples/utils":
+  version: 0.0.0-use.local
+  resolution: "@examples/utils@workspace:examples/utils"
+  languageName: unknown
+  linkType: soft
+
 "@fastify/ajv-compiler@npm:^3.5.0":
   version: 3.6.0
   resolution: "@fastify/ajv-compiler@npm:3.6.0"
@@ -3956,7 +3962,6 @@ __metadata:
     "@types/jest": "npm:^29.5.0"
     fast-check: "npm:^3.15.0"
     jest: "npm:^29.7.0"
-    nanoid: "npm:^5.0.0"
     tsup: "npm:^8.5.1"
     typescript: "npm:^5.3.0"
   peerDependencies:
@@ -4026,7 +4031,6 @@ __metadata:
     acorn: "npm:^8.11.0"
     acorn-walk: "npm:^8.3.0"
     escodegen: "npm:^2.1.0"
-    nanoid: "npm:^5.0.0"
     tsup: "npm:^8.5.1"
     typescript: "npm:^5.3.0"
     zod: "npm:^3.25.0"
@@ -14768,7 +14772,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nanoid@npm:^5.0.0, nanoid@npm:^5.0.9, nanoid@npm:^5.1.6":
+"nanoid@npm:^5.0.9, nanoid@npm:^5.1.6":
   version: 5.1.6
   resolution: "nanoid@npm:5.1.6"
   bin:

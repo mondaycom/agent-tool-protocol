@@ -1,8 +1,10 @@
 import type { APIGroupConfig, CustomFunctionDef } from '@mondaydotcomorg/atp-protocol';
+import { filterApiGroups } from '../core/request-scope.js';
 
 interface TreeNode {
 	type: 'directory' | 'function';
 	name: string;
+	description?: string;
 	children?: Map<string, TreeNode>;
 	functionDef?: {
 		func: CustomFunctionDef;
@@ -13,7 +15,7 @@ interface TreeNode {
 interface ExploreDirectoryResult {
 	type: 'directory';
 	path: string;
-	items: Array<{ name: string; type: 'directory' | 'function' }>;
+	items: Array<{ name: string; type: 'directory' | 'function'; description?: string }>;
 }
 
 interface ExploreFunctionResult {
@@ -36,10 +38,67 @@ export type ExploreResult = ExploreDirectoryResult | ExploreFunctionResult;
  */
 export class ExplorerService {
 	private root: TreeNode;
+	private apiGroups: APIGroupConfig[];
 
 	constructor(apiGroups: APIGroupConfig[]) {
+		this.apiGroups = apiGroups;
 		this.root = { type: 'directory', name: '/', children: new Map() };
 		this.buildTree(apiGroups);
+	}
+
+	/**
+	 * Get filtering context based on current request's tool rules.
+	 * Returns sets for allowed items and all known items (for filtering).
+	 */
+	private getFilterContext(): {
+		allowedTypes: Set<string>;
+		allowedGroups: Set<string>;
+		allowedTools: Set<string>;
+		allGroups: Set<string>;
+	} {
+		const allowedGroups = filterApiGroups(this.apiGroups);
+
+		const context = {
+			allowedTypes: new Set<string>(),
+			allowedGroups: new Set<string>(),
+			allowedTools: new Set<string>(),
+			allGroups: new Set(this.apiGroups.map((g) => g.name)),
+		};
+
+		for (const group of allowedGroups) {
+			if (group.type !== 'graphql') {
+				context.allowedTypes.add(group.type);
+			}
+			context.allowedGroups.add(group.name);
+			if (group.functions) {
+				for (const func of group.functions) {
+					context.allowedTools.add(`${group.name}:${func.name}`);
+				}
+			}
+		}
+
+		return context;
+	}
+
+	/**
+	 * Check if a directory should be visible based on filter context.
+	 */
+	private isDirectoryAllowed(
+		name: string,
+		currentPath: string,
+		ctx: ReturnType<typeof this.getFilterContext>
+	): boolean {
+		const API_TYPES = ['openapi', 'mcp', 'custom', 'graphql'];
+
+		if (currentPath === '/' && API_TYPES.includes(name)) {
+			return ctx.allowedTypes.has(name) || ctx.allowedGroups.has(name);
+		}
+
+		if (ctx.allGroups.has(name)) {
+			return ctx.allowedGroups.has(name);
+		}
+
+		return true;
 	}
 
 	/**
@@ -51,8 +110,12 @@ export class ExplorerService {
 
 			const groupFolder =
 				group.type === 'graphql'
-					? this.ensureDirectory(this.root, group.name)
-					: this.ensureDirectory(this.ensureDirectory(this.root, group.type), group.name);
+					? this.ensureDirectory(this.root, group.name, group.description)
+					: this.ensureDirectory(
+							this.ensureDirectory(this.root, group.type),
+							group.name,
+							group.description
+						);
 
 			for (const func of group.functions) {
 				const segments = this.extractSegments(func, group);
@@ -128,15 +191,17 @@ export class ExplorerService {
 	/**
 	 * Ensures a directory exists at the given path
 	 */
-	private ensureDirectory(parent: TreeNode, name: string): TreeNode {
+	private ensureDirectory(parent: TreeNode, name: string, description?: string): TreeNode {
 		if (!parent.children) {
 			parent.children = new Map();
 		}
 
 		let child = parent.children.get(name);
 		if (!child) {
-			child = { type: 'directory', name, children: new Map() };
+			child = { type: 'directory', name, description, children: new Map() };
 			parent.children.set(name, child);
+		} else if (description && !child.description) {
+			child.description = description;
 		}
 
 		return child;
@@ -163,9 +228,12 @@ export class ExplorerService {
 	}
 
 	/**
-	 * Explores the filesystem at the given path
+	 * Explores the filesystem at the given path.
+	 * Tool rules are automatically applied from the request scope.
+	 * @param path - The path to explore
 	 */
 	explore(path: string): ExploreResult | null {
+		const ctx = this.getFilterContext();
 		const normalizedPath = this.normalizePath(path);
 		const segments = normalizedPath === '/' ? [] : normalizedPath.split('/').filter((s) => s);
 
@@ -181,10 +249,27 @@ export class ExplorerService {
 		}
 
 		if (current.type === 'directory') {
-			const items: Array<{ name: string; type: 'directory' | 'function' }> = [];
+			const items: Array<{ name: string; type: 'directory' | 'function'; description?: string }> =
+				[];
 			if (current.children) {
 				for (const [name, node] of current.children) {
-					items.push({ name, type: node.type });
+					// Filter directories and functions based on tool rules
+					if (node.type === 'directory') {
+						if (!this.isDirectoryAllowed(name, currentPath, ctx)) continue;
+					} else if (node.type === 'function' && node.functionDef) {
+						if (!ctx.allowedTools.has(`${node.functionDef.group}:${name}`)) continue;
+					}
+
+					const item: { name: string; type: 'directory' | 'function'; description?: string } = {
+						name,
+						type: node.type,
+					};
+					if (node.description) {
+						item.description = node.description;
+					} else if (node.type === 'function' && node.functionDef?.func.description) {
+						item.description = node.functionDef.func.description;
+					}
+					items.push(item);
 				}
 			}
 			items.sort((a, b) => {
@@ -205,6 +290,11 @@ export class ExplorerService {
 			}
 
 			const { func, group } = current.functionDef;
+
+			if (!ctx.allowedTools.has(`${group}:${func.name}`)) {
+				return null;
+			}
+
 			const definition = this.generateFunctionDefinition(func, group);
 
 			return {

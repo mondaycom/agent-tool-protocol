@@ -265,6 +265,19 @@ export interface ClientServiceProviders {
 	tools?: ClientTool[];
 }
 
+/**
+ * Tool call event emitted when an API function is invoked in the sandbox
+ */
+export interface ToolCallEvent {
+	toolName: string;
+	apiGroup: string;
+	input: unknown;
+	output?: unknown;
+	error?: Error;
+	duration: number;
+	success: boolean;
+}
+
 export interface ExecutionConfig {
 	timeout: number;
 	maxMemory: number;
@@ -278,6 +291,8 @@ export interface ExecutionConfig {
 	securityPolicies?: SecurityPolicy[];
 	provenanceHints?: string[];
 	requestContext?: Record<string, unknown>;
+	toolRules?: ClientToolRules;
+	onToolCall?: (event: ToolCallEvent) => void;
 }
 
 /**
@@ -422,7 +437,7 @@ export interface ExploreRequest {
 export interface ExploreDirectoryResult {
 	type: 'directory';
 	path: string;
-	items: Array<{ name: string; type: 'directory' | 'function' }>;
+	items: Array<{ name: string; type: 'directory' | 'function'; description?: string }>;
 }
 
 export interface ExploreFunctionResult {
@@ -473,6 +488,8 @@ export interface ServerConfig {
 export interface APIGroupConfig {
 	name: string;
 	type: 'mcp' | 'openapi' | 'graphql' | 'custom';
+	/** Human-readable description of this API group */
+	description?: string;
 	url?: string;
 	spec?: unknown;
 	functions?: CustomFunctionDef[];
