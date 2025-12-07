@@ -154,4 +154,57 @@ return { count: results.length };
 
 		console.log(`✅ Large batch (15 calls): ${duration}ms`);
 	}, 180000);
+
+	test('should handle Promise.all with api.client.* calls (batch parallel)', async () => {
+		const toolsCalled: string[] = [];
+
+		// Register client tools
+		const clientWithTools = new AgentToolProtocolClient({
+			baseUrl: `http://localhost:${TEST_PORT}`,
+			serviceProviders: {
+				tools: [
+					{
+						name: 'toolA',
+						description: 'Tool A',
+						inputSchema: { type: 'object', properties: { value: { type: 'number' } } },
+						handler: async (input: any) => {
+							toolsCalled.push('toolA');
+							return { result: input.value * 2 };
+						},
+					},
+					{
+						name: 'toolB',
+						description: 'Tool B',
+						inputSchema: { type: 'object', properties: { value: { type: 'number' } } },
+						handler: async (input: any) => {
+							toolsCalled.push('toolB');
+							return { result: input.value * 3 };
+						},
+					},
+				],
+			},
+		});
+
+		await clientWithTools.init();
+		await clientWithTools.connect();
+
+		const code = `
+const results = await Promise.all([
+  api.client.toolA({ value: 10 }),
+  api.client.toolB({ value: 10 })
+]);
+return { a: results[0].result, b: results[1].result };
+		`;
+
+		const result = await clientWithTools.execute(code);
+
+		expect(result.status).toBe('completed');
+		expect((result.result as any).a).toBe(20);
+		expect((result.result as any).b).toBe(30);
+
+		// Verify both tools were called
+		expect(toolsCalled).toContain('toolA');
+		expect(toolsCalled).toContain('toolB');
+		expect(toolsCalled.length).toBe(2);
+	}, 30000);
 });

@@ -1,5 +1,5 @@
 import * as t from '@babel/types';
-import type { BatchCallInfo } from '../types.js';
+import type { BatchCallInfo, BatchServiceType } from '../types.js';
 import { isPausableCallExpression, getMemberExpressionPath } from './utils.js';
 
 export class BatchParallelDetector {
@@ -74,11 +74,21 @@ export class BatchParallelDetector {
 		}
 
 		const [namespace, service, method] = parts;
-		if (namespace !== 'atp' || !method) {
+		if (!service || !method) {
 			return null;
 		}
 
-		const type = service as 'llm' | 'approval' | 'embedding';
+		let type: BatchServiceType;
+		if (namespace === 'atp') {
+			if (!['llm', 'approval', 'embedding'].includes(service)) {
+				return null;
+			}
+			type = service as BatchServiceType;
+		} else if (namespace === 'api' && service === 'client') {
+			type = 'tool';
+		} else {
+			return null;
+		}
 		const payload = this.extractPayload(callNode.arguments as t.Expression[]);
 
 		return {

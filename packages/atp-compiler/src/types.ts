@@ -1,4 +1,3 @@
-import type { Node } from '@babel/types';
 import type { CacheProvider } from '@mondaydotcomorg/atp-protocol';
 
 export interface DetectionResult {
@@ -44,8 +43,10 @@ export interface LoopCheckpoint {
 	timestamp: number;
 }
 
+export type BatchServiceType = 'llm' | 'approval' | 'embedding' | 'tool';
+
 export interface BatchCallInfo {
-	type: 'llm' | 'approval' | 'embedding';
+	type: BatchServiceType;
 	operation: string;
 	payload: Record<string, unknown>;
 }
@@ -82,6 +83,7 @@ export const PAUSABLE_CALL_PATTERNS: PausableCallPattern[] = [
 	{ namespace: 'atp.embedding', method: 'create' },
 	{ namespace: 'atp.embedding', method: 'generate' },
 	{ namespace: 'atp.embedding', method: 'encode' },
+	{ namespace: 'api.client', method: '*' },
 ];
 
 export interface CompilerConfig {

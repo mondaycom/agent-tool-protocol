@@ -4,6 +4,8 @@ import { BatchParallelDetector } from './batch-detector.js';
 import { RuntimeFunction } from '../runtime/runtime-functions.js';
 import type { BatchCallInfo } from '../types.js';
 
+const TOOL_OPERATION_CALL = 'call';
+
 export class PromiseTransformer {
 	private transformCount = 0;
 	private batchDetector: BatchParallelDetector;
@@ -93,21 +95,13 @@ export class PromiseTransformer {
 				}
 
 				const payloadArg = callNode.arguments[0];
-
-				return t.objectExpression([
-					t.objectProperty(t.identifier('type'), t.stringLiteral(callInfo.type)),
-					t.objectProperty(t.identifier('operation'), t.stringLiteral(callInfo.operation)),
-					t.objectProperty(
-						t.identifier('payload'),
-						payloadArg && t.isExpression(payloadArg) ? payloadArg : t.objectExpression([])
-					),
-				]);
+				return this.buildBatchCallObject(callInfo, payloadArg);
 			})
 		);
 
 		const runtimeCall = t.awaitExpression(
 			t.callExpression(
-				t.memberExpression(t.identifier('__runtime'), t.identifier(RuntimeFunction.BATCH_PARALLEL)),
+				t.memberExpression(t.identifier('__runtime'), t.identifier('batchParallel')),
 				[batchCallsArray, t.stringLiteral(batchId)]
 			)
 		);
@@ -115,6 +109,40 @@ export class PromiseTransformer {
 		path.replaceWith(runtimeCall);
 		this.transformCount++;
 		return true;
+	}
+
+	/**
+	 * Builds the AST for a batch call object.
+	 * For client tools, wraps payload with toolName and input structure.
+	 */
+	private buildBatchCallObject(
+		callInfo: BatchCallInfo,
+		payloadArg: t.Node | undefined
+	): t.ObjectExpression {
+		const payloadExpr =
+			payloadArg && t.isExpression(payloadArg) ? payloadArg : t.objectExpression([]);
+
+		if (callInfo.type === 'tool') {
+			// Client tools: operation is always 'call', payload contains toolName and input
+			return t.objectExpression([
+				t.objectProperty(t.identifier('type'), t.stringLiteral(callInfo.type)),
+				t.objectProperty(t.identifier('operation'), t.stringLiteral(TOOL_OPERATION_CALL)),
+				t.objectProperty(
+					t.identifier('payload'),
+					t.objectExpression([
+						t.objectProperty(t.identifier('toolName'), t.stringLiteral(callInfo.operation)),
+						t.objectProperty(t.identifier('input'), payloadExpr),
+					])
+				),
+			]);
+		}
+
+		// Standard services (llm, approval, embedding)
+		return t.objectExpression([
+			t.objectProperty(t.identifier('type'), t.stringLiteral(callInfo.type)),
+			t.objectProperty(t.identifier('operation'), t.stringLiteral(callInfo.operation)),
+			t.objectProperty(t.identifier('payload'), payloadExpr),
+		]);
 	}
 
 	private transformToSequential(path: any, node: t.CallExpression): boolean {
@@ -127,10 +155,7 @@ export class PromiseTransformer {
 
 		const runtimeCall = t.awaitExpression(
 			t.callExpression(
-				t.memberExpression(
-					t.identifier('__runtime'),
-					t.identifier(RuntimeFunction.RESUMABLE_PROMISE_ALL)
-				),
+				t.memberExpression(t.identifier('__runtime'), t.identifier('resumablePromiseAll')),
 				[arrayArg, t.stringLiteral(parallelId)]
 			)
 		);
