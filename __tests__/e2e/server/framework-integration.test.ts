@@ -5,7 +5,7 @@
 
 import { createServer as createHTTPServer } from 'node:http';
 import { createServer } from '@mondaydotcomorg/atp-server';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 
 describe('Framework Integration', () => {
 	const getTestPort = () => 4000 + Math.floor(Math.random() * 500);

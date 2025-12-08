@@ -14,7 +14,6 @@ module.exports = {
 		'^@mondaydotcomorg/atp-server$': '<rootDir>/../server/src/index.ts',
 		'^@mondaydotcomorg/atp-client$': '<rootDir>/../client/src/index.ts',
 		'^@mondaydotcomorg/atp-providers$': '<rootDir>/../providers/src/index.ts',
-		'^nanoid$': '<rootDir>/../../__mocks__/nanoid.js',
 		'^zod-to-json-schema$': '<rootDir>/../../__mocks__/zod-to-json-schema/index.js',
 	},
 	transform: {
@@ -30,10 +29,7 @@ module.exports = {
 			},
 		],
 	},
-	transformIgnorePatterns: [
-		// Transform nanoid since it's ESM only
-		'node_modules/(?!(nanoid)/)',
-	],
+	transformIgnorePatterns: [],
 	testTimeout: 30000,
 	verbose: true,
 	extensionsToTreatAsEsm: [],

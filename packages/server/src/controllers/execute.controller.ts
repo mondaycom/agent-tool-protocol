@@ -7,7 +7,7 @@ import type { ExecutionStateManager } from '../execution-state/index.js';
 import type { AuditConfig } from '../middleware/audit.js';
 import { auditExecution } from '../middleware/audit.js';
 import { clientCallbackManager } from '../callback/index.js';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 import type { log } from '@mondaydotcomorg/atp-runtime';
 
 interface ExecuteContext {
@@ -90,7 +90,7 @@ export async function handleExecute(
 		res.writeHead(200, { 'Content-Type': 'application/json' });
 		res.end(
 			JSON.stringify({
-				executionId: nanoid(),
+				executionId: randomUUID(),
 				status: hasSecurityIssues ? 'security_violation' : 'validation_failed',
 				error: {
 					message: 'Code validation failed',

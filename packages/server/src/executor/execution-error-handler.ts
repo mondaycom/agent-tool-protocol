@@ -14,7 +14,7 @@ import {
 	type PauseExecutionError,
 } from '@mondaydotcomorg/atp-runtime';
 import { isBatchPauseError, type BatchPauseExecutionError } from '@mondaydotcomorg/atp-compiler';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 import type { CallbackRecord } from '../execution-state/index.js';
 import type { RuntimeContext } from './types.js';
 import { categorizeError } from './error-handler.js';
@@ -92,7 +92,7 @@ export function handleExecutionError(
 			executionId,
 			status: ExecutionStatus.PAUSED,
 			needsCallbacks: batchErr.calls.map((call: any) => ({
-				id: nanoid(),
+				id: randomUUID(),
 				type: call.type as any,
 				operation: call.operation,
 				payload: call.payload,

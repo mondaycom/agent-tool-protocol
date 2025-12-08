@@ -19,7 +19,6 @@ module.exports = {
 		'!packages/*/src/index.ts',
 	],
 	moduleNameMapper: {
-		'^nanoid$': '<rootDir>/__mocks__/nanoid.js',
 		'^zod-to-json-schema$': '<rootDir>/__mocks__/zod-to-json-schema/index.js',
 		'^@mondaydotcomorg/atp-protocol$': '<rootDir>/packages/protocol/src/index.ts',
 		'^@mondaydotcomorg/atp-runtime$': '<rootDir>/packages/runtime/src/index.ts',
@@ -54,8 +53,6 @@ module.exports = {
 	extensionsToTreatAsEsm: [],
 	resolver: '<rootDir>/jest-resolver.js',
 	transformIgnorePatterns: [
-		// Ignore all node_modules EXCEPT nanoid
-		'node_modules/(?!(nanoid)/).*',
 		// ALWAYS ignore @babel - use their compiled lib files
 		'node_modules/@babel/.*',
 	],

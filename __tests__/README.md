@@ -46,10 +46,6 @@ The test suite uses:
 
 Configuration is in `jest.config.js` at the project root.
 
-## Mocks
-
-- `__mocks__/nanoid.js` - Mock for the nanoid library (ES module compatibility)
-
 ## Notes
 
 - One HTTP POST test is skipped due to external API certificate issues

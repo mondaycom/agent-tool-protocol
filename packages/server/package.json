@@ -73,7 +73,6 @@
 		"isolated-vm": "5.0.4",
 		"js-yaml": "^4.1.0",
 		"jsonwebtoken": "^9.0.2",
-		"nanoid": "^5.1.6",
 		"rate-limiter-flexible": "*"
 	},
 	"devDependencies": {

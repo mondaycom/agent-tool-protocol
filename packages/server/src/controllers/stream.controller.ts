@@ -9,7 +9,7 @@ import {
 import type { CodeValidator } from '../validator/index.js';
 import type { SandboxExecutor } from '../executor/index.js';
 import type { ExecutionStateManager } from '../execution-state/index.js';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 import type { log } from '@mondaydotcomorg/atp-runtime';
 
 interface StreamContext {
@@ -110,7 +110,7 @@ export async function handleExecuteStream(
 				validationResult.securityIssues && validationResult.securityIssues.length > 0;
 
 			sendEvent('result', {
-				executionId: nanoid(),
+				executionId: randomUUID(),
 				status: hasSecurityIssues ? 'security_violation' : 'validation_failed',
 				error: {
 					message: 'Code validation failed',
