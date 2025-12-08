@@ -4106,7 +4106,6 @@ __metadata:
     isolated-vm: "npm:5.0.4"
     js-yaml: "npm:^4.1.0"
     jsonwebtoken: "npm:^9.0.2"
-    nanoid: "npm:^5.1.6"
     rate-limiter-flexible: "npm:*"
     tsup: "npm:^8.5.1"
     typescript: "npm:^5.3.3"
@@ -8627,7 +8626,6 @@ __metadata:
     jest: "npm:^29.7.0"
     langchain: "npm:^0.3.36"
     langchainhub: "npm:^0.0.11"
-    nanoid: "npm:^5.0.9"
     nx: "npm:22.0.3"
     openai: "npm:^6.3.0"
     prettier: "npm:^3.4.2"
@@ -14769,15 +14767,6 @@ __metadata:
   bin:
     nanoid: bin/nanoid.cjs
   checksum: 10c0/40e7f70b3d15f725ca072dfc4f74e81fcf1fbb02e491cf58ac0c79093adc9b0a73b152bcde57df4b79cd097e13023d7504acb38404a4da7bc1cd8e887b82fe0b
-  languageName: node
-  linkType: hard
-
-"nanoid@npm:^5.0.9, nanoid@npm:^5.1.6":
-  version: 5.1.6
-  resolution: "nanoid@npm:5.1.6"
-  bin:
-    nanoid: bin/nanoid.js
-  checksum: 10c0/27b5b055ad8332cf4f0f9f6e2a494aa7e5ded89df4cab8c8490d4eabefe72c4423971d2745d22002868b1d50576a5e42b7b05214733b19f576382323282dd26e
   languageName: node
   linkType: hard
 

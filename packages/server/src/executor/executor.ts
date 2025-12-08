@@ -20,7 +20,7 @@ import {
 	setReplayMode,
 	setVectorStoreExecutionId,
 } from '@mondaydotcomorg/atp-runtime';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 import type { CallbackRecord } from '../execution-state/index.js';
 import type { ClientSessionManager } from '../client-sessions.js';
 import { BOOTSTRAP_CODE } from './bootstrap-generated.js';
@@ -86,7 +86,7 @@ export class SandboxExecutor {
 			executionId?: string;
 		}
 	): Promise<ExecutionResult> {
-		const executionId = resumeData?.executionId || nanoid();
+		const executionId = resumeData?.executionId || randomUUID();
 
 		return runInExecutionContext(executionId, async () => {
 			return await this.executeInContext(

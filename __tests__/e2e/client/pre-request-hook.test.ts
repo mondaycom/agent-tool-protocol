@@ -5,7 +5,7 @@
 import { AgentToolProtocolClient } from '@mondaydotcomorg/atp-client';
 import type { PreRequestContext, PreRequestHook, ClientHooks } from '@mondaydotcomorg/atp-client';
 import { createServer } from '@mondaydotcomorg/atp-server';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 
 describe('PreRequestHook', () => {
 	let server: any;

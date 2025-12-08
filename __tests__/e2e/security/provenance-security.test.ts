@@ -16,12 +16,12 @@ import {
 	blockLLMRecipients,
 	blockLLMRecipientsWithApproval,
 } from '@mondaydotcomorg/atp-server';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 import { ToolOperationType, ToolSensitivityLevel } from '@mondaydotcomorg/atp-protocol';
 import { ProvenanceMode } from '@mondaydotcomorg/atp-provenance';
 
 const TEST_PORT = 3902;
-const TEST_API_KEY = `test-key-${nanoid()}`;
+const TEST_API_KEY = `test-key-${randomUUID()}`;
 
 describe('Provenance Security E2E', () => {
 	let server: AgentToolProtocolServer;

@@ -1,7 +1,7 @@
 import type { RequestContext } from '../core/config.js';
 import type { ClientSessionManager } from '../client-sessions.js';
 import type { AuditSink, AuditEvent } from '@mondaydotcomorg/atp-protocol';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 import { log } from '@mondaydotcomorg/atp-runtime';
 
 export async function handleInit(
@@ -34,7 +34,7 @@ export async function handleInit(
 
 	if (auditSink) {
 		const event: AuditEvent = {
-			eventId: nanoid(),
+			eventId: randomUUID(),
 			timestamp: Date.now(),
 			clientId: (result as any).clientId,
 			eventType: 'client_init',

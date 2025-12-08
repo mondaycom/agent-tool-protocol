@@ -8,10 +8,10 @@ import { AgentToolProtocolServer } from '@mondaydotcomorg/atp-server';
 import { AgentToolProtocolClient } from '@mondaydotcomorg/atp-client';
 import { ProvenanceMode, createCustomPolicy } from '@mondaydotcomorg/atp-server';
 import { ProvenanceSource } from '@mondaydotcomorg/atp-provenance';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 
 const TEST_PORT = 3891;
-const TEST_API_KEY = `test-key-${nanoid()}`;
+const TEST_API_KEY = `test-key-${randomUUID()}`;
 
 describe('Cross-Call Provenance Tracking', () => {
 	let server: AgentToolProtocolServer;

@@ -5,7 +5,7 @@
 import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
 import { AgentToolProtocolServer } from '@mondaydotcomorg/atp-server';
 import fetch from 'node-fetch';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 
 const TEST_PORT = 3502;
 const BASE_URL = `http://localhost:${TEST_PORT}`;
@@ -44,7 +44,7 @@ describe('Resume Token Validation E2E', () => {
 	});
 
 	test('should reject resume without authentication', async () => {
-		const executionId = nanoid();
+		const executionId = randomUUID();
 
 		const response = await fetch(`${BASE_URL}/api/resume/${executionId}`, {
 			method: 'POST',
@@ -58,7 +58,7 @@ describe('Resume Token Validation E2E', () => {
 	});
 
 	test('should reject resume with invalid token', async () => {
-		const executionId = nanoid();
+		const executionId = randomUUID();
 
 		const response = await fetch(`${BASE_URL}/api/resume/${executionId}`, {
 			method: 'POST',
@@ -98,7 +98,7 @@ describe('Resume Token Validation E2E', () => {
 		// 3. Try to resume with client2's token
 		// Since this requires client-provided services, we'll test the endpoint directly
 
-		const fakeExecutionId = nanoid();
+		const fakeExecutionId = randomUUID();
 
 		const response = await fetch(`${BASE_URL}/api/resume/${fakeExecutionId}`, {
 			method: 'POST',
@@ -124,7 +124,7 @@ describe('Resume Token Validation E2E', () => {
 		const { clientId, token } = await initResponse.json();
 
 		// Try to resume with mismatched clientId in header
-		const executionId = nanoid();
+		const executionId = randomUUID();
 		const response = await fetch(`${BASE_URL}/api/resume/${executionId}`, {
 			method: 'POST',
 			headers: {
@@ -150,7 +150,7 @@ describe('Resume Token Validation E2E', () => {
 
 		// For this test, we're just verifying the auth validation passes
 		// The execution won't exist, so we'll get 404, but that comes AFTER auth
-		const executionId = nanoid();
+		const executionId = randomUUID();
 		const response = await fetch(`${BASE_URL}/api/resume/${executionId}`, {
 			method: 'POST',
 			headers: {
@@ -175,7 +175,7 @@ describe('Resume Token Validation E2E', () => {
 		const { clientId, token } = await initResponse.json();
 
 		// Try to resume (will fail on execution not found, but should refresh token)
-		const executionId = nanoid();
+		const executionId = randomUUID();
 		const response = await fetch(`${BASE_URL}/api/resume/${executionId}`, {
 			method: 'POST',
 			headers: {

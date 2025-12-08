@@ -1,8 +1,7 @@
 /**
  * Client Session Management
  */
-import { randomBytes } from 'node:crypto';
-import { nanoid } from 'nanoid';
+import { randomBytes, randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { log } from '@mondaydotcomorg/atp-runtime';
 import type {
@@ -189,7 +188,7 @@ export class ClientSessionManager {
 			{
 				clientId,
 				type: 'client',
-				jti: nanoid(),
+				jti: randomUUID(),
 			},
 			this.jwtSecret,
 			{

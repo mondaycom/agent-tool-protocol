@@ -14,7 +14,7 @@ import {
 	type ProvenanceState,
 	type SourceMetadata,
 } from '@mondaydotcomorg/atp-provenance';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Tag a callback result with provenance metadata
@@ -42,7 +42,7 @@ function tagCallbackResult(
 		// Primitive: taint it
 		if (typeof value === 'string' || typeof value === 'number') {
 			const metadata = {
-				id: nanoid(),
+				id: randomUUID(),
 				source,
 				readers: { type: 'public' as const },
 				dependencies: [],

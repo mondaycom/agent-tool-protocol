@@ -6,10 +6,10 @@
 import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
 import { AgentToolProtocolServer } from '@mondaydotcomorg/atp-server';
 import { AgentToolProtocolClient } from '@mondaydotcomorg/atp-client';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 
 const TEST_PORT = 3342;
-const TEST_API_KEY = `test-key-${nanoid()}`;
+const TEST_API_KEY = `test-key-${randomUUID()}`;
 
 describe('Runtime Progress E2E', () => {
 	let server: AgentToolProtocolServer;

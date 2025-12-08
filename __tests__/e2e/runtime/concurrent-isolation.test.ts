@@ -6,7 +6,7 @@
 import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
 import { AgentToolProtocolServer } from '@mondaydotcomorg/atp-server';
 import { AgentToolProtocolClient } from '@mondaydotcomorg/atp-client';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 
 const TEST_PORT = 3344;
 
@@ -38,11 +38,11 @@ describe('Concurrent Client Isolation E2E', () => {
 		// Use DIFFERENT API keys for proper client isolation
 		const client1 = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client1-${nanoid()}` },
+			headers: { Authorization: `Bearer client1-${randomUUID()}` },
 		});
 		const client2 = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client2-${nanoid()}` },
+			headers: { Authorization: `Bearer client2-${randomUUID()}` },
 		});
 
 		await client1.init();
@@ -77,11 +77,11 @@ describe('Concurrent Client Isolation E2E', () => {
 		// Use DIFFERENT API keys for proper client isolation
 		const client1 = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client1-${nanoid()}` },
+			headers: { Authorization: `Bearer client1-${randomUUID()}` },
 		});
 		const client2 = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client2-${nanoid()}` },
+			headers: { Authorization: `Bearer client2-${randomUUID()}` },
 		});
 
 		await client1.init();
@@ -146,11 +146,11 @@ describe('Concurrent Client Isolation E2E', () => {
 		// Use DIFFERENT API keys for proper client isolation
 		const client1 = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client1-${nanoid()}` },
+			headers: { Authorization: `Bearer client1-${randomUUID()}` },
 		});
 		const client2 = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client2-${nanoid()}` },
+			headers: { Authorization: `Bearer client2-${randomUUID()}` },
 		});
 
 		await client1.init();
@@ -200,11 +200,11 @@ describe('Concurrent Client Isolation E2E', () => {
 		// Use DIFFERENT API keys for proper client isolation
 		const client1 = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client1-${nanoid()}` },
+			headers: { Authorization: `Bearer client1-${randomUUID()}` },
 		});
 		const client2 = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client2-${nanoid()}` },
+			headers: { Authorization: `Bearer client2-${randomUUID()}` },
 		});
 
 		await client1.init();
@@ -262,7 +262,7 @@ describe('Concurrent Client Isolation E2E', () => {
 	test('should handle rapid sequential executions without state leaks', async () => {
 		const client = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client-${nanoid()}` },
+			headers: { Authorization: `Bearer client-${randomUUID()}` },
 		});
 		await client.init();
 		await client.connect();
@@ -299,11 +299,11 @@ describe('Concurrent Client Isolation E2E', () => {
 		// Use DIFFERENT API keys for proper client isolation
 		const client1 = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client1-${nanoid()}` },
+			headers: { Authorization: `Bearer client1-${randomUUID()}` },
 		});
 		const client2 = new AgentToolProtocolClient({
 			baseUrl: `http://localhost:${TEST_PORT}`,
-			headers: { Authorization: `Bearer client2-${nanoid()}` },
+			headers: { Authorization: `Bearer client2-${randomUUID()}` },
 		});
 
 		await client1.init();

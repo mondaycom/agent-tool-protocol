@@ -1,5 +1,5 @@
 import { IncomingMessage, ServerResponse } from 'node:http';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 import { log } from '@mondaydotcomorg/atp-runtime';
 import type { CacheProvider, AuthProvider, AuditSink } from '@mondaydotcomorg/atp-protocol';
 import { parseBody } from '../core/http.js';
@@ -102,7 +102,7 @@ export async function handleHTTPRequest(
 					});
 				}
 
-				handleError(res, error as Error, nanoid(), headers);
+				handleError(res, error as Error, randomUUID(), headers);
 			} catch (handlerError) {
 				try {
 					if (!res.headersSent) {
