@@ -4,7 +4,7 @@ import type { ExecutionStateManager } from '../execution-state/index.js';
 import type { ClientSessionManager } from '../client-sessions.js';
 import type { AuditSink, AuditEvent, ToolCallEvent } from '@mondaydotcomorg/atp-protocol';
 import { ExecutionStatus, ProvenanceMode } from '@mondaydotcomorg/atp-protocol';
-import { nanoid } from 'nanoid';
+import crypto from 'crypto';
 import {
 	captureProvenanceSnapshot,
 	verifyProvenanceHints,
@@ -85,7 +85,7 @@ export async function handleExecute(
 	const onToolCall = auditSink
 		? (event: ToolCallEvent) => {
 				const auditEvent: AuditEvent = {
-					eventId: nanoid(),
+					eventId: crypto.randomUUID(),
 					timestamp: Date.now(),
 					clientId: ctx.clientId || 'anonymous',
 					eventType: 'tool_call',
@@ -120,13 +120,18 @@ export async function handleExecute(
 			requestConfig.provenanceMode || config.execution.provenanceMode || ProvenanceMode.NONE,
 		securityPolicies: config.execution.securityPolicies || [],
 		provenanceHints: requestConfig.provenanceHints,
-		requestContext: requestConfig.requestContext,
+		requestContext: {
+			...requestConfig.requestContext,
+			headers: ctx.headers,
+			path: ctx.path,
+			method: ctx.method,
+		},
 		onToolCall,
 	};
 
 	// Verify provenance hints if provided
 	let hintMap: Map<string, ProvenanceMetadata> | undefined;
-	const prelimExecutionId = nanoid();
+	const prelimExecutionId = crypto.randomUUID();
 	if (
 		executionConfig.provenanceHints &&
 		executionConfig.provenanceHints.length > 0 &&
@@ -170,7 +175,7 @@ export async function handleExecute(
 
 	if (auditSink) {
 		const startEvent: AuditEvent = {
-			eventId: nanoid(),
+			eventId: crypto.randomUUID(),
 			timestamp: startTime,
 			clientId: ctx.clientId || 'anonymous',
 			eventType: 'execution',
@@ -243,7 +248,7 @@ export async function handleExecute(
 
 	if (auditSink) {
 		const endEvent: AuditEvent = {
-			eventId: nanoid(),
+			eventId: crypto.randomUUID(),
 			timestamp: Date.now(),
 			clientId: ctx.clientId || 'anonymous',
 			eventType: 'execution',
