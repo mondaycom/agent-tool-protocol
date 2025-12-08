@@ -341,6 +341,7 @@ export class AgentToolProtocolServer {
 		name: string,
 		definition: {
 			group?: string;
+			groupDescription?: string;
 			description: string;
 			input: Record<string, string>;
 			output?: Record<string, string>;
@@ -355,9 +356,12 @@ export class AgentToolProtocolServer {
 			targetGroup = {
 				name: groupName,
 				type: 'custom',
+				description: definition.groupDescription,
 				functions: [],
 			};
 			this.apiGroups.push(targetGroup);
+		} else if (definition.groupDescription && !targetGroup.description) {
+			targetGroup.description = definition.groupDescription;
 		}
 
 		targetGroup.functions!.push({
