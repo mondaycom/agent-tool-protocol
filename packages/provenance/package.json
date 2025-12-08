@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-provenance",
-	"version": "0.19.9",
+	"version": "0.19.10",
 	"description": "CAMEL-inspired provenance security for LLM applications - track data origin and enforce security policies",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
@@ -40,7 +40,7 @@
 	"author": "Agent Tool Protocol Team",
 	"license": "MIT",
 	"dependencies": {
-		"@mondaydotcomorg/atp-runtime": "0.19.9",
+		"@mondaydotcomorg/atp-runtime": "0.19.10",
 		"@types/escodegen": "^0.0.10",
 		"acorn": "^8.11.0",
 		"acorn-walk": "^8.3.0",
