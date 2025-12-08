@@ -101,7 +101,7 @@ export class PromiseTransformer {
 
 		const runtimeCall = t.awaitExpression(
 			t.callExpression(
-				t.memberExpression(t.identifier('__runtime'), t.identifier('batchParallel')),
+				t.memberExpression(t.identifier('__runtime'), t.identifier(RuntimeFunction.BATCH_PARALLEL))),
 				[batchCallsArray, t.stringLiteral(batchId)]
 			)
 		);
@@ -155,7 +155,7 @@ export class PromiseTransformer {
 
 		const runtimeCall = t.awaitExpression(
 			t.callExpression(
-				t.memberExpression(t.identifier('__runtime'), t.identifier('resumablePromiseAll')),
+				t.memberExpression(t.identifier('__runtime'), t.identifier(RuntimeFunction.RESUMABLE_PROMISE_ALL)),
 				[arrayArg, t.stringLiteral(parallelId)]
 			)
 		);
