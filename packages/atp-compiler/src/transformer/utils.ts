@@ -22,9 +22,10 @@ export function isPausableCallExpression(node: t.CallExpression): boolean {
 	}
 
 	const fullPath = getMemberExpressionPath(callee);
-
-	return PAUSABLE_CALL_PATTERNS.some(
-		(pattern) => fullPath === `${pattern.namespace}.${pattern.method}`
+	return PAUSABLE_CALL_PATTERNS.some((pattern) =>
+		pattern.method === '*'
+			? fullPath.startsWith(`${pattern.namespace}.`)
+			: fullPath === `${pattern.namespace}.${pattern.method}`
 	);
 }
 

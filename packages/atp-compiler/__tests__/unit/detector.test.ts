@@ -248,6 +248,36 @@ describe('AsyncIterationDetector', () => {
 			expect(result.batchableParallel).toBe(true);
 		});
 
+		it('should detect batchable Promise.all with api.client.* calls', () => {
+			const code = `
+        const results = await Promise.all([
+          api.client.toolA({ a: 1 }),
+          api.client.toolB({ b: 2 }),
+        ]);
+      `;
+
+			const result = detector.detect(code);
+
+			expect(result.needsTransform).toBe(true);
+			expect(result.patterns).toContain('promise-all');
+			expect(result.batchableParallel).toBe(true);
+		});
+
+		it('should detect batchable Promise.all with mixed atp.llm and api.client calls', () => {
+			const code = `
+        const results = await Promise.all([
+          atp.llm.call({ prompt: 'Q1' }),
+          api.client.myTool({ input: 'data' }),
+        ]);
+      `;
+
+			const result = detector.detect(code);
+
+			expect(result.needsTransform).toBe(true);
+			expect(result.patterns).toContain('promise-all');
+			expect(result.batchableParallel).toBe(true);
+		});
+
 		it('should not mark Promise.all as batchable with complex logic', () => {
 			const code = `
         const results = await Promise.all(

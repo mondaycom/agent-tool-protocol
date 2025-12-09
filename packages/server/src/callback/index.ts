@@ -9,7 +9,7 @@ import { log } from '@mondaydotcomorg/atp-runtime';
 /**
  * Callback request types
  */
-export type CallbackType = 'llm' | 'approval' | 'embedding';
+export type CallbackType = 'llm' | 'approval' | 'embedding' | 'tool';
 
 /**
  * Callback request payload
@@ -95,7 +95,7 @@ export class ClientCallbackManager {
 	 * @param serviceType - Type of service
 	 * @returns Whether client provides this service
 	 */
-	hasClientService(clientId: string, serviceType: 'llm' | 'approval' | 'embedding'): boolean {
+	hasClientService(clientId: string, serviceType: CallbackType): boolean {
 		const client = this.clients.get(clientId);
 		if (!client) return false;
 
@@ -106,6 +106,8 @@ export class ClientCallbackManager {
 				return client.services.hasApproval;
 			case 'embedding':
 				return client.services.hasEmbedding;
+			case 'tool':
+				return client.services.hasTools;
 			default:
 				return false;
 		}
