@@ -253,11 +253,10 @@ export class ExplorerService {
 				[];
 			if (current.children) {
 				for (const [name, node] of current.children) {
-					// Filter directories and functions based on tool rules
 					if (node.type === 'directory') {
 						if (!this.isDirectoryAllowed(name, currentPath, ctx)) continue;
 					} else if (node.type === 'function' && node.functionDef) {
-						if (!ctx.allowedTools.has(`${node.functionDef.group}:${name}`)) continue;
+						if (!ctx.allowedTools.has(`${node.functionDef.group}:${node.functionDef.func.name}`)) continue;
 					}
 
 					const item: { name: string; type: 'directory' | 'function'; description?: string } = {
