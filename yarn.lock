@@ -3995,6 +3995,7 @@ __metadata:
     "@modelcontextprotocol/sdk": "npm:^1.23.0"
     "@mondaydotcomorg/atp-protocol": "npm:0.19.11"
     "@mondaydotcomorg/atp-server": "npm:0.19.14"
+    tsup: "npm:^8.5.1"
     typescript: "npm:^5.3.3"
     vitest: "npm:^1.2.1"
     zod: "npm:^3.25.0"
