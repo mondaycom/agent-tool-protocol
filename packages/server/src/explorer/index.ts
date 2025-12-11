@@ -70,6 +70,10 @@ export class ExplorerService {
 				context.allowedTypes.add(group.type);
 			}
 			context.allowedGroups.add(group.name);
+		}
+
+		for (const group of this.apiGroups) {
+			if (!context.allowedGroups.has(group.name)) continue;
 			if (group.functions) {
 				for (const func of group.functions) {
 					context.allowedTools.add(`${group.name}:${func.name}`);
@@ -256,7 +260,8 @@ export class ExplorerService {
 					if (node.type === 'directory') {
 						if (!this.isDirectoryAllowed(name, currentPath, ctx)) continue;
 					} else if (node.type === 'function' && node.functionDef) {
-						if (!ctx.allowedTools.has(`${node.functionDef.group}:${node.functionDef.func.name}`)) continue;
+						if (!ctx.allowedTools.has(`${node.functionDef.group}:${node.functionDef.func.name}`))
+							continue;
 					}
 
 					const item: { name: string; type: 'directory' | 'function'; description?: string } = {
