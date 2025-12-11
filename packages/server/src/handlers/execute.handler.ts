@@ -127,6 +127,7 @@ export async function handleExecute(
 			method: ctx.method,
 		},
 		onToolCall,
+		eventCallback: requestConfig.eventCallback,
 	};
 
 	// Verify provenance hints if provided

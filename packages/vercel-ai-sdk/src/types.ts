@@ -1,5 +1,6 @@
 import type { ExecutionConfig, ClientTool } from '@mondaydotcomorg/atp-protocol';
 import type { ClientHooks } from '@mondaydotcomorg/atp-client';
+import type { UIMessageStreamWriter } from './event-adapter.js';
 
 export interface ApprovalRequest {
 	message: string;
@@ -40,6 +41,18 @@ export interface CreateATPToolsOptions {
 	approvalHandler?: ApprovalHandler;
 	defaultExecutionConfig?: Partial<ExecutionConfig>;
 	hooks?: ClientHooks;
+}
+
+/**
+ * Options for creating ATP tools with streaming event support
+ */
+export interface StreamingToolsOptions extends CreateATPToolsOptions {
+	/**
+	 * UIMessageStreamWriter to forward events to.
+	 * Events like 'thinking', 'tool_start', 'tool_end', 'text', 'source' will be
+	 * converted to Vercel AI SDK format and written to this stream.
+	 */
+	dataStream: UIMessageStreamWriter;
 }
 
 export interface ATPToolsResult {

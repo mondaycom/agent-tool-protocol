@@ -6,6 +6,7 @@ import type {
 	ClientTool,
 	ClientToolDefinition,
 	ExploreResult,
+	ATPEvent,
 } from '@mondaydotcomorg/atp-protocol';
 import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
 import { CallbackType } from '@mondaydotcomorg/atp-protocol';
@@ -250,14 +251,33 @@ export class AgentToolProtocolClient {
 	}
 
 	/**
-	 * Executes code on the server with real-time progress updates via SSE.
+	 * Executes code on the server with real-time streaming events via SSE.
+	 *
+	 * @param code - TypeScript code to execute
+	 * @param config - Optional execution configuration
+	 * @param onEvent - Callback for all streaming events (thinking, tool_start, tool_end, text, source, etc.)
+	 * @param onProgress - Legacy callback for progress events only (deprecated, use onEvent instead)
+	 *
+	 * @example
+	 * ```typescript
+	 * const result = await client.executeStream(
+	 *   code,
+	 *   {},
+	 *   (event) => {
+	 *     if (event.type === 'thinking') console.log('Thinking:', event.data.content);
+	 *     if (event.type === 'text') console.log('Text:', event.data.text);
+	 *     if (event.type === 'tool_start') console.log('Tool started:', event.data.toolName);
+	 *   }
+	 * );
+	 * ```
 	 */
 	async executeStream(
 		code: string,
 		config?: Partial<ExecutionConfig>,
+		onEvent?: (event: ATPEvent) => void,
 		onProgress?: (message: string, fraction: number) => void
 	): Promise<ExecutionResult> {
-		return await this.execOps.executeStream(code, config, onProgress);
+		return await this.execOps.executeStream(code, config, onEvent, onProgress);
 	}
 
 	/**

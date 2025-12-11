@@ -1,0 +1,33 @@
+{
+	"name": "streaming-events-example",
+	"version": "1.0.0",
+	"type": "module",
+	"private": true,
+	"description": "Real-world example demonstrating ATP streaming events with both LangChain and Vercel AI SDK",
+	"scripts": {
+		"server": "NODE_OPTIONS='--no-node-snapshot' tsx server.ts",
+		"vercel:http": "NODE_OPTIONS='--no-node-snapshot' tsx vercel-http-example.ts",
+		"vercel:inprocess": "NODE_OPTIONS='--no-node-snapshot' tsx vercel-inprocess-example.ts",
+		"langchain:http": "NODE_OPTIONS='--no-node-snapshot' tsx langchain-http-example.ts",
+		"langchain:inprocess": "NODE_OPTIONS='--no-node-snapshot' tsx langchain-inprocess-example.ts"
+	},
+	"dependencies": {
+		"@ai-sdk/openai": "^1.0.0",
+		"@langchain/core": "^0.3.78",
+		"@langchain/langgraph": "^0.2.0",
+		"@langchain/openai": "^0.3.0",
+		"@mondaydotcomorg/atp-client": "workspace:*",
+		"@mondaydotcomorg/atp-langchain": "workspace:*",
+		"@mondaydotcomorg/atp-protocol": "workspace:*",
+		"@mondaydotcomorg/atp-server": "workspace:*",
+		"@mondaydotcomorg/atp-vercel-sdk": "workspace:*",
+		"ai": "^4.0.0",
+		"dotenv": "^16.4.5",
+		"zod": "^3.25.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"tsx": "^4.19.2",
+		"typescript": "^5.3.3"
+	}
+}

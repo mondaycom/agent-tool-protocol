@@ -1,4 +1,6 @@
 import type { ProvenanceMode, SecurityPolicy } from '@mondaydotcomorg/atp-provenance';
+import type { ATPEvent, ATPEventHandler, ATPEventType } from './events.js';
+
 export { ProvenanceMode, type SecurityPolicy } from '@mondaydotcomorg/atp-provenance';
 
 /**
@@ -293,6 +295,7 @@ export interface ExecutionConfig {
 	requestContext?: Record<string, unknown>;
 	toolRules?: ClientToolRules;
 	onToolCall?: (event: ToolCallEvent) => void;
+	eventCallback?: ATPEventHandler;
 }
 
 /**
@@ -530,7 +533,8 @@ export interface LoggingConfig {
 /** Context passed to function handlers during execution */
 export interface FunctionHandlerContext {
 	metadata?: ToolMetadata;
-	requestContext?: Record<string, unknown>;
+	requestContext?: Record<string, unknown>;	
+	emit: (eventOrType: ATPEvent | ATPEventType | string, data?: unknown, runId?: string) => void;
 }
 
 export interface CustomFunctionDef {
