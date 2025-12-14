@@ -150,6 +150,28 @@ export interface LoadOpenAPIOptions {
 
 	/** Base URL override (if different from spec servers) */
 	baseURL?: string;
+
+	/**
+	 * Dynamic header provider for per-request authentication (e.g., per-user OAuth).
+	 * Similar to GraphQL's headerProvider. Called before each API request.
+	 * @param params - The request parameters
+	 * @param context - Optional context from contextProvider
+	 * @returns Headers to add to the request
+	 */
+	headerProvider?: (
+		params: Record<string, unknown> | undefined,
+		context?: Record<string, unknown>
+	) => Promise<Record<string, string>> | Record<string, string>;
+
+	/**
+	 * Context provider to extract context from execution environment.
+	 * Similar to GraphQL's contextProvider. Called once per request.
+	 * @param executionContext - The execution context from ATP
+	 * @returns Context object passed to headerProvider
+	 */
+	contextProvider?: (
+		executionContext?: Record<string, unknown>
+	) => Promise<Record<string, unknown>> | Record<string, unknown>;
 }
 
 /**
@@ -342,7 +364,14 @@ function convertOperation(
 
 	const annotations = extractAnnotations(operation, operationKey, options.annotations);
 
-	const handler = async (params: unknown) => {
+	const handler = async (
+		params: unknown,
+		handlerContext?: {
+			metadata?: unknown;
+			requestContext?: Record<string, unknown>;
+			emit?: unknown;
+		}
+	) => {
 		// Build the actual HTTP request
 		const input = (params as Record<string, any>) || {};
 		let requestPath = path;
@@ -352,8 +381,22 @@ function convertOperation(
 			'Content-Type': 'application/json',
 		};
 
-		// Add authentication
-		if (auth) {
+		// Get context from contextProvider if available (for per-user auth)
+		// The handlerContext.requestContext contains userId and other request-specific data
+		let context: Record<string, unknown> | undefined;
+		if (options.contextProvider) {
+			context = await options.contextProvider(handlerContext?.requestContext);
+		}
+
+		// Get dynamic headers from headerProvider if available (for per-user OAuth)
+		if (options.headerProvider) {
+			const dynamicHeaders = await options.headerProvider(input, context);
+			Object.assign(headers, dynamicHeaders);
+			log.debug('Added headers from headerProvider', { keys: Object.keys(dynamicHeaders) });
+		}
+
+		// Add authentication (only if headerProvider didn't set Authorization)
+		if (auth && !headers['Authorization']) {
 			if (auth.scheme === 'bearer' && auth.envVar) {
 				// Try authProvider first, fallback to process.env
 				let token: string | null = null;
