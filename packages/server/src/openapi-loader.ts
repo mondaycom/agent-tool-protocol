@@ -372,7 +372,6 @@ function convertOperation(
 			emit?: unknown;
 		}
 	) => {
-		// Build the actual HTTP request
 		const input = (params as Record<string, any>) || {};
 		let requestPath = path;
 		const queryParams: Record<string, string> = {};
@@ -381,24 +380,19 @@ function convertOperation(
 			'Content-Type': 'application/json',
 		};
 
-		// Get context from contextProvider if available (for per-user auth)
-		// The handlerContext.requestContext contains userId and other request-specific data
 		let context: Record<string, unknown> | undefined;
 		if (options.contextProvider) {
 			context = await options.contextProvider(handlerContext?.requestContext);
 		}
 
-		// Get dynamic headers from headerProvider if available (for per-user OAuth)
 		if (options.headerProvider) {
 			const dynamicHeaders = await options.headerProvider(input, context);
 			Object.assign(headers, dynamicHeaders);
 			log.debug('Added headers from headerProvider', { keys: Object.keys(dynamicHeaders) });
 		}
 
-		// Add authentication (only if headerProvider didn't set Authorization)
 		if (auth && !headers['Authorization']) {
 			if (auth.scheme === 'bearer' && auth.envVar) {
-				// Try authProvider first, fallback to process.env
 				let token: string | null = null;
 				if (options.authProvider) {
 					token = await options.authProvider.getCredential(auth.envVar);
@@ -459,7 +453,6 @@ function convertOperation(
 			}
 		}
 
-		// Replace path parameters
 		if (operation.parameters) {
 			for (const param of operation.parameters) {
 				if (param.in === 'path' && input[param.name]) {
@@ -475,9 +468,7 @@ function convertOperation(
 			}
 		}
 
-		// Add request body if present
 		if (operation.requestBody && ['post', 'put', 'patch'].includes(method.toLowerCase())) {
-			// Collect body properties
 			const bodyParams: Record<string, any> = {};
 			if (operation.parameters) {
 				const paramNames = operation.parameters.map((p) => p.name);
@@ -494,7 +485,6 @@ function convertOperation(
 			}
 		}
 
-		// Build URL with query params
 		if (!baseURL) {
 			throw new Error(
 				`No baseURL configured for OpenAPI spec. Check that the spec has a 'servers' section with a valid URL.`
@@ -510,7 +500,6 @@ function convertOperation(
 			url.searchParams.append(key, value);
 		}
 
-		// Make the HTTP request
 		try {
 			const response = await fetch(url.toString(), {
 				method: method.toUpperCase(),
@@ -523,7 +512,6 @@ function convertOperation(
 				throw new Error(`HTTP ${response.status}: ${errorText}`);
 			}
 
-			// Handle 204 No Content
 			if (response.status === 204) {
 				return { success: true };
 			}
@@ -531,7 +519,6 @@ function convertOperation(
 			const contentType = response.headers.get('content-type');
 			if (contentType?.includes('application/json')) {
 				const text = await response.text();
-				// Handle empty response body
 				if (!text || text.trim() === '') {
 					return { success: true };
 				}
