@@ -150,6 +150,28 @@ export interface LoadOpenAPIOptions {
 
 	/** Base URL override (if different from spec servers) */
 	baseURL?: string;
+
+	/**
+	 * Dynamic header provider for per-request authentication (e.g., per-user OAuth).
+	 * Similar to GraphQL's headerProvider. Called before each API request.
+	 * @param params - The request parameters
+	 * @param context - Optional context from contextProvider
+	 * @returns Headers to add to the request
+	 */
+	headerProvider?: (
+		params: Record<string, unknown> | undefined,
+		context?: Record<string, unknown>
+	) => Promise<Record<string, string>> | Record<string, string>;
+
+	/**
+	 * Context provider to extract context from execution environment.
+	 * Similar to GraphQL's contextProvider. Called once per request.
+	 * @param executionContext - The execution context from ATP
+	 * @returns Context object passed to headerProvider
+	 */
+	contextProvider?: (
+		executionContext?: Record<string, unknown>
+	) => Promise<Record<string, unknown>> | Record<string, unknown>;
 }
 
 /**
@@ -342,8 +364,14 @@ function convertOperation(
 
 	const annotations = extractAnnotations(operation, operationKey, options.annotations);
 
-	const handler = async (params: unknown) => {
-		// Build the actual HTTP request
+	const handler = async (
+		params: unknown,
+		handlerContext?: {
+			metadata?: unknown;
+			requestContext?: Record<string, unknown>;
+			emit?: unknown;
+		}
+	) => {
 		const input = (params as Record<string, any>) || {};
 		let requestPath = path;
 		const queryParams: Record<string, string> = {};
@@ -352,10 +380,19 @@ function convertOperation(
 			'Content-Type': 'application/json',
 		};
 
-		// Add authentication
-		if (auth) {
+		let context: Record<string, unknown> | undefined;
+		if (options.contextProvider) {
+			context = await options.contextProvider(handlerContext?.requestContext);
+		}
+
+		if (options.headerProvider) {
+			const dynamicHeaders = await options.headerProvider(input, context);
+			Object.assign(headers, dynamicHeaders);
+			log.debug('Added headers from headerProvider', { keys: Object.keys(dynamicHeaders) });
+		}
+
+		if (auth && !headers['Authorization']) {
 			if (auth.scheme === 'bearer' && auth.envVar) {
-				// Try authProvider first, fallback to process.env
 				let token: string | null = null;
 				if (options.authProvider) {
 					token = await options.authProvider.getCredential(auth.envVar);
@@ -416,7 +453,6 @@ function convertOperation(
 			}
 		}
 
-		// Replace path parameters
 		if (operation.parameters) {
 			for (const param of operation.parameters) {
 				if (param.in === 'path' && input[param.name]) {
@@ -432,9 +468,7 @@ function convertOperation(
 			}
 		}
 
-		// Add request body if present
 		if (operation.requestBody && ['post', 'put', 'patch'].includes(method.toLowerCase())) {
-			// Collect body properties
 			const bodyParams: Record<string, any> = {};
 			if (operation.parameters) {
 				const paramNames = operation.parameters.map((p) => p.name);
@@ -451,7 +485,6 @@ function convertOperation(
 			}
 		}
 
-		// Build URL with query params
 		if (!baseURL) {
 			throw new Error(
 				`No baseURL configured for OpenAPI spec. Check that the spec has a 'servers' section with a valid URL.`
@@ -467,7 +500,6 @@ function convertOperation(
 			url.searchParams.append(key, value);
 		}
 
-		// Make the HTTP request
 		try {
 			const response = await fetch(url.toString(), {
 				method: method.toUpperCase(),
@@ -480,7 +512,6 @@ function convertOperation(
 				throw new Error(`HTTP ${response.status}: ${errorText}`);
 			}
 
-			// Handle 204 No Content
 			if (response.status === 204) {
 				return { success: true };
 			}
@@ -488,7 +519,6 @@ function convertOperation(
 			const contentType = response.headers.get('content-type');
 			if (contentType?.includes('application/json')) {
 				const text = await response.text();
-				// Handle empty response body
 				if (!text || text.trim() === '') {
 					return { success: true };
 				}
