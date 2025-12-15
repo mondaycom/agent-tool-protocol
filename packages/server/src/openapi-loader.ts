@@ -172,6 +172,31 @@ export interface LoadOpenAPIOptions {
 	contextProvider?: (
 		executionContext?: Record<string, unknown>
 	) => Promise<Record<string, unknown>> | Record<string, unknown>;
+
+	/**
+	 * Request transformer to modify the request before it's sent.
+	 * Useful for APIs that require non-JSON content types (e.g., form-urlencoded).
+	 * @param request - The request details (url, method, headers, body)
+	 * @returns Modified request details
+	 */
+	requestTransformer?: (request: {
+		url: string;
+		method: string;
+		headers: Record<string, string>;
+		body: unknown;
+	}) =>
+		| Promise<{
+				url?: string;
+				method?: string;
+				headers?: Record<string, string>;
+				body?: string | undefined;
+		  }>
+		| {
+				url?: string;
+				method?: string;
+				headers?: Record<string, string>;
+				body?: string | undefined;
+		  };
 }
 
 /**
@@ -501,10 +526,29 @@ function convertOperation(
 		}
 
 		try {
-			const response = await fetch(url.toString(), {
-				method: method.toUpperCase(),
-				headers,
-				body: body ? JSON.stringify(body) : undefined,
+			let finalUrl = url.toString();
+			let finalMethod = method.toUpperCase();
+			let finalHeaders = { ...headers };
+			let finalBody: string | undefined = body ? JSON.stringify(body) : undefined;
+
+			if (options.requestTransformer) {
+				const transformed = await options.requestTransformer({
+					url: finalUrl,
+					method: finalMethod,
+					headers: finalHeaders,
+					body,
+				});
+
+				if (transformed.url) finalUrl = transformed.url;
+				if (transformed.method) finalMethod = transformed.method;
+				if (transformed.headers) finalHeaders = transformed.headers;
+				if (transformed.body !== undefined) finalBody = transformed.body;
+			}
+
+			const response = await fetch(finalUrl, {
+				method: finalMethod,
+				headers: finalHeaders,
+				body: finalBody,
 			});
 
 			if (!response.ok) {
