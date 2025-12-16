@@ -3,7 +3,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { AgentToolProtocolClient } from '../client.js';
 import { ToolNames, type Tool } from './types.js';
 
-const searchApiInputSchema = z.object({
+export const searchApiInputSchema = z.object({
 	query: z.string().describe('Search query string'),
 });
 

@@ -3,7 +3,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { AgentToolProtocolClient } from '../client.js';
 import { ToolNames, type Tool } from './types.js';
 
-const exploreApiInputSchema = z.object({
+export const exploreApiInputSchema = z.object({
 	path: z
 		.string()
 		.describe('Path to explore (e.g., "/", "/openapi/github", "/mcp/filesystem/read_file")'),
