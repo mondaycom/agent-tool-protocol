@@ -3,7 +3,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { AgentToolProtocolClient } from '../client.js';
 import { ToolNames, type Tool } from './types.js';
 
-const fetchAllApisInputSchema = z.object({
+export const fetchAllApisInputSchema = z.object({
 	apiGroups: z.array(z.string()).optional().describe('Optional: Specific API groups to include'),
 });
 

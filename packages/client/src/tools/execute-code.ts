@@ -4,7 +4,7 @@ import { ExecutionStatus } from '@mondaydotcomorg/atp-protocol';
 import type { AgentToolProtocolClient } from '../client.js';
 import { ToolNames, type Tool } from './types.js';
 
-const executeCodeInputSchema = z.object({
+export const executeCodeInputSchema = z.object({
 	code: z.string().describe('The JavaScript/TypeScript code to execute'),
 	timeout: z.number().optional().describe('Execution timeout in milliseconds (default: 30000)'),
 	maxMemory: z.number().optional().describe('Maximum memory in bytes (default: 128MB)'),
