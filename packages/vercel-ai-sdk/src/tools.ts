@@ -1,22 +1,24 @@
 import { z } from 'zod';
 import { VercelAIATPClient } from './client.js';
 import type { CreateATPToolsOptions, ATPToolsResult, StreamingToolsOptions } from './types.js';
-import {
-	ToolNames,
-	executeCodeInputSchema,
-	exploreApiInputSchema,
-	searchApiInputSchema,
-	fetchAllApisInputSchema,
-} from '@mondaydotcomorg/atp-client';
+import { ToolNames } from '@mondaydotcomorg/atp-client';
 import { ExecutionStatus } from '@mondaydotcomorg/atp-protocol';
 import { tool } from 'ai';
-import { createVercelEventHandler, type UIMessageStreamWriter } from './event-adapter.js';
+import { createVercelEventHandler } from './event-adapter.js';
 
 const TOOL_SCHEMAS = {
-	[ToolNames.EXECUTE_CODE]: executeCodeInputSchema.pick({ code: true }),
-	[ToolNames.EXPLORE_API]: exploreApiInputSchema,
-	[ToolNames.SEARCH_API]: searchApiInputSchema,
-	[ToolNames.FETCH_ALL_APIS]: fetchAllApisInputSchema,
+	[ToolNames.EXECUTE_CODE]: z.object({
+		code: z.string().describe('The JavaScript/TypeScript code to execute'),
+	}),
+	[ToolNames.EXPLORE_API]: z.object({
+		path: z
+			.string()
+			.describe('The path to explore (e.g., "/" for root, "/openapi" for OpenAPI group)'),
+	}),
+	[ToolNames.SEARCH_API]: z.object({
+		query: z.string().describe('Search query string to find APIs'),
+	}),
+	[ToolNames.FETCH_ALL_APIS]: z.object({}),
 } as const;
 
 export async function createATPTools(options: CreateATPToolsOptions): Promise<ATPToolsResult> {
