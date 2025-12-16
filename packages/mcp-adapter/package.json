@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-mcp-adapter",
-	"version": "0.20.2",
+	"version": "0.20.3",
 	"description": "MCP compatibility adapter for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.cjs",

@@ -3929,7 +3929,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mondaydotcomorg/atp-client@npm:0.19.15, @mondaydotcomorg/atp-client@workspace:*, @mondaydotcomorg/atp-client@workspace:packages/client":
+"@mondaydotcomorg/atp-client@npm:0.19.16, @mondaydotcomorg/atp-client@workspace:*, @mondaydotcomorg/atp-client@workspace:packages/client":
   version: 0.0.0-use.local
   resolution: "@mondaydotcomorg/atp-client@workspace:packages/client"
   dependencies:
@@ -3975,7 +3975,7 @@ __metadata:
   resolution: "@mondaydotcomorg/atp-langchain@workspace:packages/langchain"
   dependencies:
     "@langchain/core": "npm:^0.3.78"
-    "@mondaydotcomorg/atp-client": "npm:0.19.15"
+    "@mondaydotcomorg/atp-client": "npm:0.19.16"
     "@mondaydotcomorg/atp-protocol": "npm:0.19.15"
     "@mondaydotcomorg/atp-runtime": "npm:0.19.14"
     json-schema-to-zod: "npm:^2.6.1"
@@ -4120,7 +4120,7 @@ __metadata:
   resolution: "@mondaydotcomorg/atp-vercel-sdk@workspace:packages/vercel-ai-sdk"
   dependencies:
     "@jest/globals": "npm:^29.7.0"
-    "@mondaydotcomorg/atp-client": "npm:0.19.15"
+    "@mondaydotcomorg/atp-client": "npm:0.19.16"
     "@mondaydotcomorg/atp-protocol": "npm:0.19.15"
     "@types/jest": "npm:^29.5.11"
     jest: "npm:^29.7.0"
