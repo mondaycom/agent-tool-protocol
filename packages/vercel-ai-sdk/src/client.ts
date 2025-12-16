@@ -87,7 +87,7 @@ export class VercelAIATPClient {
 			model: this.model,
 			prompt,
 			temperature: options?.temperature,
-			maxTokens: options?.maxTokens,
+			maxOutputTokens: options?.maxTokens,
 			system: options?.systemPrompt,
 		});
 
@@ -101,7 +101,7 @@ export class VercelAIATPClient {
 			schema,
 			system: options?.systemPrompt,
 			temperature: options?.temperature,
-			maxTokens: options?.maxTokens,
+			maxOutputTokens: options?.maxTokens,
 		});
 
 		return result.object;

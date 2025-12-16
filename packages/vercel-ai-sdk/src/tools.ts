@@ -1,24 +1,22 @@
 import { z } from 'zod';
 import { VercelAIATPClient } from './client.js';
 import type { CreateATPToolsOptions, ATPToolsResult, StreamingToolsOptions } from './types.js';
-import { ToolNames } from '@mondaydotcomorg/atp-client';
+import {
+	ToolNames,
+	executeCodeInputSchema,
+	exploreApiInputSchema,
+	searchApiInputSchema,
+	fetchAllApisInputSchema,
+} from '@mondaydotcomorg/atp-client';
 import { ExecutionStatus } from '@mondaydotcomorg/atp-protocol';
 import { tool } from 'ai';
 import { createVercelEventHandler } from './event-adapter.js';
 
 const TOOL_SCHEMAS = {
-	[ToolNames.EXECUTE_CODE]: z.object({
-		code: z.string().describe('The JavaScript/TypeScript code to execute'),
-	}),
-	[ToolNames.EXPLORE_API]: z.object({
-		path: z
-			.string()
-			.describe('The path to explore (e.g., "/" for root, "/openapi" for OpenAPI group)'),
-	}),
-	[ToolNames.SEARCH_API]: z.object({
-		query: z.string().describe('Search query string to find APIs'),
-	}),
-	[ToolNames.FETCH_ALL_APIS]: z.object({}),
+	[ToolNames.EXECUTE_CODE]: executeCodeInputSchema.pick({ code: true }),
+	[ToolNames.EXPLORE_API]: exploreApiInputSchema,
+	[ToolNames.SEARCH_API]: searchApiInputSchema,
+	[ToolNames.FETCH_ALL_APIS]: fetchAllApisInputSchema,
 } as const;
 
 export async function createATPTools(options: CreateATPToolsOptions): Promise<ATPToolsResult> {
@@ -33,7 +31,7 @@ export async function createATPTools(options: CreateATPToolsOptions): Promise<AT
 	vercelTools.atp_execute_code = tool({
 		description:
 			'Execute TypeScript code in ATP sandbox with access to runtime APIs (atp.llm.*, atp.embedding.*, atp.approval.*)',
-		parameters: TOOL_SCHEMAS[ToolNames.EXECUTE_CODE],
+		inputSchema: TOOL_SCHEMAS[ToolNames.EXECUTE_CODE],
 		execute: async ({ code }: { code: string }) => {
 			try {
 				const result = await client.execute(code, defaultExecutionConfig);
@@ -68,7 +66,7 @@ export async function createATPTools(options: CreateATPToolsOptions): Promise<AT
 	vercelTools.atp_explore_api = tool({
 		description:
 			'Explore APIs using filesystem-like navigation. Navigate through directories to discover available functions.',
-		parameters: TOOL_SCHEMAS[ToolNames.EXPLORE_API],
+		inputSchema: TOOL_SCHEMAS[ToolNames.EXPLORE_API],
 		execute: async ({ path }: { path: string }) => {
 			try {
 				const result = await underlyingClient.exploreAPI(path);
@@ -88,7 +86,7 @@ export async function createATPTools(options: CreateATPToolsOptions): Promise<AT
 	vercelTools.atp_search_api = tool({
 		description:
 			'Search for APIs by keyword. Provide search term as string like "add", "math", "user", etc.',
-		parameters: TOOL_SCHEMAS[ToolNames.SEARCH_API],
+		inputSchema: TOOL_SCHEMAS[ToolNames.SEARCH_API],
 		execute: async ({ query }: { query: string }) => {
 			try {
 				const results = await underlyingClient.searchAPI(query);
@@ -114,7 +112,7 @@ export async function createATPTools(options: CreateATPToolsOptions): Promise<AT
 	vercelTools.atp_get_type_definitions = tool({
 		description:
 			'Get TypeScript type definitions for ATP runtime APIs to understand available functions',
-		parameters: z.object({}),
+		inputSchema: z.object({}),
 		execute: async () => {
 			try {
 				const types = client.getTypeDefinitions();
@@ -179,7 +177,7 @@ export async function createATPStreamingTools(
 	vercelTools.atp_execute_code = tool({
 		description:
 			'Execute TypeScript code in ATP sandbox with streaming events for thinking, tool execution, and text output',
-		parameters: TOOL_SCHEMAS[ToolNames.EXECUTE_CODE],
+		inputSchema: TOOL_SCHEMAS[ToolNames.EXECUTE_CODE],
 		execute: async ({ code }: { code: string }) => {
 			try {
 				const result = await underlyingClient.executeStream(
@@ -218,7 +216,7 @@ export async function createATPStreamingTools(
 	vercelTools.atp_explore_api = tool({
 		description:
 			'Explore APIs using filesystem-like navigation. Navigate through directories to discover available functions.',
-		parameters: TOOL_SCHEMAS[ToolNames.EXPLORE_API],
+		inputSchema: TOOL_SCHEMAS[ToolNames.EXPLORE_API],
 		execute: async ({ path }: { path: string }) => {
 			try {
 				const result = await underlyingClient.exploreAPI(path);
@@ -238,7 +236,7 @@ export async function createATPStreamingTools(
 	vercelTools.atp_search_api = tool({
 		description:
 			'Search for APIs by keyword. Provide search term as string like "add", "math", "user", etc.',
-		parameters: TOOL_SCHEMAS[ToolNames.SEARCH_API],
+		inputSchema: TOOL_SCHEMAS[ToolNames.SEARCH_API],
 		execute: async ({ query }: { query: string }) => {
 			try {
 				const results = await underlyingClient.searchAPI(query);
@@ -264,7 +262,7 @@ export async function createATPStreamingTools(
 	vercelTools.atp_get_type_definitions = tool({
 		description:
 			'Get TypeScript type definitions for ATP runtime APIs to understand available functions',
-		parameters: z.object({}),
+		inputSchema: z.object({}),
 		execute: async () => {
 			try {
 				const types = client.getTypeDefinitions();
