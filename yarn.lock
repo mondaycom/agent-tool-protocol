@@ -17174,6 +17174,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"streaming-events-example@workspace:examples/streaming-events":
+  version: 0.0.0-use.local
+  resolution: "streaming-events-example@workspace:examples/streaming-events"
+  dependencies:
+    "@ai-sdk/openai": "npm:^1.0.0"
+    "@langchain/core": "npm:^0.3.78"
+    "@langchain/langgraph": "npm:^0.2.0"
+    "@langchain/openai": "npm:^0.3.0"
+    "@mondaydotcomorg/atp-client": "workspace:*"
+    "@mondaydotcomorg/atp-langchain": "workspace:*"
+    "@mondaydotcomorg/atp-protocol": "workspace:*"
+    "@mondaydotcomorg/atp-server": "workspace:*"
+    "@mondaydotcomorg/atp-vercel-sdk": "workspace:*"
+    "@types/node": "npm:^22.10.2"
+    ai: "npm:^4.0.0"
+    dotenv: "npm:^16.4.5"
+    tsx: "npm:^4.19.2"
+    typescript: "npm:^5.3.3"
+    zod: "npm:^3.25.0"
+  languageName: unknown
+  linkType: soft
+
 "string-length@npm:^4.0.1":
   version: 4.0.2
   resolution: "string-length@npm:4.0.2"
