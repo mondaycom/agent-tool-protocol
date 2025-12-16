@@ -15,14 +15,25 @@ export class VercelAIATPClient {
 	private approvalHandler?: ApprovalHandler;
 
 	constructor(options: VercelAIATPClientOptions) {
-		const { serverUrl, headers, model, embeddings, tools, approvalHandler, hooks } = options;
+		const { model, embeddings, tools, approvalHandler, hooks } = options;
 
-		this.client = new AgentToolProtocolClient({
-			baseUrl: serverUrl,
-			headers,
-			hooks,
-			serviceProviders: tools ? { tools } : undefined,
-		});
+		if ('server' in options && options.server) {
+			this.client = new AgentToolProtocolClient({
+				server: options.server,
+				hooks,
+				serviceProviders: tools ? { tools } : undefined,
+			});
+		} else if ('serverUrl' in options && options.serverUrl) {
+			this.client = new AgentToolProtocolClient({
+				baseUrl: options.serverUrl,
+				headers: options.headers,
+				hooks,
+				serviceProviders: tools ? { tools } : undefined,
+			});
+		} else {
+			throw new Error('Either serverUrl or server must be provided');
+		}
+
 		this.model = model;
 		this.embeddings = embeddings;
 		this.approvalHandler = approvalHandler;

@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { ExecutionConfig } from '@mondaydotcomorg/atp-protocol';
+import type { ExecutionConfig, ATPEvent } from '@mondaydotcomorg/atp-protocol';
 import {
 	ExecutionErrorCode,
 	validateExecutionConfig,
@@ -85,6 +85,9 @@ export async function handleExecuteStream(
 			allowLLMCalls: request.config?.allowLLMCalls ?? true,
 			progressCallback: (message: string, fraction: number) => {
 				sendEvent('progress', { message, fraction });
+			},
+			eventCallback: (event: ATPEvent) => {
+				sendEvent(event.type, event.data);
 			},
 			clientServices: request.config?.clientServices,
 			provenanceMode: request.config?.provenanceMode,

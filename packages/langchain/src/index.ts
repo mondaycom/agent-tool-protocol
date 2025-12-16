@@ -8,4 +8,11 @@ export {
 	type ATPToolsResult,
 } from './langgraph-tools.js';
 
+export {
+	createLangChainEventHandler,
+	createCallbackManagerHandler,
+	type LangChainEvent,
+	type CreateLangChainEventHandlerOptions,
+} from './event-adapter.js';
+
 export * from './node.js';

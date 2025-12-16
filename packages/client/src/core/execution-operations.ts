@@ -1,4 +1,4 @@
-import type { ExecutionResult, ExecutionConfig } from '@mondaydotcomorg/atp-protocol';
+import type { ExecutionResult, ExecutionConfig, ATPEvent } from '@mondaydotcomorg/atp-protocol';
 import { ExecutionStatus, CallbackType } from '@mondaydotcomorg/atp-protocol';
 import { log } from '@mondaydotcomorg/atp-runtime';
 import type { ISession } from './session.js';
@@ -26,11 +26,17 @@ export class ExecutionOperations {
 	}
 
 	/**
-	 * Executes code on the server with real-time progress updates via SSE.
+	 * Executes code on the server with real-time streaming events via SSE.
+	 *
+	 * @param code - TypeScript code to execute
+	 * @param config - Optional execution configuration
+	 * @param onEvent - Callback for all streaming events (thinking, tool_start, tool_end, text, source, etc.)
+	 * @param onProgress - Legacy callback for progress events only (deprecated, use onEvent instead)
 	 */
 	async executeStream(
 		code: string,
 		config?: Partial<ExecutionConfig>,
+		onEvent?: (event: ATPEvent) => void,
 		onProgress?: (message: string, fraction: number) => void
 	): Promise<ExecutionResult> {
 		await this.session.ensureInitialized();
@@ -74,7 +80,7 @@ export class ExecutionOperations {
 							const line = lines[i];
 
 							if (line && line.startsWith('event:')) {
-								const event = line.substring(6).trim();
+								const eventType = line.substring(6).trim();
 
 								for (let j = i + 1; j < lines.length; j++) {
 									const dataLine = lines[j];
@@ -84,11 +90,20 @@ export class ExecutionOperations {
 											try {
 												const data = JSON.parse(dataStr);
 
-												if (event === 'progress' && onProgress) {
+												if (onEvent) {
+													const event: ATPEvent = {
+														type: eventType,
+														data,
+														timestamp: Date.now(),
+													};
+													onEvent(event);
+												}
+
+												if (eventType === 'progress' && onProgress) {
 													onProgress(data.message, data.fraction);
-												} else if (event === 'result') {
+												} else if (eventType === 'result') {
 													result = data as ExecutionResult;
-												} else if (event === 'error') {
+												} else if (eventType === 'error') {
 													reject(new Error(data.message));
 													return;
 												}

@@ -3,7 +3,10 @@ import type {
 	APIGroupConfig,
 	ClientToolDefinition,
 	ToolCallEvent,
+	ATPEvent,
+	ATPEventType,
 } from '@mondaydotcomorg/atp-protocol';
+import { createToolStartEvent, createToolEndEvent } from '@mondaydotcomorg/atp-protocol';
 import { filterApiGroups } from '../core/request-scope.js';
 import {
 	ToolOperationType,
@@ -40,6 +43,35 @@ import {
 import { ReaderPermissions } from '@mondaydotcomorg/atp-server';
 import { getHintMap, reattachProvenanceFromHints } from '../utils/provenance-reattachment.js';
 import { createASTProvenanceChecker } from './ast-provenance-bridge.js';
+
+/**
+ * Creates a non-blocking event emitter for streaming events to clients.
+ * Events are fired asynchronously without blocking execution.
+ */
+function createEventEmitter(
+	eventCallback?: (event: ATPEvent) => void
+): (
+	eventOrType: ATPEvent | ATPEventType | string,
+	data?: unknown,
+	runId?: string
+) => void {
+	return (eventOrType, data, runId) => {
+		if (!eventCallback) return;
+
+		const event: ATPEvent =
+			typeof eventOrType === 'string'
+				? { type: eventOrType, data, timestamp: Date.now(), runId }
+				: eventOrType;
+
+		setImmediate(() => {
+			try {
+				eventCallback(event);
+			} catch (error) {
+				// Silently ignore errors in event callbacks to avoid breaking execution
+			}
+		});
+	};
+}
 
 export class SandboxBuilder {
 	private policyEngine: SecurityPolicyEngine | null = null;
@@ -467,13 +499,18 @@ export class SandboxBuilder {
 							});
 						}
 
+						const emit = createEventEmitter(config.eventCallback);
+
 						const handlerContext = {
 							metadata: metadata,
 							requestContext: config.requestContext,
+							emit,
 						};
 						const toolCallStartTime = Date.now();
 						let result: unknown;
 						let toolCallError: Error | undefined;
+
+						emit(createToolStartEvent(func.name, group.name, input));
 
 						try {
 							result = await handler(input, handlerContext);
@@ -481,8 +518,20 @@ export class SandboxBuilder {
 							toolCallError = error instanceof Error ? error : new Error(String(error));
 							throw error;
 						} finally {
+							const duration = Date.now() - toolCallStartTime;
+
+							emit(
+								createToolEndEvent(
+									func.name,
+									group.name,
+									toolCallError ? undefined : result,
+									duration,
+									!toolCallError,
+									toolCallError?.message
+								)
+							);
+
 							if (config.onToolCall) {
-								const duration = Date.now() - toolCallStartTime;
 								config.onToolCall({
 									toolName: func.name,
 									apiGroup: group.name,
