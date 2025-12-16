@@ -51,9 +51,11 @@ export const IN_ISOLATE_IMPLEMENTATIONS: Record<string, string> = {
 		}
 	}`,
 
-	[RuntimeFunction.RESUMABLE_FOR_LOOP]: `async (init, condition, update, body, loopId) => {
-		for (init(); condition(); update()) {
-			await body();
+	[RuntimeFunction.RESUMABLE_FOR_LOOP]: `async (initValue, condition, increment, body, loopId) => {
+		let i = initValue;
+		while (condition(i)) {
+			await body(i);
+			i = increment(i);
 		}
 	}`,
 
