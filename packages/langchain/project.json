@@ -9,7 +9,7 @@
 			"executor": "nx:run-commands",
 			"outputs": ["{projectRoot}/dist"],
 			"options": {
-				"command": "tsc --build packages/langchain/tsconfig.json"
+				"command": "cd packages/langchain && npm run build"
 			}
 		},
 		"test": {

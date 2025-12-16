@@ -8,7 +8,7 @@
 			"executor": "nx:run-commands",
 			"outputs": ["{projectRoot}/dist"],
 			"options": {
-				"command": "tsc -p packages/vercel-ai-sdk/tsconfig.json"
+				"command": "cd packages/vercel-ai-sdk && npm run build"
 			}
 		},
 		"lint": {
