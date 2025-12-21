@@ -198,6 +198,8 @@ export interface ClientToolRules {
 	allowOnlyApiGroups?: string[];
 }
 
+export type ApiGroupRules = Pick<ClientToolRules, 'allowOnlyApiGroups' | 'blockApiGroups'>;
+
 /**
  * Tool/API metadata for security and risk management
  *
