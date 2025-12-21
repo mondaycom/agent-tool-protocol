@@ -106,15 +106,15 @@ export class APIOperations {
 	/**
 	 * Explores the API filesystem at the given path.
 	 */
-	async exploreAPI(path: string): Promise<ExploreResult> {
+	async exploreAPI(path: string, options?: { toolRules?: { allowOnlyApiGroups?: string[]; blockApiGroups?: string[] } }): Promise<ExploreResult> {
 		await this.session.ensureInitialized();
 
 		if (this.inProcessSession) {
-			return (await this.inProcessSession.explore(path)) as ExploreResult;
+			return (await this.inProcessSession.explore(path, options)) as ExploreResult;
 		}
 
 		const url = `${this.session.getBaseUrl()}/api/explore`;
-		const body = JSON.stringify({ path });
+		const body = JSON.stringify({ path, ...options });
 		const headers = await this.session.prepareHeaders('POST', url, body);
 
 		const response = await fetch(url, {

@@ -69,7 +69,9 @@ export async function createATPTools(options: CreateATPToolsOptions): Promise<AT
 		inputSchema: TOOL_SCHEMAS[ToolNames.EXPLORE_API],
 		execute: async ({ path }: { path: string }) => {
 			try {
-				const result = await underlyingClient.exploreAPI(path);
+				const result = await underlyingClient.exploreAPI(path, {
+					toolRules: defaultExecutionConfig?.toolRules,
+				});
 				return {
 					success: true,
 					result,
@@ -89,7 +91,10 @@ export async function createATPTools(options: CreateATPToolsOptions): Promise<AT
 		inputSchema: TOOL_SCHEMAS[ToolNames.SEARCH_API],
 		execute: async ({ query }: { query: string }) => {
 			try {
-				const results = await underlyingClient.searchAPI(query);
+				const results = await underlyingClient.searchAPI(query, {
+					query,
+					toolRules: defaultExecutionConfig?.toolRules,
+				});
 				return {
 					success: true,
 					results: results.map((r: any) => ({
@@ -219,7 +224,9 @@ export async function createATPStreamingTools(
 		inputSchema: TOOL_SCHEMAS[ToolNames.EXPLORE_API],
 		execute: async ({ path }: { path: string }) => {
 			try {
-				const result = await underlyingClient.exploreAPI(path);
+				const result = await underlyingClient.exploreAPI(path, {
+					toolRules: defaultExecutionConfig?.toolRules,
+				});
 				return {
 					success: true,
 					result,
@@ -239,7 +246,10 @@ export async function createATPStreamingTools(
 		inputSchema: TOOL_SCHEMAS[ToolNames.SEARCH_API],
 		execute: async ({ query }: { query: string }) => {
 			try {
-				const results = await underlyingClient.searchAPI(query);
+				const results = await underlyingClient.searchAPI(query, {
+					query,
+					toolRules: defaultExecutionConfig?.toolRules,
+				});
 				return {
 					success: true,
 					results: results.map((r: any) => ({

@@ -246,8 +246,8 @@ export class AgentToolProtocolClient {
 	/**
 	 * Explores the API filesystem at the given path.
 	 */
-	async exploreAPI(path: string): Promise<ExploreResult> {
-		return await this.apiOps.exploreAPI(path);
+	async exploreAPI(path: string, options?: { toolRules?: { allowOnlyApiGroups?: string[]; blockApiGroups?: string[] } }): Promise<ExploreResult> {
+		return await this.apiOps.exploreAPI(path, options);
 	}
 
 	/**

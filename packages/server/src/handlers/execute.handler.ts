@@ -128,6 +128,7 @@ export async function handleExecute(
 		},
 		onToolCall,
 		eventCallback: requestConfig.eventCallback,
+		toolRules: requestConfig.toolRules,
 	};
 
 	// Verify provenance hints if provided
