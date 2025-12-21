@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-mcp-adapter",
-	"version": "0.20.7",
+	"version": "0.20.8",
 	"description": "MCP compatibility adapter for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.cjs",
@@ -44,8 +44,8 @@
 	],
 	"license": "MIT",
 	"dependencies": {
-		"@mondaydotcomorg/atp-protocol": "0.19.18",
-		"@mondaydotcomorg/atp-server": "0.20.6"
+		"@mondaydotcomorg/atp-protocol": "0.19.19",
+		"@mondaydotcomorg/atp-server": "0.20.7"
 	},
 	"peerDependencies": {
 		"@modelcontextprotocol/sdk": ">=0.5.0",
@@ -64,4 +64,3 @@
 		"zod": "^3.25.0"
 	}
 }
-
