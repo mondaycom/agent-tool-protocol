@@ -93,6 +93,7 @@ export async function handleExecuteStream(
 			provenanceMode: request.config?.provenanceMode,
 			securityPolicies: request.config?.securityPolicies,
 			provenanceHints: request.config?.provenanceHints,
+			toolRules: request.config?.toolRules,
 		};
 
 		logger.info('Validating code for streaming execution', {

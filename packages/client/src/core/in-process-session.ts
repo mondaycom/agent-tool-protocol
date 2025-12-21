@@ -202,13 +202,13 @@ export class InProcessSession implements ISession {
 		return (await this.server.handleSearch(ctx)) as { results: unknown[] };
 	}
 
-	async explore(path: string): Promise<unknown> {
+	async explore(path: string, options?: Record<string, unknown>): Promise<unknown> {
 		await this.ensureInitialized();
 
 		const ctx = this.createContext({
 			method: 'POST',
 			path: '/api/explore',
-			body: { path },
+			body: { path, ...options },
 		});
 
 		return await this.server.handleExplore(ctx);

@@ -7,6 +7,7 @@ import type {
 	ClientToolDefinition,
 	ExploreResult,
 	ATPEvent,
+	ApiGroupRules,
 } from '@mondaydotcomorg/atp-protocol';
 import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
 import { CallbackType } from '@mondaydotcomorg/atp-protocol';
@@ -246,8 +247,8 @@ export class AgentToolProtocolClient {
 	/**
 	 * Explores the API filesystem at the given path.
 	 */
-	async exploreAPI(path: string): Promise<ExploreResult> {
-		return await this.apiOps.exploreAPI(path);
+	async exploreAPI(path: string, options?: { toolRules?: ApiGroupRules }): Promise<ExploreResult> {
+		return await this.apiOps.exploreAPI(path, options);
 	}
 
 	/**

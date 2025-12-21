@@ -198,6 +198,8 @@ export interface ClientToolRules {
 	allowOnlyApiGroups?: string[];
 }
 
+export type ApiGroupRules = Pick<ClientToolRules, 'allowOnlyApiGroups' | 'blockApiGroups'>;
+
 /**
  * Tool/API metadata for security and risk management
  *
@@ -422,6 +424,7 @@ export interface SearchOptions {
 	maxResults?: number;
 	useEmbeddings?: boolean;
 	embeddingModel?: string;
+	toolRules?: ClientToolRules;
 }
 
 export interface SearchResult {
@@ -435,6 +438,7 @@ export interface SearchResult {
 
 export interface ExploreRequest {
 	path: string;
+	toolRules?: ClientToolRules;
 }
 
 export interface ExploreDirectoryResult {

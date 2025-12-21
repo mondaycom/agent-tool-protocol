@@ -1,4 +1,4 @@
-import type { SearchOptions, SearchResult, ExploreResult } from '@mondaydotcomorg/atp-protocol';
+import type { SearchOptions, SearchResult, ExploreResult, ApiGroupRules } from '@mondaydotcomorg/atp-protocol';
 import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
 import type { ISession } from './session.js';
 import type { InProcessSession } from './in-process-session.js';
@@ -106,15 +106,15 @@ export class APIOperations {
 	/**
 	 * Explores the API filesystem at the given path.
 	 */
-	async exploreAPI(path: string): Promise<ExploreResult> {
+	async exploreAPI(path: string, options?: { toolRules?: ApiGroupRules }): Promise<ExploreResult> {
 		await this.session.ensureInitialized();
 
 		if (this.inProcessSession) {
-			return (await this.inProcessSession.explore(path)) as ExploreResult;
+			return (await this.inProcessSession.explore(path, options)) as ExploreResult;
 		}
 
 		const url = `${this.session.getBaseUrl()}/api/explore`;
-		const body = JSON.stringify({ path });
+		const body = JSON.stringify({ path, ...options });
 		const headers = await this.session.prepareHeaders('POST', url, body);
 
 		const response = await fetch(url, {
