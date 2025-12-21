@@ -1,5 +1,6 @@
 import type { ProvenanceMode, SecurityPolicy } from '@mondaydotcomorg/atp-provenance';
 import type { ATPEvent, ATPEventHandler, ATPEventType } from './events.js';
+import type { AuthConfig } from './auth.js';
 
 export { ProvenanceMode, type SecurityPolicy } from '@mondaydotcomorg/atp-provenance';
 
@@ -445,6 +446,7 @@ export interface ExploreDirectoryResult {
 	type: 'directory';
 	path: string;
 	items: Array<{ name: string; type: 'directory' | 'function'; description?: string }>;
+	documentation?: APIGroupDocumentation;
 }
 
 export interface ExploreFunctionResult {
@@ -454,6 +456,8 @@ export interface ExploreFunctionResult {
 	description: string;
 	definition: string;
 	group: string;
+	inputSchema?: JSONSchema;
+	outputSchema?: JSONSchema;
 }
 
 export type ExploreResult = ExploreDirectoryResult | ExploreFunctionResult;
@@ -492,6 +496,13 @@ export interface ServerConfig {
 	logging: LoggingConfig;
 }
 
+export interface APIGroupDocumentation {
+	explorePaths?: string[];
+	examples?: string;
+	rules?: string;
+	tips?: string;
+}
+
 export interface APIGroupConfig {
 	name: string;
 	type: 'mcp' | 'openapi' | 'graphql' | 'custom';
@@ -501,7 +512,8 @@ export interface APIGroupConfig {
 	spec?: unknown;
 	functions?: CustomFunctionDef[];
 	/** Authentication configuration for this API group */
-	auth?: import('./auth.js').AuthConfig;
+	auth?: AuthConfig;
+	documentation?: APIGroupDocumentation;
 }
 
 export interface SecurityConfig {

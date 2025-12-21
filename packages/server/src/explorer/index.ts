@@ -1,4 +1,8 @@
-import type { APIGroupConfig, CustomFunctionDef } from '@mondaydotcomorg/atp-protocol';
+import type {
+	APIGroupConfig,
+	APIGroupDocumentation,
+	CustomFunctionDef,
+} from '@mondaydotcomorg/atp-protocol';
 import { filterApiGroups } from '../core/request-scope.js';
 
 interface TreeNode {
@@ -10,12 +14,14 @@ interface TreeNode {
 		func: CustomFunctionDef;
 		group: string;
 	};
+	apiGroupName?: string;
 }
 
 interface ExploreDirectoryResult {
 	type: 'directory';
 	path: string;
 	items: Array<{ name: string; type: 'directory' | 'function'; description?: string }>;
+	documentation?: APIGroupDocumentation;
 }
 
 interface ExploreFunctionResult {
@@ -39,9 +45,11 @@ export type ExploreResult = ExploreDirectoryResult | ExploreFunctionResult;
 export class ExplorerService {
 	private root: TreeNode;
 	private apiGroups: APIGroupConfig[];
+	private apiGroupMap: Map<string, APIGroupConfig>;
 
 	constructor(apiGroups: APIGroupConfig[]) {
 		this.apiGroups = apiGroups;
+		this.apiGroupMap = new Map(apiGroups.map((group) => [group.name, group]));
 		this.root = { type: 'directory', name: '/', children: new Map() };
 		this.buildTree(apiGroups);
 	}
@@ -112,14 +120,17 @@ export class ExplorerService {
 		for (const group of apiGroups) {
 			if (!group.functions || group.functions.length === 0) continue;
 
-			const groupFolder =
-				group.type === 'graphql'
-					? this.ensureDirectory(this.root, group.name, group.description)
-					: this.ensureDirectory(
-							this.ensureDirectory(this.root, group.type),
-							group.name,
-							group.description
-						);
+			let groupFolder: TreeNode;
+			if (group.type === 'graphql') {
+				groupFolder = this.ensureDirectory(this.root, group.name, group.description);
+			} else {
+				groupFolder = this.ensureDirectory(
+					this.ensureDirectory(this.root, group.type),
+					group.name,
+					group.description
+				);
+			}
+			groupFolder.apiGroupName = group.name;
 
 			for (const func of group.functions) {
 				const segments = this.extractSegments(func, group);
@@ -283,11 +294,20 @@ export class ExplorerService {
 				return a.type === 'directory' ? -1 : 1;
 			});
 
-			return {
+			const result: ExploreDirectoryResult = {
 				type: 'directory',
 				path: currentPath,
 				items,
 			};
+
+			if (current.apiGroupName) {
+				const apiGroup = this.apiGroupMap.get(current.apiGroupName);
+				if (apiGroup?.documentation) {
+					result.documentation = apiGroup.documentation;
+				}
+			}
+
+			return result;
 		} else {
 			if (!current.functionDef) {
 				return null;
