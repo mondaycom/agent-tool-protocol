@@ -77,8 +77,8 @@ describe('Schema Validation - Fix for type:None Bug', () => {
 			expect(schema._def).toBeDefined();
 			expect(schema._def.typeName).toBe('ZodObject');
 			expect(schema.shape).toBeDefined();
-			expect(schema.shape.path).toBeDefined();
-			expect(schema.shape.path._def.typeName).toBe('ZodString');
+			expect(schema.shape.paths).toBeDefined();
+			expect(schema.shape.paths._def.typeName).toBe('ZodUnion');
 		});
 
 		test('search_api schema is a valid Zod object schema', () => {

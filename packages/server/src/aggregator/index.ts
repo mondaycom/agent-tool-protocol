@@ -313,4 +313,85 @@ export class APIAggregator {
 	getApiGroups(): string[] {
 		return this.apiGroups.map((g) => g.name);
 	}
+
+	/**
+	 * Generates a compact TypeScript definition for a single function.
+	 * Includes input types with inline descriptions and compact output type.
+	 * @param func - Function definition
+	 * @param groupName - API group name
+	 * @returns Compact TypeScript definition string
+	 */
+	generateCompactFunctionDefinition(func: CustomFunctionDef, groupName: string): string {
+		const groupPath = groupName.replace(/\//g, '.');
+		const inputType = this.generateCompactInputType(func.inputSchema);
+		const outputType = func.outputSchema
+			? this.generateCompactOutputType(func.outputSchema)
+			: 'unknown';
+		return `async function api.${groupPath}.${func.name}(${inputType}): Promise<${outputType}>`;
+	}
+
+	/**
+	 * Generates compact input type with inline descriptions
+	 */
+	private generateCompactInputType(schema?: {
+		properties?: Record<string, any>;
+		required?: string[];
+	}): string {
+		if (!schema || !schema.properties) {
+			return '{}';
+		}
+
+		const props: string[] = [];
+		const required = schema.required || [];
+
+		for (const [key, value] of Object.entries(schema.properties)) {
+			const prop = value as { type?: string; description?: string; enum?: any[] };
+			const isRequired = required.includes(key);
+			const tsType = prop.enum
+				? prop.enum.map((v: any) => `"${v}"`).join(' | ')
+				: this.jsonSchemaTypeToTS(prop.type ?? 'unknown');
+			const optional = isRequired ? '' : '?';
+
+			if (prop.description) {
+				const desc = prop.description.replace(/\n/g, ' ').substring(0, 100);
+				props.push(`/* ${desc} */ ${key}${optional}: ${tsType}`);
+			} else {
+				props.push(`${key}${optional}: ${tsType}`);
+			}
+		}
+
+		return `{ ${props.join('; ')} }`;
+	}
+
+	/**
+	 * Generates compact output type with inline descriptions (top-level fields only, limited count)
+	 */
+	private generateCompactOutputType(schema: { properties?: Record<string, any> }): string {
+		if (!schema.properties) {
+			return 'unknown';
+		}
+
+		const keys = Object.keys(schema.properties);
+		if (keys.length === 0) {
+			return 'unknown';
+		}
+
+		const maxFields = 6;
+		const displayKeys = keys.slice(0, maxFields);
+		const props = displayKeys.map((key) => {
+			const prop = schema.properties![key] as { type?: string; description?: string };
+			const tsType = this.jsonSchemaTypeToTS(prop.type ?? 'unknown');
+
+			if (prop.description) {
+				const desc = prop.description.replace(/\n/g, ' ').substring(0, 80);
+				return `/* ${desc} */ ${key}: ${tsType}`;
+			}
+			return `${key}: ${tsType}`;
+		});
+
+		if (keys.length > maxFields) {
+			return `{ ${props.join('; ')}; /* +${keys.length - maxFields} more */ }`;
+		}
+		return `{ ${props.join('; ')} }`;
+	}
 }

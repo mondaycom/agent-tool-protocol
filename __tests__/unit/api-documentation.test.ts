@@ -9,7 +9,7 @@
  */
 
 import { describe, test, expect, beforeAll } from '@jest/globals';
-import { AgentToolProtocolServer, createServer } from '@mondaydotcomorg/atp-server';
+import { createServer } from '@mondaydotcomorg/atp-server';
 import { AgentToolProtocolClient } from '@mondaydotcomorg/atp-client';
 import type { APIGroupDocumentation, ExploreResult } from '@mondaydotcomorg/atp-protocol';
 import { initializeCache, initializeLogger } from '@mondaydotcomorg/atp-runtime';
@@ -340,12 +340,13 @@ describe('API Documentation Feature', () => {
 			expect(func.type).toBe('function');
 		});
 
-		test('function should have definition and schema', async () => {
+		test('function should have definition with inline descriptions', async () => {
 			const func = await client.exploreAPI('/monday/query/boards');
 			expect(func.type).toBe('function');
 			if (func.type === 'function') {
 				expect(func.definition).toContain('query_boards');
-				expect((func as { inputSchema?: unknown }).inputSchema).toBeDefined();
+				expect(func.definition).toContain('async function api.');
+				expect(func.definition).toContain('Promise<');
 			}
 		});
 	});

@@ -4,6 +4,7 @@ import type {
 	CustomFunctionDef,
 } from '@mondaydotcomorg/atp-protocol';
 import { filterApiGroups } from '../core/request-scope.js';
+import { APIAggregator } from '../aggregator/index.js';
 
 interface TreeNode {
 	type: 'directory' | 'function';
@@ -31,8 +32,6 @@ interface ExploreFunctionResult {
 	description: string;
 	definition: string;
 	group: string;
-	inputSchema?: any;
-	outputSchema?: any;
 }
 
 export type ExploreResult = ExploreDirectoryResult | ExploreFunctionResult;
@@ -46,10 +45,12 @@ export class ExplorerService {
 	private root: TreeNode;
 	private apiGroups: APIGroupConfig[];
 	private apiGroupMap: Map<string, APIGroupConfig>;
+	private aggregator: APIAggregator;
 
 	constructor(apiGroups: APIGroupConfig[]) {
 		this.apiGroups = apiGroups;
 		this.apiGroupMap = new Map(apiGroups.map((group) => [group.name, group]));
+		this.aggregator = new APIAggregator(apiGroups);
 		this.root = { type: 'directory', name: '/', children: new Map() };
 		this.buildTree(apiGroups);
 	}
@@ -319,7 +320,7 @@ export class ExplorerService {
 				return null;
 			}
 
-			const definition = this.generateFunctionDefinition(func, group);
+			const definition = this.aggregator.generateCompactFunctionDefinition(func, group);
 
 			return {
 				type: 'function',
@@ -328,8 +329,6 @@ export class ExplorerService {
 				description: func.description,
 				definition,
 				group,
-				inputSchema: func.inputSchema,
-				outputSchema: func.outputSchema,
 			};
 		}
 	}
@@ -349,79 +348,5 @@ export class ExplorerService {
 		}
 
 		return path;
-	}
-
-	/**
-	 * Generates TypeScript function signature showing how to call the function.
-	 */
-	private generateFunctionDefinition(func: CustomFunctionDef, group: string): string {
-		const inputType = this.generateInputType(func.inputSchema);
-		const groupPath = group.replace(/\//g, '.');
-		const outputType = func.outputSchema ? this.generateOutputType(func.outputSchema) : 'unknown';
-		return `async function api.${groupPath}.${func.name}(${inputType}): Promise<${outputType}>`;
-	}
-
-	/**
-	 * Generates TypeScript type from JSON schema
-	 */
-	private generateInputType(schema?: {
-		properties?: Record<string, any>;
-		required?: string[];
-	}): string {
-		if (!schema || !schema.properties) {
-			return '{}';
-		}
-
-		const props: string[] = [];
-		const required = schema.required || [];
-
-		for (const [key, value] of Object.entries(schema.properties)) {
-			const isRequired = required.includes(key);
-			const prop = value as { type?: string; description?: string };
-			const tsType = this.jsonSchemaTypeToTS(prop.type ?? 'any');
-			const optional = isRequired ? '' : '?';
-			props.push(`${key}${optional}: ${tsType}`);
-		}
-
-		return `{ ${props.join('; ')} }`;
-	}
-
-	/**
-	 * Generates output type from JSON schema
-	 */
-	private generateOutputType(schema: { properties?: Record<string, any> }): string {
-		if (!schema.properties) {
-			return 'unknown';
-		}
-
-		const props: string[] = [];
-		for (const [key, value] of Object.entries(schema.properties)) {
-			const prop = value as { type?: string };
-			const tsType = this.jsonSchemaTypeToTS(prop.type ?? 'any');
-			props.push(`${key}: ${tsType}`);
-		}
-
-		return `{ ${props.join('; ')} }`;
-	}
-
-	/**
-	 * Converts JSON Schema type to TypeScript type
-	 */
-	private jsonSchemaTypeToTS(type: string): string {
-		switch (type) {
-			case 'string':
-				return 'string';
-			case 'number':
-			case 'integer':
-				return 'number';
-			case 'boolean':
-				return 'boolean';
-			case 'array':
-				return 'any[]';
-			case 'object':
-				return 'Record<string, any>';
-			default:
-				return 'any';
-		}
 	}
 }

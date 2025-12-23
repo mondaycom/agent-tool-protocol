@@ -300,23 +300,25 @@ describe('ATP Server Explorer - Filesystem-like API navigation', () => {
 			const tools = require('@mondaydotcomorg/atp-client').createToolsFromATPClient(client);
 			const exploreApiTool = tools.find((t: any) => t.name === 'explore_api');
 
-			const result = await exploreApiTool.func({ path: '/' });
+			const result = await exploreApiTool.func({ paths: '/' });
 			const parsed = JSON.parse(result);
 
-			expect(parsed.success).toBe(true);
-			expect(parsed.type).toBe('directory');
-			expect(parsed.items).toBeDefined();
+			expect(Array.isArray(parsed)).toBe(true);
+			expect(parsed[0].success).toBe(true);
+			expect(parsed[0].type).toBe('directory');
+			expect(parsed[0].items).toBeDefined();
 		});
 
 		test('explore_api tool should handle errors gracefully', async () => {
 			const tools = require('@mondaydotcomorg/atp-client').createToolsFromATPClient(client);
 			const exploreApiTool = tools.find((t: any) => t.name === 'explore_api');
 
-			const result = await exploreApiTool.func({ path: '/invalid/path' });
+			const result = await exploreApiTool.func({ paths: '/invalid/path' });
 			const parsed = JSON.parse(result);
 
-			expect(parsed.success).toBe(false);
-			expect(parsed.error).toBeDefined();
+			expect(Array.isArray(parsed)).toBe(true);
+			expect(parsed[0].success).toBe(false);
+			expect(parsed[0].error).toBeDefined();
 		});
 	});
 
