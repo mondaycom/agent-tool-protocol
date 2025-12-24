@@ -54,10 +54,11 @@ export async function createATPTools(options: CreateATPToolsOptions): Promise<AT
 						error: 'Execution in unexpected state: ' + result.status,
 					};
 				}
-			} catch (error: any) {
+			} catch (error: unknown) {
+				const message = error instanceof Error ? error.message : String(error);
 				return {
 					success: false,
-					error: error.message || 'Unknown error',
+					error: message || 'Unknown error',
 				};
 			}
 		},
@@ -65,23 +66,24 @@ export async function createATPTools(options: CreateATPToolsOptions): Promise<AT
 
 	vercelTools.atp_explore_api = tool({
 		description:
-			'Explore APIs using filesystem-like navigation. Navigate through directories to discover available functions.',
+			'Explore APIs using filesystem-like navigation. Navigate through directories to discover available functions. Accepts a single path string or array of paths.',
 		inputSchema: TOOL_SCHEMAS[ToolNames.EXPLORE_API],
-		execute: async ({ path }: { path: string }) => {
-			try {
-				const result = await underlyingClient.exploreAPI(path, {
-					toolRules: defaultExecutionConfig?.toolRules,
-				});
-				return {
-					success: true,
-					result,
-				};
-			} catch (error: any) {
-				return {
-					success: false,
-					error: error.message,
-				};
-			}
+		execute: async ({ paths }: { paths: string | string[] }) => {
+			const pathsToExplore = Array.isArray(paths) ? paths : [paths];
+			const results = await Promise.all(
+				pathsToExplore.map(async (path) => {
+					try {
+						const result = await underlyingClient.exploreAPI(path, {
+							toolRules: defaultExecutionConfig?.toolRules,
+						});
+						return { success: true, path, result };
+					} catch (error: unknown) {
+						const message = error instanceof Error ? error.message : String(error);
+						return { success: false, path, error: message };
+					}
+				})
+			);
+			return results;
 		},
 	});
 
@@ -105,10 +107,11 @@ export async function createATPTools(options: CreateATPToolsOptions): Promise<AT
 					})),
 					count: results.length,
 				};
-			} catch (error: any) {
+			} catch (error: unknown) {
+				const message = error instanceof Error ? error.message : String(error);
 				return {
 					success: false,
-					error: error.message,
+					error: message,
 				};
 			}
 		},
@@ -125,10 +128,11 @@ export async function createATPTools(options: CreateATPToolsOptions): Promise<AT
 					success: true,
 					types,
 				};
-			} catch (error: any) {
+			} catch (error: unknown) {
+				const message = error instanceof Error ? error.message : String(error);
 				return {
 					success: false,
-					error: error.message,
+					error: message,
 				};
 			}
 		},
@@ -209,10 +213,11 @@ export async function createATPStreamingTools(
 						error: 'Execution in unexpected state: ' + result.status,
 					};
 				}
-			} catch (error: any) {
+			} catch (error: unknown) {
+				const message = error instanceof Error ? error.message : String(error);
 				return {
 					success: false,
-					error: error.message || 'Unknown error',
+					error: message || 'Unknown error',
 				};
 			}
 		},
@@ -220,23 +225,24 @@ export async function createATPStreamingTools(
 
 	vercelTools.atp_explore_api = tool({
 		description:
-			'Explore APIs using filesystem-like navigation. Navigate through directories to discover available functions.',
+			'Explore APIs using filesystem-like navigation. Navigate through directories to discover available functions. Accepts a single path string or array of paths.',
 		inputSchema: TOOL_SCHEMAS[ToolNames.EXPLORE_API],
-		execute: async ({ path }: { path: string }) => {
-			try {
-				const result = await underlyingClient.exploreAPI(path, {
-					toolRules: defaultExecutionConfig?.toolRules,
-				});
-				return {
-					success: true,
-					result,
-				};
-			} catch (error: any) {
-				return {
-					success: false,
-					error: error.message,
-				};
-			}
+		execute: async ({ paths }: { paths: string | string[] }) => {
+			const pathsToExplore = Array.isArray(paths) ? paths : [paths];
+			const results = await Promise.all(
+				pathsToExplore.map(async (path) => {
+					try {
+						const result = await underlyingClient.exploreAPI(path, {
+							toolRules: defaultExecutionConfig?.toolRules,
+						});
+						return { success: true, path, result };
+					} catch (error: unknown) {
+						const message = error instanceof Error ? error.message : String(error);
+						return { success: false, path, error: message };
+					}
+				})
+			);
+			return results;
 		},
 	});
 
@@ -260,10 +266,11 @@ export async function createATPStreamingTools(
 					})),
 					count: results.length,
 				};
-			} catch (error: any) {
+			} catch (error: unknown) {
+				const message = error instanceof Error ? error.message : String(error);
 				return {
 					success: false,
-					error: error.message,
+					error: message,
 				};
 			}
 		},
@@ -280,10 +287,11 @@ export async function createATPStreamingTools(
 					success: true,
 					types,
 				};
-			} catch (error: any) {
+			} catch (error: unknown) {
+				const message = error instanceof Error ? error.message : String(error);
 				return {
 					success: false,
-					error: error.message,
+					error: message,
 				};
 			}
 		},
