@@ -130,7 +130,7 @@ return { results, count: results.length };
 		let callCount = 0;
 
 		client.provideLLM({
-			call: async (prompt: string) => {
+			call: async (_prompt: string) => {
 				callCount++;
 				return `Summary for item ${callCount}`;
 			},
@@ -168,6 +168,65 @@ return { results, count: results.length };
 		expect(results[0]).toHaveProperty('summary');
 
 		console.log(`✅ Shorthand properties work correctly`);
+	}, 180000);
+
+	test('should BATCH LLM calls while preserving object structure', async () => {
+		let callCount = 0;
+		const callTimes: number[] = [];
+
+		client.provideLLM({
+			call: async (prompt: string) => {
+				callCount++;
+				callTimes.push(Date.now());
+				await new Promise(resolve => setTimeout(resolve, 50));
+				return `Summary for: ${prompt.substring(0, 20)}`;
+			},
+		});
+
+		const code = `
+const items = [
+  { id: 1, subject: 'Email A', snippet: 'Content A about meetings' },
+  { id: 2, subject: 'Email B', snippet: 'Content B about projects' },
+  { id: 3, subject: 'Email C', snippet: 'Content C about reviews' }
+];
+
+const results = await Promise.all(
+  items.map(async (item) => {
+    const subject = item.subject;
+    const id = item.id;
+    const summary = await atp.llm.call({ prompt: item.snippet });
+    return { id, subject, summary };
+  })
+);
+
+return { results, count: results.length };
+		`;
+
+		console.log('[TEST] Starting batch LLM with object preservation test...');
+		const startTime = Date.now();
+		const result = await client.execute(code);
+		const duration = Date.now() - startTime;
+
+		console.log('[TEST] Result:', JSON.stringify(result, null, 2));
+		console.log(`[TEST] Total duration: ${duration}ms, LLM calls: ${callCount}`);
+
+		expect(result.status).toBe('completed');
+		expect(result.result).toHaveProperty('count', 3);
+		expect(result.result).toHaveProperty('results');
+		
+		const results = (result.result as any).results;
+		expect(Array.isArray(results)).toBe(true);
+		
+		// Verify object structure is preserved
+		expect(results[0]).toHaveProperty('id', 1);
+		expect(results[0]).toHaveProperty('subject', 'Email A');
+		expect(results[0]).toHaveProperty('summary');
+		expect(typeof results[0].summary).toBe('string');
+
+		// Verify all 3 LLM calls were made
+		expect(callCount).toBe(3);
+
+		console.log(`✅ Batch LLM with object preservation works!`);
 	}, 180000);
 
 	test('should handle errors in atp.llm.call()', async () => {
