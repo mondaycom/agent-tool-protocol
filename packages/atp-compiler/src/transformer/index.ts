@@ -171,5 +171,6 @@ export * from './batch-detector.js';
 export * from './batch-optimizer.js';
 export * from './loop-transformer.js';
 export * from './array-transformer.js';
+export * from './array-transformer-batch-reconstruct.js';
 export * from './promise-transformer.js';
 export * from './utils.js';

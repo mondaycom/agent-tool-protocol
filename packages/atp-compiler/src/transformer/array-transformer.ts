@@ -1,9 +1,14 @@
 import * as t from '@babel/types';
 import { BatchOptimizer } from './batch-optimizer.js';
 import { BatchParallelDetector } from './batch-detector.js';
-import { getArrayMethodName, canUseBatchParallel } from './array-transformer-utils.js';
+import {
+	getArrayMethodName,
+	canUseBatchParallel,
+	findLLMCallExpression,
+} from './array-transformer-utils.js';
 import { transformToBatchParallel } from './array-transformer-batch.js';
 import { transformToSequential } from './array-transformer-sequential.js';
+import { transformToBatchWithReconstruction } from './array-transformer-batch-reconstruct.js';
 
 export class ArrayTransformer {
 	private transformCount = 0;
@@ -31,6 +36,29 @@ export class ArrayTransformer {
 		}
 
 		const batchResult = this.batchOptimizer.canBatchArrayMethod(callback);
+
+		if (!batchResult.canBatch && methodName === 'map') {
+			const reason = batchResult.reason || '';
+			const hasObjectOrArrayReturn =
+				reason.includes('object expression') || reason.includes('array expression');
+
+			if (hasObjectOrArrayReturn) {
+				const llmCall = findLLMCallExpression(callback.body);
+				if (llmCall) {
+					const success = transformToBatchWithReconstruction(
+						path,
+						node,
+						methodName,
+						callback,
+						this.batchDetector,
+						() => this.transformCount++
+					);
+					if (success) {
+						return true;
+					}
+				}
+			}
+		}
 
 		if (batchResult.canBatch && canUseBatchParallel(methodName)) {
 			const array = (node.callee as t.MemberExpression).object;
