@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-vercel-sdk",
-	"version": "0.21.0",
+	"version": "0.21.1",
 	"description": "Vercel AI SDK integration for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.cjs",
@@ -44,8 +44,8 @@
 	],
 	"license": "MIT",
 	"dependencies": {
-		"@mondaydotcomorg/atp-client": "0.20.0",
-		"@mondaydotcomorg/atp-protocol": "0.19.19"
+		"@mondaydotcomorg/atp-client": "0.20.1",
+		"@mondaydotcomorg/atp-protocol": "0.19.20"
 	},
 	"peerDependencies": {
 		"ai": "^5.0.0",
