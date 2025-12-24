@@ -10,7 +10,7 @@ import { findLLMCallExpression } from './array-transformer-utils.js';
  * 
  * This creates a two-step transformation:
  * 1. Batch all LLM calls in parallel
- * 2. Reconstruct objects using the batched results
+ * 2. Reconstruct objects using the batched results 
  */
 export function transformToBatchWithReconstruction(
 	path: any,

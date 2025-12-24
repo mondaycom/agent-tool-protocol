@@ -11,7 +11,7 @@ const TEST_PORT = 3345;
 
 describe('ATP LLM Callbacks E2E', () => {
 	let client: AgentToolProtocolClient;
-	let server: AgentToolProtocolServer;
+	let server: InstanceType<typeof AgentToolProtocolServer>;
 
 	beforeAll(async () => {
 		process.env.ATP_JWT_SECRET = 'test-secret-llm-callbacks';
@@ -147,7 +147,7 @@ const results = await Promise.all(
   items.map(async (item) => {
     const subject = item.subject;
     const summary = await atp.llm.call({ prompt: \`Summarize: \${item.snippet}\` });
-    return { subject, summary };  // Shorthand property syntax
+    return { subject, summary };
   })
 );
 
