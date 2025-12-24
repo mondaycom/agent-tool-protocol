@@ -126,6 +126,50 @@ return { results, count: results.length };
 		console.log(`✅ Promise.all with 3 LLM calls completed`);
 	}, 180000);
 
+	test('should handle Promise.all with map() and shorthand properties', async () => {
+		let callCount = 0;
+
+		client.provideLLM({
+			call: async (prompt: string) => {
+				callCount++;
+				return `Summary for item ${callCount}`;
+			},
+		});
+
+		const code = `
+const items = [
+  { id: 1, subject: 'Email A', snippet: 'Content A' },
+  { id: 2, subject: 'Email B', snippet: 'Content B' },
+  { id: 3, subject: 'Email C', snippet: 'Content C' }
+];
+
+const results = await Promise.all(
+  items.map(async (item) => {
+    const subject = item.subject;
+    const summary = await atp.llm.call({ prompt: \`Summarize: \${item.snippet}\` });
+    return { subject, summary };  // Shorthand property syntax
+  })
+);
+
+return { results, count: results.length };
+		`;
+
+		console.log('[TEST] Starting shorthand property test...');
+		const result = await client.execute(code);
+
+		console.log('[TEST] Result:', JSON.stringify(result, null, 2));
+
+		expect(result.status).toBe('completed');
+		expect(result.result).toHaveProperty('count', 3);
+		expect(result.result).toHaveProperty('results');
+		const results = (result.result as any).results;
+		expect(Array.isArray(results)).toBe(true);
+		expect(results[0]).toHaveProperty('subject', 'Email A');
+		expect(results[0]).toHaveProperty('summary');
+
+		console.log(`✅ Shorthand properties work correctly`);
+	}, 180000);
+
 	test('should handle errors in atp.llm.call()', async () => {
 		client.provideLLM({
 			call: async (prompt: string) => {

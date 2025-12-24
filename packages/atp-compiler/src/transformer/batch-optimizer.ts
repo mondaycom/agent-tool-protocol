@@ -98,6 +98,22 @@ export class BatchOptimizer {
 			};
 		}
 
+		const lastStmt = statements[statements.length - 1];
+		if (t.isReturnStatement(lastStmt) && lastStmt.argument) {
+			if (t.isObjectExpression(lastStmt.argument)) {
+				return {
+					canBatch: false,
+					reason: 'Return statement is object expression - batch would lose structure',
+				};
+			}
+			if (t.isArrayExpression(lastStmt.argument)) {
+				return {
+					canBatch: false,
+					reason: 'Return statement is array expression - batch would lose structure',
+				};
+			}
+		}
+
 		return { canBatch: true, llmCallPattern: 'single', hasConditionals: false };
 	}
 
