@@ -1,23 +1,31 @@
 import * as t from '@babel/types';
 import { isArrayMethod } from './utils.js';
+import type { BatchParallelDetector } from './batch-detector.js';
+import type { BatchCallInfo } from '../types.js';
+
+export interface LLMCallInfo {
+	callNode: t.CallExpression;
+	callInfo: BatchCallInfo;
+	payloadNode: t.Expression;
+	// Unique key for grouping: "type:operation"
+	key: string;
+}
 
 /**
- * Find LLM call expression in AST node
+ * Find all awaited member expression calls in AST node
  */
-export function findLLMCallExpression(body: t.Node): t.CallExpression | null {
-	let found: t.CallExpression | null = null;
+function findAllAwaitedMemberCalls(body: t.Node): t.CallExpression[] {
+	const calls: t.CallExpression[] = [];
 
 	const visit = (node: t.Node) => {
-		if (found) return;
-
 		if (t.isAwaitExpression(node) && t.isCallExpression(node.argument)) {
 			const call = node.argument;
 			if (t.isMemberExpression(call.callee)) {
-				found = call;
-				return;
+				calls.push(call);
 			}
 		}
 
+		// Continue traversing
 		Object.keys(node).forEach((key) => {
 			const value = (node as any)[key];
 			if (Array.isArray(value)) {
@@ -33,7 +41,42 @@ export function findLLMCallExpression(body: t.Node): t.CallExpression | null {
 	};
 
 	visit(body);
-	return found;
+	return calls;
+}
+
+/**
+ * Find ALL LLM call expressions in AST node with batch info
+ */
+export function findAllLLMCallExpressions(
+	body: t.Node,
+	batchDetector: BatchParallelDetector
+): LLMCallInfo[] {
+	const allCalls = findAllAwaitedMemberCalls(body);
+	const llmCalls: LLMCallInfo[] = [];
+
+	for (const call of allCalls) {
+		const callInfo = batchDetector.extractCallInfo(call);
+		const payloadNode = batchDetector.extractPayloadNode(call);
+
+		if (callInfo && payloadNode) {
+			llmCalls.push({
+				callNode: call,
+				callInfo,
+				payloadNode,
+				key: `${callInfo.type}:${callInfo.operation}`,
+			});
+		}
+	}
+
+	return llmCalls;
+}
+
+/**
+ * Find first LLM call expression in AST node
+ */
+export function findLLMCallExpression(body: t.Node): t.CallExpression | null {
+	const calls = findAllAwaitedMemberCalls(body);
+	return calls[0] ?? null;
 }
 
 /**

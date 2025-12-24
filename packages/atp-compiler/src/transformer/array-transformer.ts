@@ -36,13 +36,17 @@ export class ArrayTransformer {
 		}
 
 		const batchResult = this.batchOptimizer.canBatchArrayMethod(callback);
-
 		if (!batchResult.canBatch && methodName === 'map') {
 			const reason = batchResult.reason || '';
-			const hasObjectOrArrayReturn =
-				reason.includes('object expression') || reason.includes('array expression');
+			// Try batch-with-reconstruction for:
+			// 1. Object/array returns (would lose structure with simple batch)
+			// 2. Multiple pausable calls (can batch each call type separately)
+			const canTryBatchReconstruct =
+				reason.includes('object expression') ||
+				reason.includes('array expression') ||
+				reason.includes('Multiple pausable calls');
 
-			if (hasObjectOrArrayReturn) {
+			if (canTryBatchReconstruct) {
 				const llmCall = findLLMCallExpression(callback.body);
 				if (llmCall) {
 					const success = transformToBatchWithReconstruction(

@@ -229,6 +229,94 @@ return { results, count: results.length };
 		console.log(`✅ Batch LLM with object preservation works!`);
 	}, 180000);
 
+	test('should handle multiple LLM calls per map callback (batch_reconstruct)', async () => {
+		let callCount = 0;
+		const callLog: string[] = [];
+
+		client.provideLLM({
+			call: async (prompt: string) => {
+				callCount++;
+				callLog.push(prompt);
+				// Return different results based on prompt type
+				if (prompt.includes('title')) {
+					return `Title: ${prompt.split('for ')[1] || 'Unknown'}`;
+				}
+				if (prompt.includes('summary')) {
+					return `Summary: ${prompt.split('of ')[1] || 'Unknown'}`;
+				}
+				return `Response ${callCount}`;
+			},
+		});
+
+		const code = `
+const items = [
+  { id: 1, name: 'Alpha', content: 'Alpha content here' },
+  { id: 2, name: 'Beta', content: 'Beta content here' },
+  { id: 3, name: 'Gamma', content: 'Gamma content here' }
+];
+
+const results = await Promise.all(
+  items.map(async (item) => {
+    const title = await atp.llm.call({ prompt: 'Generate title for ' + item.name });
+    const summary = await atp.llm.call({ prompt: 'Generate summary of ' + item.content });
+    return { id: item.id, title, summary };
+  })
+);
+
+return { results, count: results.length };
+		`;
+
+		console.log('[TEST] Starting multiple LLM calls per callback test...');
+		const result = await client.execute(code);
+
+		console.log('[TEST] Result:', JSON.stringify(result, null, 2));
+		console.log('[TEST] Call log:', callLog);
+
+		expect(result.status).toBe('completed');
+		expect(result.result).toHaveProperty('count', 3);
+		expect(result.result).toHaveProperty('results');
+
+		const results = (result.result as any).results;
+		expect(Array.isArray(results)).toBe(true);
+		expect(results).toHaveLength(3);
+
+		// Verify each result has both title and summary from separate LLM calls
+		for (let i = 0; i < results.length; i++) {
+			expect(results[i]).toHaveProperty('id');
+			expect(results[i]).toHaveProperty('title');
+			expect(results[i]).toHaveProperty('summary');
+			expect(typeof results[i].title).toBe('string');
+			expect(typeof results[i].summary).toBe('string');
+		}
+
+		// Verify all 6 LLM calls were made (2 per item × 3 items)
+		expect(callCount).toBe(6);
+
+		// Verify batch_reconstruct transformation was applied by checking call order pattern
+		// With batch_reconstruct, calls are grouped by type:
+		// - First batch: all 3 title calls (indices 0, 1, 2)
+		// - Second batch: all 3 summary calls (indices 3, 4, 5)
+		console.log('[TEST] Verifying call grouping pattern for batch_reconstruct...');
+
+		// Check that the first 3 calls are all "title" calls
+		const titleCalls = callLog.slice(0, 3);
+		expect(titleCalls.every((c) => c.includes('title'))).toBe(true);
+
+		// Check that the next 3 calls are all "summary" calls
+		const summaryCalls = callLog.slice(3, 6);
+		expect(summaryCalls.every((c) => c.includes('summary'))).toBe(true);
+
+		// Verify the correct order within each batch (Alpha, Beta, Gamma)
+		expect(titleCalls[0]).toContain('Alpha');
+		expect(titleCalls[1]).toContain('Beta');
+		expect(titleCalls[2]).toContain('Gamma');
+		expect(summaryCalls[0]).toContain('Alpha');
+		expect(summaryCalls[1]).toContain('Beta');
+		expect(summaryCalls[2]).toContain('Gamma');
+
+		console.log(`✅ Multiple LLM calls per callback with batch_reconstruct works correctly`);
+	}, 180000);
+
 	test('should handle errors in atp.llm.call()', async () => {
 		client.provideLLM({
 			call: async (prompt: string) => {
