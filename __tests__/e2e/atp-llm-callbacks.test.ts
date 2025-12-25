@@ -317,6 +317,95 @@ return { results, count: results.length };
 		console.log(`✅ Multiple LLM calls per callback with batch_reconstruct works correctly`);
 	}, 180000);
 
+	test('should handle dependent LLM calls in map (no batch optimization)', async () => {
+		// When an LLM call depends on the result of a previous LLM call,
+		// batchParallel cannot optimize (can't batch calls that depend on each other).
+		// This test verifies the code still runs correctly with sequential execution.
+		let callCount = 0;
+		const callLog: string[] = [];
+
+		client.provideLLM({
+			call: async (prompt: string) => {
+				callCount++;
+				callLog.push(prompt);
+				// First call generates a title
+				if (prompt.includes('Generate title')) {
+					const name = prompt.split('for ')[1] || 'Unknown';
+					return `Title: ${name}`;
+				}
+				// Second call uses the title from the first call
+				if (prompt.includes('Summarize')) {
+					// Extract the title that was passed in the prompt
+					const match = prompt.match(/titled "(.*?)"/);
+					const title = match ? match[1] : 'no title';
+					return `Summary of ${title}`;
+				}
+				return `Response ${callCount}`;
+			},
+		});
+
+		const code = `
+const items = [
+  { id: 1, name: 'Alpha', content: 'Alpha content here' },
+  { id: 2, name: 'Beta', content: 'Beta content here' },
+  { id: 3, name: 'Gamma', content: 'Gamma content here' }
+];
+
+const results = await Promise.all(
+  items.map(async (item) => {
+    // First LLM call to generate title
+    const title = await atp.llm.call({ prompt: 'Generate title for ' + item.name });
+    // Second LLM call DEPENDS on the title from the first call
+    const summary = await atp.llm.call({ prompt: 'Summarize ' + item.content + ' titled "' + title + '"' });
+    return { id: item.id, title, summary };
+  })
+);
+
+return { results, count: results.length };
+		`;
+
+		console.log('[TEST] Starting dependent LLM calls test (no batch optimization)...');
+		const result = await client.execute(code);
+
+		console.log('[TEST] Result:', JSON.stringify(result, null, 2));
+		console.log('[TEST] Call log:', callLog);
+
+		expect(result.status).toBe('completed');
+		expect(result.result).toHaveProperty('count', 3);
+		expect(result.result).toHaveProperty('results');
+
+		const results = (result.result as any).results;
+		expect(Array.isArray(results)).toBe(true);
+		expect(results).toHaveLength(3);
+
+		// Verify each result has both title and summary
+		for (let i = 0; i < results.length; i++) {
+			expect(results[i]).toHaveProperty('id');
+			expect(results[i]).toHaveProperty('title');
+			expect(results[i]).toHaveProperty('summary');
+			expect(typeof results[i].title).toBe('string');
+			expect(typeof results[i].summary).toBe('string');
+		}
+
+		// Verify all 6 LLM calls were made (2 per item × 3 items)
+		expect(callCount).toBe(6);
+
+		// Verify the summary calls received the title from the first call
+		// This proves the dependency was correctly handled (sequential execution)
+		expect(results[0].summary).toContain('Title: Alpha');
+		expect(results[1].summary).toContain('Title: Beta');
+		expect(results[2].summary).toContain('Title: Gamma');
+
+		// Without batch optimization, calls should be interleaved per item:
+		// title-Alpha, summary-Alpha (with title), title-Beta, summary-Beta (with title), etc.
+		// OR Promise.all may run them in parallel per-item, so order within each item is preserved
+		// but items may interleave. The key is that each summary contains the correct title.
+		console.log('[TEST] Call order (should show dependency preservation):');
+		callLog.forEach((c, i) => console.log(`  ${i + 1}. ${c}`));
+
+		console.log(`✅ Dependent LLM calls handled correctly without batch optimization`);
+	}, 180000);
+
 	test('should handle errors in atp.llm.call()', async () => {
 		client.provideLLM({
 			call: async (prompt: string) => {
