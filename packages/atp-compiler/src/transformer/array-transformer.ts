@@ -5,6 +5,7 @@ import {
 	getArrayMethodName,
 	canUseBatchParallel,
 	findLLMCallExpression,
+	hasLLMCallDependencies,
 } from './array-transformer-utils.js';
 import { transformToBatchParallel } from './array-transformer-batch.js';
 import { transformToSequential } from './array-transformer-sequential.js';
@@ -36,15 +37,29 @@ export class ArrayTransformer {
 		}
 
 		const batchResult = this.batchOptimizer.canBatchArrayMethod(callback);
-
 		if (!batchResult.canBatch && methodName === 'map') {
 			const reason = batchResult.reason || '';
-			const hasObjectOrArrayReturn =
-				reason.includes('object expression') || reason.includes('array expression');
+			// Try batch-with-reconstruction for:
+			// 1. Object/array returns (would lose structure with simple batch)
+			// 2. Multiple pausable calls (can batch each call type separately)
+			const canTryBatchReconstruct =
+				reason.includes('object expression') ||
+				reason.includes('array expression') ||
+				reason.includes('Multiple pausable calls');
 
-			if (hasObjectOrArrayReturn) {
+			if (canTryBatchReconstruct) {
 				const llmCall = findLLMCallExpression(callback.body);
-				if (llmCall) {
+				// Get the item parameter name (e.g., "item" in items.map(async (item) => ...))
+				const itemParam = callback.params[0];
+				const itemParamName = t.isIdentifier(itemParam) ? itemParam.name : undefined;
+				// Check for dependencies on local variables (e.g., computed values, previous LLM results)
+				// If dependencies exist, we can't batch because payload mapper only has access to item + outer scope
+				const hasDependencies = hasLLMCallDependencies(
+					callback.body,
+					this.batchDetector,
+					itemParamName
+				);
+				if (llmCall && !hasDependencies) {
 					const success = transformToBatchWithReconstruction(
 						path,
 						node,
