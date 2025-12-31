@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-compiler",
-	"version": "0.19.24",
+	"version": "0.19.25",
 	"description": "Production-ready compiler for transforming async iteration patterns into resumable operations with checkpoint-based state management",
 	"type": "module",
 	"main": "dist/index.cjs",
