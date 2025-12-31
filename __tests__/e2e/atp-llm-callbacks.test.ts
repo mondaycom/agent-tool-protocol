@@ -229,6 +229,61 @@ return { results, count: results.length };
 		console.log(`✅ Batch LLM with object preservation works!`);
 	}, 180000);
 
+	test('should handle map callback with index parameter', async () => {
+		let callCount = 0;
+
+		client.provideLLM({
+			call: async (prompt: string) => {
+				callCount++;
+				return `Result for: ${prompt}`;
+			},
+		});
+
+		const code = `
+const items = ["a", "b", "c"];
+
+const results = await Promise.all(
+  items.map(async (item, idx) => {
+    const llmResult = await atp.llm.call({ prompt: item });
+    return { index: idx, value: item.toUpperCase(), llmResult };
+  })
+);
+
+return results;
+		`;
+
+		console.log('[TEST] Starting map callback with index parameter test...');
+		const result = await client.execute(code);
+
+		console.log('[TEST] Result:', JSON.stringify(result, null, 2));
+
+		expect(result.status).toBe('completed');
+		expect(result.result).toHaveLength(3);
+
+		const results = result.result as any[];
+
+		// Verify index parameter is preserved correctly
+		expect(results[0]).toEqual({
+			index: 0,
+			value: 'A',
+			llmResult: 'Result for: a',
+		});
+		expect(results[1]).toEqual({
+			index: 1,
+			value: 'B',
+			llmResult: 'Result for: b',
+		});
+		expect(results[2]).toEqual({
+			index: 2,
+			value: 'C',
+			llmResult: 'Result for: c',
+		});
+
+		expect(callCount).toBe(3);
+
+		console.log(`✅ Map callback with index parameter works correctly`);
+	}, 180000);
+
 	test('should handle multiple LLM calls per map callback (batch_reconstruct)', async () => {
 		let callCount = 0;
 		const callLog: string[] = [];

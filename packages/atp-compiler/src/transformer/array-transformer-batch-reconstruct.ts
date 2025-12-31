@@ -39,7 +39,10 @@ export function transformToBatchWithReconstruction(
 	}
 
 	const methodId = generateUniqueId(`${methodName}_batch_reconstruct`);
-	const indexVar = '__idx';
+
+	const originalIndexParam = callback.params[1];
+	const indexVar =
+		originalIndexParam && t.isIdentifier(originalIndexParam) ? originalIndexParam.name : '__idx';
 
 	// Create batch declarations - one per LLM call (in order of appearance)
 	// This ensures each call gets its own result array
