@@ -84,17 +84,7 @@ interface BaseClientOptions {
 	tools?: ClientTool[];
 	approvalHandler?: ApprovalHandler;
 	hooks?: ClientHooks;
-	/**
-	 * Optional custom implementation of generateText function.
-	 * If not provided, the default implementation from 'ai' package will be used.
-	 * Must match the GenerateTextFunction signature.
-	 */
 	generateTextFn?: GenerateTextFunction;
-	/**
-	 * Optional custom implementation of generateObject function.
-	 * If not provided, the default implementation from 'ai' package will be used.
-	 * Must match the GenerateObjectFunction signature.
-	 */
 	generateObjectFn?: GenerateObjectFunction;
 }
 
