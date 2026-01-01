@@ -16,4 +16,10 @@ export type {
 	ApprovalRequest,
 	ApprovalResponse,
 	EmbeddingProvider,
+	GenerateTextFunction,
+	GenerateTextOptions,
+	GenerateTextResult,
+	GenerateObjectFunction,
+	GenerateObjectOptions,
+	GenerateObjectResult,
 } from './types.js';
