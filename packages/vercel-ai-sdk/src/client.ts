@@ -25,8 +25,8 @@ export class VercelAIATPClient {
 			tools,
 			approvalHandler,
 			hooks,
-			generateTextFn,
-			generateObjectFn,
+			generateTextFn = generateText,
+			generateObjectFn = generateObject,
 		} = options;
 
 		if ('server' in options && options.server) {
@@ -49,19 +49,8 @@ export class VercelAIATPClient {
 		this.model = model;
 		this.embeddings = embeddings;
 		this.approvalHandler = approvalHandler;
-
-		// Use provided functions or fallback to defaults from 'ai' package
-		this.generateTextFn =
-			generateTextFn ||
-			(async (options) => {
-				return await generateText(options);
-			});
-
-		this.generateObjectFn =
-			generateObjectFn ||
-			(async (options) => {
-				return await generateObject(options);
-			});
+		this.generateTextFn = generateTextFn;
+		this.generateObjectFn = generateObjectFn;
 
 		this.client.provideLLM({
 			call: async (prompt: string, options?: any) => {
