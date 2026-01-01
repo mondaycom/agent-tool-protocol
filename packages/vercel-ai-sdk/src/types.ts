@@ -1,6 +1,7 @@
 import type { ExecutionConfig, ClientTool } from '@mondaydotcomorg/atp-protocol';
 import type { ClientHooks } from '@mondaydotcomorg/atp-client';
 import type { UIMessageStreamWriter } from './event-adapter.js';
+import type { generateText, generateObject } from 'ai';
 
 export interface ApprovalRequest {
 	message: string;
@@ -23,6 +24,48 @@ export interface EmbeddingProvider {
 	embed(text: string): Promise<number[]>;
 }
 
+/**
+ * Options for generateText function - uses the full parameter type from Vercel AI SDK
+ * This allows consumers to pass any valid options that generateText accepts
+ */
+export type GenerateTextOptions = Parameters<typeof generateText>[0];
+
+/**
+ * Result from generateText function - uses the full return type from Vercel AI SDK
+ * This ensures type compatibility with the actual generateText function
+ */
+export type GenerateTextResult = Awaited<ReturnType<typeof generateText>>;
+
+/**
+ * Type signature for generateText function from Vercel AI SDK
+ * Consumers can provide their own implementation that matches this signature
+ * The function accepts the full options type and returns the full result type
+ */
+export type GenerateTextFunction = (
+	options: GenerateTextOptions
+) => Promise<GenerateTextResult>;
+
+/**
+ * Options for generateObject function - uses the full parameter type from Vercel AI SDK
+ * This allows consumers to pass any valid options that generateObject accepts
+ */
+export type GenerateObjectOptions = Parameters<typeof generateObject>[0];
+
+/**
+ * Result from generateObject function - uses the full return type from Vercel AI SDK
+ * This ensures type compatibility with the actual generateObject function
+ */
+export type GenerateObjectResult = Awaited<ReturnType<typeof generateObject>>;
+
+/**
+ * Type signature for generateObject function from Vercel AI SDK
+ * Consumers can provide their own implementation that matches this signature
+ * The function accepts the full options type and returns the full result type
+ */
+export type GenerateObjectFunction = (
+	options: GenerateObjectOptions
+) => Promise<GenerateObjectResult>;
+
 export interface InProcessServer {
 	start(): Promise<void>;
 	handleInit(ctx: unknown): Promise<unknown>;
@@ -41,6 +84,8 @@ interface BaseClientOptions {
 	tools?: ClientTool[];
 	approvalHandler?: ApprovalHandler;
 	hooks?: ClientHooks;
+	generateTextFn?: GenerateTextFunction;
+	generateObjectFn?: GenerateObjectFunction;
 }
 
 /** HTTP mode options */

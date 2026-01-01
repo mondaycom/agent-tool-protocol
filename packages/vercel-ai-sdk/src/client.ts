@@ -6,6 +6,8 @@ import type {
 	ApprovalResponse,
 	EmbeddingProvider,
 	ApprovalHandler,
+	GenerateTextFunction,
+	GenerateObjectFunction,
 } from './types.js';
 
 export class VercelAIATPClient {
@@ -13,9 +15,19 @@ export class VercelAIATPClient {
 	private model: any;
 	private embeddings?: EmbeddingProvider;
 	private approvalHandler?: ApprovalHandler;
+	private generateTextFn: GenerateTextFunction;
+	private generateObjectFn: GenerateObjectFunction;
 
 	constructor(options: VercelAIATPClientOptions) {
-		const { model, embeddings, tools, approvalHandler, hooks } = options;
+		const {
+			model,
+			embeddings,
+			tools,
+			approvalHandler,
+			hooks,
+			generateTextFn = generateText,
+			generateObjectFn = generateObject,
+		} = options;
 
 		if ('server' in options && options.server) {
 			this.client = new AgentToolProtocolClient({
@@ -37,6 +49,8 @@ export class VercelAIATPClient {
 		this.model = model;
 		this.embeddings = embeddings;
 		this.approvalHandler = approvalHandler;
+		this.generateTextFn = generateTextFn;
+		this.generateObjectFn = generateObjectFn;
 
 		this.client.provideLLM({
 			call: async (prompt: string, options?: any) => {
@@ -83,7 +97,7 @@ export class VercelAIATPClient {
 	}
 
 	private async handleLLMCall(prompt: string, options?: any): Promise<string> {
-		const result = await generateText({
+		const result = await this.generateTextFn({
 			model: this.model,
 			prompt,
 			temperature: options?.temperature,
@@ -95,7 +109,7 @@ export class VercelAIATPClient {
 	}
 
 	private async handleLLMExtract(prompt: string, schema: any, options?: any): Promise<any> {
-		const result = await generateObject({
+		const result = await this.generateObjectFn({
 			model: this.model,
 			prompt,
 			schema,
@@ -114,7 +128,7 @@ export class VercelAIATPClient {
 	): Promise<string> {
 		const promptText = `Classify the following text into one of these categories: ${categories.join(', ')}\n\nText: ${text}\n\nRespond with ONLY the category name, nothing else.`;
 
-		const result = await generateText({
+		const result = await this.generateTextFn({
 			model: this.model,
 			prompt: promptText,
 			system: options?.systemPrompt,
