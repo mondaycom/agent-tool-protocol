@@ -28,13 +28,20 @@ import type { ExecutorConfig, RuntimeContext } from './types.js';
 import { SandboxBuilder } from './sandbox-builder.js';
 import { CodeInstrumentor, StateManager } from '../instrumentation/index.js';
 import { ATP_COMPILER_ENABLED } from './constants.js';
-import { getCompilerRuntime, transformCodeWithCompiler } from './compiler-config.js';
+import {
+	getCompilerRuntime,
+	transformCodeWithCompiler,
+	initializeCheckpointRuntime,
+	cleanupCheckpointRuntime,
+	getCheckpointRuntime,
+} from './compiler-config.js';
 import { setupResumeExecution } from './resume-handler.js';
 import {
 	injectSandbox,
 	injectTimerPolyfills,
 	setupAPINamespace,
 	setupRuntimeNamespace,
+	setupCheckpointNamespace,
 } from './sandbox-injector.js';
 import { handleExecutionError } from './execution-error-handler.js';
 import {
@@ -297,11 +304,21 @@ export class SandboxExecutor {
 				};
 			}
 
-			if (ATP_COMPILER_ENABLED) {
-				sandbox.__runtime = getCompilerRuntime();
-			}
+		if (ATP_COMPILER_ENABLED) {
+			sandbox.__runtime = getCompilerRuntime();
+		}
 
-			let hintMetadata: Map<string, any> | undefined;
+		// Initialize checkpoint runtime if cache provider is available
+		if (this.config.cacheProvider) {
+			initializeCheckpointRuntime({
+				executionId,
+				cache: this.config.cacheProvider,
+				config: { enabled: true },
+			});
+			sandbox.__checkpoint = getCheckpointRuntime();
+		}
+
+		let hintMetadata: Map<string, any> | undefined;
 			if (provenanceMode === ProvenanceMode.AST) {
 				hintMetadata = getHintMap(executionId);
 
@@ -336,11 +353,16 @@ export class SandboxExecutor {
 
 			await setupAPINamespace(ivmContext, sandbox, provenanceMode);
 
-			if (ATP_COMPILER_ENABLED) {
-				await setupRuntimeNamespace(ivmContext, sandbox);
-			}
+		if (ATP_COMPILER_ENABLED) {
+			await setupRuntimeNamespace(ivmContext, sandbox);
+		}
 
-			let useCompiler = false;
+		// Setup checkpoint namespace if available
+		if (this.config.cacheProvider) {
+			await setupCheckpointNamespace(ivmContext, sandbox);
+		}
+
+		let useCompiler = false;
 			let astInstrumented = false;
 
 			const isResume = resumeData !== undefined;
@@ -416,9 +438,11 @@ export class SandboxExecutor {
 					this.compiler
 				);
 				codeToExecute = compilerResult.code;
+				console.log('------- COMPILED COLED', codeToExecute)
 				useCompiler = compilerResult.useCompiler;
 			} else if (alreadyTransformed) {
 				codeToExecute = code;
+				console.log('------- ALREADY COMPILE ', codeToExecute)
 				useCompiler = true;
 				executionLogger.debug('Using already-transformed code on resume');
 			}
@@ -580,7 +604,7 @@ export class SandboxExecutor {
 				}
 			}
 
-			return handleExecutionError(
+			return await handleExecutionError(
 				error,
 				pauseError,
 				context,
@@ -642,6 +666,11 @@ export class SandboxExecutor {
 		setProgressCallback(null);
 
 		clearVectorStoreExecutionId();
+
+		// Cleanup checkpoint runtime
+		try {
+			cleanupCheckpointRuntime();
+		} catch (e) {}
 
 		if (executionId) {
 			try {

@@ -176,6 +176,41 @@ export async function injectSandbox(
 			continue;
 		}
 
+		// Handle checkpoint namespace
+		if (namespace === '__checkpoint' && typeof value === 'object' && value !== null) {
+			for (const [key, fn] of Object.entries(value)) {
+				if (typeof fn === 'function') {
+					await jail.set(
+						`__checkpoint_${key}_impl`,
+						new ivm.Reference(async (...args: unknown[]) => {
+							try {
+								const execute = async () => {
+									const result = await fn(...args);
+									return new ivm.ExternalCopy(result).copyInto();
+								};
+
+								if (executionId) {
+									return await runInExecutionContext(executionId, execute);
+								} else {
+									return await execute();
+								}
+							} catch (error) {
+								const err = error as Error;
+								if (isPauseError(error) || err.message === PAUSE_EXECUTION_MARKER) {
+									if (isPauseError(error)) {
+										onPauseError(error);
+									}
+									throw new Error(PAUSE_EXECUTION_MARKER);
+								}
+								throw error;
+							}
+						})
+					);
+				}
+			}
+			continue;
+		}
+
 		if (namespace === '__runtime' && typeof value === 'object' && value !== null) {
 			for (const [key, fn] of Object.entries(value)) {
 				if (typeof fn === 'function') {
@@ -351,4 +386,42 @@ ${newAccessPath} = async function(...args) {
 
 	setupNestedAPI(apiObject, '', 'globalThis.api');
 	await ivmContext.eval(apiSetup);
+}
+
+export async function setupCheckpointNamespace(
+	ivmContext: ivm.Context,
+	sandbox: Record<string, unknown>
+): Promise<void> {
+	const checkpointObject = sandbox.__checkpoint as Record<string, unknown>;
+	if (!checkpointObject || typeof checkpointObject !== 'object') {
+		return;
+	}
+
+	const checkpointKeys = Object.keys(checkpointObject).filter(
+		(k) => typeof checkpointObject[k] === 'function'
+	);
+	if (checkpointKeys.length === 0) {
+		return;
+	}
+
+	// Setup __checkpoint namespace for internal use by transformed code
+	let checkpointSetup = 'globalThis.__checkpoint = {\n';
+	checkpointSetup += checkpointKeys
+		.map(
+			(key) =>
+				`\t${key}: async (...args) => {\n\t\treturn await __checkpoint_${key}_impl.apply(undefined, args, { arguments: { copy: true }, result: { promise: true } });\n\t}`
+		)
+		.join(',\n');
+	checkpointSetup += '\n};';
+
+	// Setup __restore namespace for user-facing restore functionality
+	// The full checkpoint ID format is {executionId}:{shortId}, so no need to pass execution ID separately
+	checkpointSetup += `
+globalThis.__restore = {
+	checkpoint: async (fullCheckpointId) => {
+		return await __checkpoint_restore_impl.apply(undefined, [fullCheckpointId], { arguments: { copy: true }, result: { promise: true } });
+	}
+};`;
+
+	await ivmContext.eval(checkpointSetup);
 }

@@ -53,6 +53,7 @@ class TestCompiler implements ICompiler {
 			metadata: {
 				loopCount: 1,
 				arrayMethodCount: 0,
+				checkpointCount: 0,
 				parallelCallCount: 0,
 				batchableCount: 0,
 			},

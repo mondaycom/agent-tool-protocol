@@ -352,6 +352,49 @@ export enum ExecutionErrorCode {
 	CONCURRENT_LIMIT_EXCEEDED = 'CONCURRENT_LIMIT_EXCEEDED',
 }
 
+/**
+ * Checkpoint information returned with errors
+ */
+export interface ExecutionCheckpointInfo {
+	/** Checkpoint ID */
+	id: string;
+	/** Type: 'full_snapshot' or 'reference' */
+	type: string;
+	/** Operation that was checkpointed (e.g., 'atp.api.users.getById') */
+	operation: string;
+	/** Human-readable description */
+	description: string;
+	/** Timestamp when checkpoint was created */
+	timestamp: number;
+	/** Full result (for full_snapshot type) */
+	result?: unknown;
+	/** Reference info (for reference type) */
+	reference?: {
+		description: string;
+		preview?: unknown;
+		count?: number;
+		keys?: string[];
+		restoreCode: string;
+	};
+}
+
+/**
+ * Checkpoint data included in error responses
+ */
+export interface ExecutionCheckpointData {
+	/** Array of checkpoints from the failed execution */
+	checkpoints: ExecutionCheckpointInfo[];
+	/** Human-readable instructions for the LLM on how to restore */
+	restoreInstructions: string;
+	/** Statistics about checkpoints */
+	stats: {
+		total: number;
+		fullSnapshots: number;
+		references: number;
+		totalSizeBytes: number;
+	};
+}
+
 export interface ExecutionResult {
 	executionId: string;
 	status: ExecutionStatus;
@@ -364,6 +407,8 @@ export interface ExecutionResult {
 		context?: Record<string, unknown>;
 		retryable?: boolean;
 		suggestion?: string;
+		/** Checkpoint data for recovery - available when execution failed mid-way */
+		checkpointData?: ExecutionCheckpointData;
 	};
 	stats: {
 		duration: number;

@@ -77,6 +77,7 @@ return { first, second };
 
 		const result = await client.execute(code);
 
+		console.log('---- RESOLT', result)
 		expect(result.status).toBe('completed');
 		expect(result.result).toHaveProperty('first');
 		expect(result.result).toHaveProperty('second');
