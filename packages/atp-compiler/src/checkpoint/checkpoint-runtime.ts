@@ -11,6 +11,8 @@ import {
 	hasOperationCheckpointManager,
 	setOperationCheckpointManager,
 	clearOperationCheckpointManager,
+	setCheckpointExecutionId,
+	clearCheckpointExecutionId,
 } from './operation-checkpoint-manager.js';
 import type { OperationMetadata, CheckpointConfig, CheckpointInfo } from './checkpoint-types.js';
 import type { CacheProvider } from '@mondaydotcomorg/atp-protocol';
@@ -25,6 +27,10 @@ export interface CheckpointRuntimeConfig {
  * Initialize the checkpoint runtime for an execution context
  */
 export function initializeCheckpointRuntime(config: CheckpointRuntimeConfig): void {
+	// Set the current execution ID first
+	setCheckpointExecutionId(config.executionId);
+	
+	// Create and register the manager
 	const manager = new OperationCheckpointManager(
 		config.executionId,
 		config.cache,
@@ -34,10 +40,12 @@ export function initializeCheckpointRuntime(config: CheckpointRuntimeConfig): vo
 }
 
 /**
- * Cleanup the checkpoint runtime
+ * Cleanup the checkpoint runtime for an execution
+ * @param executionId - Optional execution ID to clean up (uses current if not provided)
  */
-export function cleanupCheckpointRuntime(): void {
-	clearOperationCheckpointManager();
+export function cleanupCheckpointRuntime(executionId?: string): void {
+	clearOperationCheckpointManager(executionId);
+	clearCheckpointExecutionId();
 }
 
 /**

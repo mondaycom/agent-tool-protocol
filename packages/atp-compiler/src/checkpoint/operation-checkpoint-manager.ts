@@ -24,7 +24,7 @@ import { DefaultCheckpointStrategy } from './checkpoint-strategy.js';
  */
 export class OperationCheckpointManager {
 	private cache: CacheProvider;
-	private executionId: string;
+	readonly executionId: string;
 	private strategy: CheckpointStrategy;
 	private config: Required<Omit<CheckpointConfig, 'strategy'>>;
 	private checkpoints: Map<string, Checkpoint> = new Map();
@@ -358,7 +358,7 @@ export class OperationCheckpointManager {
 		try {
 			await this.cache.delete(key);
 			this.checkpoints.delete(checkpointId);
-		} catch (error) {
+		} catch {
 			// Ignore errors during cleanup
 		}
 	}
@@ -404,37 +404,89 @@ export class OperationCheckpointManager {
 	}
 }
 
-// Global instance management (similar to existing checkpoint-manager.ts)
-let globalOperationCheckpointManager: OperationCheckpointManager | null = null;
+// Per-execution checkpoint manager storage
+// Each concurrent execution has its own isolated checkpoint manager
 
 /**
- * Set the global checkpoint manager for the current execution context
+ * Map of executionId -> OperationCheckpointManager
+ * Allows multiple concurrent executions to have isolated checkpoint managers
+ */
+const checkpointManagers = new Map<string, OperationCheckpointManager>();
+
+/**
+ * Current execution ID for checkpoint operations
+ * Set by the executor at execution start
+ */
+let currentCheckpointExecutionId: string | null = null;
+
+/**
+ * Set the current execution ID for checkpoint operations
+ */
+export function setCheckpointExecutionId(executionId: string): void {
+	currentCheckpointExecutionId = executionId;
+}
+
+/**
+ * Clear the current execution ID
+ */
+export function clearCheckpointExecutionId(): void {
+	currentCheckpointExecutionId = null;
+}
+
+/**
+ * Initialize a new checkpoint manager for an execution
+ */
+export function initializeCheckpointManager(
+	executionId: string,
+	cache: CacheProvider,
+	config?: CheckpointConfig
+): void {
+	const manager = new OperationCheckpointManager(executionId, cache, config);
+	checkpointManagers.set(executionId, manager);
+}
+
+/**
+ * Set the checkpoint manager for a specific execution
  */
 export function setOperationCheckpointManager(manager: OperationCheckpointManager): void {
-	globalOperationCheckpointManager = manager;
+	checkpointManagers.set(manager.executionId, manager);
 }
 
 /**
- * Get the global checkpoint manager
+ * Get the checkpoint manager for the current or specified execution
  */
-export function getOperationCheckpointManager(): OperationCheckpointManager {
-	if (!globalOperationCheckpointManager) {
-		throw new Error('OperationCheckpointManager not initialized');
+export function getOperationCheckpointManager(executionId?: string): OperationCheckpointManager {
+	const id = executionId || currentCheckpointExecutionId;
+	if (!id) {
+		throw new Error('No execution ID set for checkpoint manager');
 	}
-	return globalOperationCheckpointManager;
+	
+	const manager = checkpointManagers.get(id);
+	if (!manager) {
+		throw new Error(`OperationCheckpointManager not initialized for execution: ${id}`);
+	}
+	return manager;
 }
 
 /**
- * Clear the global checkpoint manager
+ * Clear the checkpoint manager after execution completes
  */
-export function clearOperationCheckpointManager(): void {
-	globalOperationCheckpointManager = null;
+export function clearOperationCheckpointManager(executionId?: string): void {
+	const id = executionId || currentCheckpointExecutionId;
+	if (!id) return;
+	
+	const manager = checkpointManagers.get(id);
+	if (manager) {
+		checkpointManagers.delete(id);
+	}
 }
 
 /**
- * Check if checkpoint manager is initialized
+ * Check if checkpoint manager is initialized for current or specified execution
  */
-export function hasOperationCheckpointManager(): boolean {
-	return globalOperationCheckpointManager !== null;
+export function hasOperationCheckpointManager(executionId?: string): boolean {
+	const id = executionId || currentCheckpointExecutionId;
+	if (!id) return false;
+	return checkpointManagers.has(id);
 }
 
