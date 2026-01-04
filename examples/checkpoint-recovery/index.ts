@@ -13,16 +13,15 @@
  * 6. Recovery succeeds without re-executing expensive APIs
  */
 
-import {AgentToolProtocolServer, createServer} from '@mondaydotcomorg/atp-server';
-import { AgentToolProtocolClient } from '@mondaydotcomorg/atp-client';
+import { AgentToolProtocolServer } from '@mondaydotcomorg/atp-server';
+import { AgentToolProtocolClient, ExecutionStatus } from '@mondaydotcomorg/atp-client';
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import {MemoryCache} from "@mondaydotcomorg/atp-providers";
+import { MemoryCache } from "@mondaydotcomorg/atp-providers";
 
 // Set up environment
 process.env.ATP_JWT_SECRET = process.env.ATP_JWT_SECRET || 'test-secret-key';
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
 // Check for OpenAI API key
 if (!process.env.OPENAI_API_KEY) {
 	console.error('❌ Error: OPENAI_API_KEY environment variable is required');
@@ -56,12 +55,8 @@ async function main() {
 	server.tool('fetchUsers', {
 		description: 'Fetch users from the company database (expensive operation)',
 		input: {
-			type: 'object',
-			properties: {
-				department: { type: 'string' },
-				limit: { type: 'number' }
-			},
-			required: ['department', 'limit']
+			department: 'string',
+			limit: 'number'
 		},
 		handler: async (params: { department: string; limit: number }) => {
 			apiCallCount.users++;
@@ -83,11 +78,7 @@ async function main() {
 	server.tool('fetchAnalytics', {
 		description: 'Fetch detailed analytics for users (expensive operation)',
 		input: {
-			type: 'object',
-			properties: {
-				userIds: { type: 'array', items: { type: 'number' } }
-			},
-			required: ['userIds']
+			userIds: 'number[]'
 		},
 		handler: async (params: { userIds: number[] }) => {
 			apiCallCount.analytics++;
@@ -178,7 +169,7 @@ return {
 
 	const result1 = await client.execute(initialCode);
 
-	if (result1.status === 'error' || result1.status === 'failed') {
+	if (result1.status === ExecutionStatus.FAILED) {
 		console.log('\n❌ Execution Failed!');
 		console.log('Error:', result1.error?.message);
 
@@ -200,7 +191,12 @@ return {
 				console.log(`   Description: ${cp.description}`);
 				if (cp.type === 'reference' && cp.reference) {
 					console.log(`   Description: ${cp.reference.description}`);
-					console.log(`   Preview: ${JSON.stringify(cp.reference.preview?.slice(0, 2))}`);
+					const preview = cp.reference.preview;
+					if (Array.isArray(preview)) {
+						console.log(`   Preview: ${JSON.stringify(preview.slice(0, 2))}`);
+					} else {
+						console.log(`   Preview: ${JSON.stringify(preview)}`);
+					}
 				}
 				console.log('');
 			});
@@ -264,7 +260,7 @@ Only return the fixed code, no explanations. The code should:
 			// Execute the recovery code
 			const result2 = await client.execute(recoveryCode);
 
-			if (result2.status === 'completed') {
+			if (result2.status === ExecutionStatus.COMPLETED) {
 				console.log('✅ RECOVERY SUCCESSFUL!\n');
 				console.log('📊 Final Result:');
 				console.log(JSON.stringify(result2.result, null, 2));

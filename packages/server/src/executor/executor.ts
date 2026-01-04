@@ -438,11 +438,9 @@ export class SandboxExecutor {
 					this.compiler
 				);
 				codeToExecute = compilerResult.code;
-				console.log('------- COMPILED COLED', codeToExecute)
 				useCompiler = compilerResult.useCompiler;
 			} else if (alreadyTransformed) {
 				codeToExecute = code;
-				console.log('------- ALREADY COMPILE ', codeToExecute)
 				useCompiler = true;
 				executionLogger.debug('Using already-transformed code on resume');
 			}
