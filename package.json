@@ -17,6 +17,8 @@
 		"test:e2e:runtime": "npm run jest -- __tests__/e2e/runtime --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
 		"test:e2e:server": "npm run jest -- __tests__/e2e/server --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
 		"test:e2e:client": "npm run jest -- __tests__/e2e/client --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
+		"test:e2e:security": "npm run jest -- __tests__/e2e/security --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
+		"test:e2e:provenance": "npm run jest -- __tests__/e2e/provenance --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
 		"test:e2e:integrations": "npm run jest -- __tests__/e2e/integrations --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
 		"test:integration": "npm run jest -- __tests__/e2e/integrations --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
 		"test:production": "npm run jest -- __tests__/e2e/runtime/cache-approval.test.ts __tests__/e2e/server/api.test.ts --runInBand --forceExit --testTimeout=120000",

@@ -4088,6 +4088,7 @@ __metadata:
     acorn: "npm:^8.11.0"
     acorn-walk: "npm:^8.3.0"
     escodegen: "npm:^2.1.0"
+    jest: "npm:^29.7.0"
     tsup: "npm:^8.5.1"
     typescript: "npm:^5.3.0"
     zod: "npm:^3.25.0"

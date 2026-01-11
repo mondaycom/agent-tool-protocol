@@ -19,13 +19,14 @@ import {
 	resumablePromiseAllSettled,
 	batchParallel,
 	initializeCheckpointRuntime,
+	initializeCheckpointRuntimeWithProvenance,
 	cleanupCheckpointRuntime,
 	getCheckpointRuntime,
 	getCheckpointDataForError,
 	type TransformResult,
 	type DetectionResult,
 	type ICompiler,
-	type CacheStats,
+	type CheckpointProvenanceMetadata,
 } from '@mondaydotcomorg/atp-compiler';
 import { ATP_COMPILER_ENABLED, ATP_BATCH_SIZE_THRESHOLD } from './constants.js';
 
@@ -186,9 +187,11 @@ export function getCompilerRuntime() {
 // Re-export checkpoint functions for executor use
 export {
 	initializeCheckpointRuntime,
+	initializeCheckpointRuntimeWithProvenance,
 	cleanupCheckpointRuntime,
 	getCheckpointRuntime,
 	getCheckpointDataForError,
+	type CheckpointProvenanceMetadata,
 };
 
 export async function transformCodeWithCompiler(

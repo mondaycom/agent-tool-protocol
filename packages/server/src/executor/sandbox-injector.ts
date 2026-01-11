@@ -117,14 +117,16 @@ export async function injectSandbox(
 							// In AST mode, tag result with provenance ID before copying so tag survives
 							if (isASTMode && result && typeof result === 'object') {
 								try {
-									// Generate unique ID for this API result
-									const provId = `tracked_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-									Object.defineProperty(result, '__prov_id__', {
-										value: provId,
-										writable: false,
-										enumerable: true,
-										configurable: true,
-									});
+									// Only add __prov_id__ if not already present (avoids overwriting UUID from createProvenanceProxy)
+									if (!Object.prototype.hasOwnProperty.call(result, '__prov_id__')) {
+										const provId = `tracked_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+										Object.defineProperty(result, '__prov_id__', {
+											value: provId,
+											writable: false,
+											enumerable: true,
+											configurable: true,
+										});
+									}
 								} catch (e) {
 									// If can't define property, that's ok
 								}

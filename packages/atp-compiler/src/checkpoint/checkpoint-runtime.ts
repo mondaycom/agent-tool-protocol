@@ -13,14 +13,40 @@ import {
 	clearOperationCheckpointManager,
 	setCheckpointExecutionId,
 	clearCheckpointExecutionId,
+	type ProvenanceExtractor,
+	type ProvenanceAttacher,
+	type ProvenanceMetaAttacher,
 } from './operation-checkpoint-manager.js';
-import type { OperationMetadata, CheckpointConfig, CheckpointInfo } from './checkpoint-types.js';
+import type { OperationMetadata, CheckpointConfig, CheckpointInfo, CheckpointProvenanceMetadata } from './checkpoint-types.js';
 import type { CacheProvider } from '@mondaydotcomorg/atp-protocol';
 
 export interface CheckpointRuntimeConfig {
 	executionId: string;
 	cache: CacheProvider;
 	config?: CheckpointConfig;
+}
+
+/**
+ * Extended config with provenance integration
+ */
+export interface CheckpointRuntimeConfigWithProvenance extends CheckpointRuntimeConfig {
+	/**
+	 * Function to extract provenance metadata from a value
+	 * Typically: (value) => getProvenance(value)
+	 */
+	provenanceExtractor?: ProvenanceExtractor;
+	
+	/**
+	 * Function to re-attach provenance to a restored value
+	 * Typically: (value, metadata) => createProvenanceProxy(value, metadata.source, metadata.readers)
+	 */
+	provenanceAttacher?: ProvenanceAttacher;
+	
+	/**
+	 * Function to attach __prov_meta__ to objects before buffering
+	 * This ensures provenance survives isolated-vm boundary crossing
+	 */
+	provenanceMetaAttacher?: ProvenanceMetaAttacher;
 }
 
 /**
@@ -37,6 +63,58 @@ export function initializeCheckpointRuntime(config: CheckpointRuntimeConfig): vo
 		config.config
 	);
 	setOperationCheckpointManager(manager);
+}
+
+/**
+ * Initialize the checkpoint runtime with provenance integration
+ * 
+ * When provenance is enabled:
+ * - Restricted data is automatically forced to use reference checkpoints
+ * - Provenance is re-attached when restoring checkpoints
+ * - Security policies continue to work after checkpoint restoration
+ */
+export function initializeCheckpointRuntimeWithProvenance(
+	config: CheckpointRuntimeConfigWithProvenance
+): void {
+	// Set the current execution ID first
+	setCheckpointExecutionId(config.executionId);
+	
+	// Create and register the manager
+	const manager = new OperationCheckpointManager(
+		config.executionId,
+		config.cache,
+		config.config
+	);
+
+	// Configure provenance integration
+	if (config.provenanceExtractor) {
+		manager.setProvenanceExtractor(config.provenanceExtractor);
+	}
+	if (config.provenanceAttacher) {
+		manager.setProvenanceAttacher(config.provenanceAttacher);
+	}
+	if (config.provenanceMetaAttacher) {
+		manager.setProvenanceMetaAttacher(config.provenanceMetaAttacher);
+	}
+
+	setOperationCheckpointManager(manager);
+}
+
+/**
+ * Configure provenance functions on an existing checkpoint manager
+ * Call this if the manager was already initialized without provenance
+ */
+export function configureCheckpointProvenance(
+	provenanceExtractor: ProvenanceExtractor,
+	provenanceAttacher: ProvenanceAttacher
+): void {
+	if (!hasOperationCheckpointManager()) {
+		return;
+	}
+
+	const manager = getOperationCheckpointManager();
+	manager.setProvenanceExtractor(provenanceExtractor);
+	manager.setProvenanceAttacher(provenanceAttacher);
 }
 
 /**
@@ -126,12 +204,7 @@ async function checkpointRestore(fullCheckpointId: string): Promise<unknown> {
 	const parsed = OperationCheckpointManager.parseCheckpointId(fullCheckpointId);
 	
 	if (!parsed) {
-		// If not a full ID format, try loading from current execution (backwards compatibility)
-		const checkpoint = await manager.load(fullCheckpointId);
-		if (!checkpoint) {
-			throw new Error(`Checkpoint not found: ${fullCheckpointId}`);
-		}
-		return manager.restore(checkpoint);
+		throw new Error(`Checkpoint not found: ${fullCheckpointId}`);
 	}
 
 	// Load from the parsed execution ID
@@ -198,10 +271,14 @@ export async function getCheckpointDataForError(): Promise<CheckpointErrorData |
 		return null;
 	}
 
+	// Count restricted checkpoints
+	const restrictedCount = checkpoints.filter(cp => cp.hasRestrictedProvenance).length;
+
 	return {
 		checkpoints,
 		restoreInstructions: manager.generateRestoreInstructions(),
 		stats: manager.getStats(),
+		restrictedCount: restrictedCount > 0 ? restrictedCount : undefined,
 	};
 }
 
@@ -217,5 +294,13 @@ export interface CheckpointErrorData {
 		references: number;
 		totalSizeBytes: number;
 	};
+	/**
+	 * Number of checkpoints with restricted provenance
+	 * These MUST be restored via __restore.checkpoint()
+	 */
+	restrictedCount?: number;
 }
 
+// Re-export types for convenience
+export type { ProvenanceExtractor, ProvenanceAttacher } from './operation-checkpoint-manager.js';
+export type { CheckpointProvenanceMetadata, CheckpointProvenanceSnapshot, CheckpointReaderPermissions, CheckpointProvenanceSource } from './checkpoint-types.js';

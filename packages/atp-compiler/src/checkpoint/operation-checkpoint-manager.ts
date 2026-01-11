@@ -12,12 +12,51 @@ import type {
 	ReferenceCheckpoint,
 	OperationMetadata,
 	CheckpointInfo,
-	CheckpointStrategy,
 	CheckpointConfig,
+	CheckpointProvenanceSnapshot,
+	CheckpointProvenanceEntry,
 } from './checkpoint-types.js';
 import { CheckpointType, OperationCheckpointError } from './checkpoint-types.js';
 import { DEFAULT_CHECKPOINT_CONFIG } from './checkpoint-types.js';
 import { DefaultCheckpointStrategy } from './checkpoint-strategy.js';
+import {
+	extractProvenanceRecursive,
+	restoreProvenanceFromSnapshot,
+	hasRestrictedProvenance,
+	type ProvenanceExtractor,
+	type ProvenanceAttacher,
+	type ProvenanceMetadata,
+} from '@mondaydotcomorg/atp-provenance';
+
+/**
+ * Function type for extracting provenance from a value
+ * This is injected at runtime to decouple from @mondaydotcomorg/atp-provenance
+ * Re-exported from provenance package for convenience
+ */
+export type { ProvenanceExtractor };
+
+/**
+ * Function type for re-attaching provenance to a restored value
+ * This is injected at runtime to decouple from @mondaydotcomorg/atp-provenance
+ * Re-exported from provenance package for convenience
+ */
+export type { ProvenanceAttacher };
+
+/**
+ * Function type for attaching __prov_meta__ to objects before checkpoint buffering
+ * This ensures provenance survives isolated-vm boundary crossing during restoration
+ */
+export type ProvenanceMetaAttacher = (value: unknown) => void;
+
+/**
+ * Result of recursive provenance extraction
+ * Re-uses the structure from provenance package
+ */
+interface RecursiveProvenanceResult {
+	entries: CheckpointProvenanceEntry[];
+	primitives: Array<[string, any]>;
+	hasRestrictedData: boolean;
+}
 
 /**
  * Manages operation-level checkpoints for an execution
@@ -25,10 +64,28 @@ import { DefaultCheckpointStrategy } from './checkpoint-strategy.js';
 export class OperationCheckpointManager {
 	private cache: CacheProvider;
 	readonly executionId: string;
-	private strategy: CheckpointStrategy;
+	private strategy: DefaultCheckpointStrategy;
 	private config: Required<Omit<CheckpointConfig, 'strategy'>>;
 	private checkpoints: Map<string, Checkpoint> = new Map();
 	private prefix: string;
+	
+	/**
+	 * Optional provenance extractor - injected at runtime
+	 * If not set, checkpoints will not capture provenance
+	 */
+	private provenanceExtractor?: ProvenanceExtractor;
+	
+	/**
+	 * Optional provenance attacher - injected at runtime
+	 * If not set, restored values will not have provenance re-attached
+	 */
+	private provenanceAttacher?: ProvenanceAttacher;
+
+	/**
+	 * Optional function to attach __prov_meta__ before buffering
+	 * This ensures provenance survives isolated-vm boundary crossing
+	 */
+	private provenanceMetaAttacher?: ProvenanceMetaAttacher;
 
 	constructor(
 		executionId: string,
@@ -41,36 +98,95 @@ export class OperationCheckpointManager {
 			...DEFAULT_CHECKPOINT_CONFIG,
 			...config,
 		};
-		this.strategy = config?.strategy || new DefaultCheckpointStrategy(config);
+		this.strategy = (config?.strategy as DefaultCheckpointStrategy) || new DefaultCheckpointStrategy(config);
 		this.prefix = 'op_checkpoint';
+	}
+
+	/**
+	 * Set the provenance extractor function
+	 * Should be called during initialization if provenance tracking is enabled
+	 */
+	setProvenanceExtractor(extractor: ProvenanceExtractor): void {
+		this.provenanceExtractor = extractor;
+	}
+
+	/**
+	 * Set the provenance attacher function
+	 * Should be called during initialization if provenance tracking is enabled
+	 */
+	setProvenanceAttacher(attacher: ProvenanceAttacher): void {
+		this.provenanceAttacher = attacher;
+	}
+
+	/**
+	 * Set the provenance meta attacher function
+	 */
+	setProvenanceMetaAttacher(attacher: ProvenanceMetaAttacher): void {
+		this.provenanceMetaAttacher = attacher;
+	}
+
+	/**
+	 * Extract provenance from a result value
+	 * Recursively extracts provenance from nested objects/arrays (for Promise.all, loops, etc.)
+	 * Returns undefined if no provenance extractor is configured
+	 * Delegates to provenance package's extractProvenanceRecursive
+	 */
+	private extractProvenance(result: unknown): CheckpointProvenanceSnapshot | undefined {
+		if (!this.provenanceExtractor) {
+			return undefined;
+		}
+
+		// Use the provenance package's extraction function
+		const recursive = extractProvenanceRecursive(result, this.provenanceExtractor);
+		
+		if (recursive.entries.length === 0 && recursive.primitives.length === 0) {
+			return undefined;
+		}
+
+		// Extract root-level metadata for convenient access
+		const topLevel = recursive.entries.find(e => e.path === '');
+		
+		return {
+			metadata: topLevel?.metadata,  // Convenience: direct access to root-level provenance
+			entries: recursive.entries.length > 0 ? recursive.entries : undefined,
+			primitives: recursive.primitives.length > 0 ? recursive.primitives : undefined,
+			hasRestrictedData: recursive.hasRestrictedData,
+		};
 	}
 
 	/**
 	 * Create a checkpoint for an operation result (synchronous)
 	 * Note: For reference checkpoints, the full result is stored in _pendingResult
 	 * and persisted later via persistAll()
+	 * 
+	 * SECURITY: Captures provenance and forces reference checkpoint for restricted data
 	 */
 	private createCheckpoint(
 		id: string,
 		result: unknown,
 		metadata: OperationMetadata
 	): Checkpoint {
-		const useFullSnapshot = this.strategy.shouldUseFullSnapshot(result);
+		// Extract provenance from the result (if provenance tracking is enabled)
+		const provenance = this.extractProvenance(result);
+
+		const useFullSnapshot = this.strategy.shouldUseFullSnapshot(result, provenance);
 
 		if (useFullSnapshot) {
-			return this.createFullSnapshot(id, result, metadata);
+			return this.createFullSnapshot(id, result, metadata, provenance);
 		} else {
-			return this.createReference(id, result, metadata);
+			return this.createReference(id, result, metadata, provenance);
 		}
 	}
 
 	/**
 	 * Create a full snapshot checkpoint
+	 * Note: This is only called for public data (restricted data uses reference)
 	 */
 	private createFullSnapshot(
 		id: string,
 		result: unknown,
-		metadata: OperationMetadata
+		metadata: OperationMetadata,
+		provenance?: CheckpointProvenanceSnapshot
 	): FullSnapshotCheckpoint {
 		const serialized = JSON.stringify(result);
 		const sizeBytes = new Blob([serialized]).size;
@@ -84,17 +200,21 @@ export class OperationCheckpointManager {
 			timestamp: Date.now(),
 			ttl: this.config.defaultTTL,
 			sizeBytes,
+			provenance, // Store provenance for re-attachment on restore
 		};
 	}
 
 	/**
 	 * Create a reference checkpoint
 	 * Stores full result in checkpoint, but only shows preview to LLM in error responses
+	 * 
+	 * SECURITY: This is ALWAYS used for restricted provenance data
 	 */
 	private createReference(
 		id: string,
 		result: unknown,
-		metadata: OperationMetadata
+		metadata: OperationMetadata,
+		provenance?: CheckpointProvenanceSnapshot
 	): ReferenceCheckpoint {
 		// Generate reference information (preview/summary for LLM)
 		let reference = this.strategy.createReference(result, metadata);
@@ -118,6 +238,7 @@ export class OperationCheckpointManager {
 			timestamp: Date.now(),
 			ttl: this.config.defaultTTL,
 			sizeBytes,
+			provenance, // Store provenance for re-attachment on restore
 		};
 	}
 
@@ -154,8 +275,11 @@ export class OperationCheckpointManager {
 		if (!this.config.enabled) {
 			return;
 		}
-
 		try {
+			if (this.provenanceMetaAttacher) {
+				this.provenanceMetaAttacher(result);
+			}
+			
 			const checkpoint = this.createCheckpoint(checkpointId, result, metadata);
 			// Only store in memory, don't persist to cache yet
 			this.checkpoints.set(checkpointId, checkpoint);
@@ -227,14 +351,32 @@ export class OperationCheckpointManager {
 
 	/**
 	 * Restore the result from a checkpoint
-	 * Both full snapshot and reference checkpoints store the result directly
+	 * Both full snapshot and reference checkpoints store the result directly\
+	 * Provenance is re-attached if available
 	 */
 	restore(checkpoint: Checkpoint): unknown {
+		let result: unknown;
+		
 		if (checkpoint.type === CheckpointType.FULL_SNAPSHOT) {
-			return (checkpoint as FullSnapshotCheckpoint).result;
+			result = (checkpoint as FullSnapshotCheckpoint).result;
 		} else {
-			return (checkpoint as ReferenceCheckpoint).result;
+			result = (checkpoint as ReferenceCheckpoint).result;
 		}
+
+		// Use the provenance package's restoration function
+		if (checkpoint.provenance && this.provenanceAttacher) {
+			return restoreProvenanceFromSnapshot(result, checkpoint.provenance, this.provenanceAttacher);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Check if a checkpoint has restricted provenance
+	 * Delegates to the provenance package's hasRestrictedProvenance utility
+	 */
+	hasRestrictedProvenance(checkpoint: Checkpoint): boolean {
+		return hasRestrictedProvenance(checkpoint.provenance);
 	}
 
 	/**
@@ -249,6 +391,9 @@ export class OperationCheckpointManager {
 	/**
 	 * Convert checkpoint to info format for error responses
 	 * Returns full checkpoint ID that includes execution ID for easy restore
+	 * 
+	 * SECURITY: Never exposes full data for restricted provenance checkpoints
+	 * Handles both single-source and aggregated (Promise.all, loops) results
 	 */
 	private checkpointToInfo(checkpoint: Checkpoint): CheckpointInfo {
 		const operation = this.formatOperation(checkpoint.operation);
@@ -262,16 +407,36 @@ export class OperationCheckpointManager {
 		// Use full ID format: {executionId}:{shortId} for easy cross-execution restore
 		const fullId = this.getFullCheckpointId(checkpoint.id);
 
+		// Check if this checkpoint has any restricted provenance (including nested)
+		const hasRestricted = this.hasRestrictedProvenance(checkpoint);
+
 		const info: CheckpointInfo = {
 			id: fullId,
 			type: checkpoint.type,
 			operation,
 			description,
 			timestamp: checkpoint.timestamp,
+			hasRestrictedProvenance: hasRestricted || undefined,
 		};
 
+		// SECURITY: Add security notice for restricted data
+		if (hasRestricted) {
+			// Collect all restricted readers from entries
+			const restrictedReaders = this.collectRestrictedReaders(checkpoint.provenance);
+			const authorizedList = restrictedReaders.length > 0 ? restrictedReaders.join(', ') : 'none';
+			
+			info.securityNotice = 
+				`⚠️ SECURITY: This data contains restricted access items (authorized: ${authorizedList}). ` +
+				`You MUST use __restore.checkpoint("${fullId}") to access this data. ` +
+				`Do NOT copy raw values into code - security policies will not work.`;
+		}
+
 		if (checkpoint.type === CheckpointType.FULL_SNAPSHOT) {
-			info.result = (checkpoint as FullSnapshotCheckpoint).result;
+			// SECURITY: Never expose full data for restricted checkpoints
+			// (This shouldn't happen as restricted data forces reference, but defense in depth)
+			if (!hasRestricted) {
+				info.result = (checkpoint as FullSnapshotCheckpoint).result;
+			}
 		} else {
 			// Update restoreCode to use the full ID
 			const reference = (checkpoint as ReferenceCheckpoint).reference;
@@ -282,6 +447,37 @@ export class OperationCheckpointManager {
 		}
 
 		return info;
+	}
+
+	/**
+	 * Collect all unique restricted readers from a provenance snapshot
+	 */
+	private collectRestrictedReaders(provenance?: CheckpointProvenanceSnapshot): string[] {
+		if (!provenance) {
+			return [];
+		}
+
+		const allReaders = new Set<string>();
+
+		// Check top-level metadata
+		if (provenance.metadata?.readers?.type === 'restricted') {
+			for (const reader of provenance.metadata.readers.readers) {
+				allReaders.add(reader);
+			}
+		}
+
+		// Check all entries
+		if (provenance.entries) {
+			for (const entry of provenance.entries) {
+				if (entry.metadata?.readers?.type === 'restricted') {
+					for (const reader of entry.metadata.readers.readers) {
+						allReaders.add(reader);
+					}
+				}
+			}
+		}
+
+		return Array.from(allReaders);
 	}
 
 	/**
@@ -322,6 +518,8 @@ export class OperationCheckpointManager {
 	/**
 	 * Generate restore instructions for LLM
 	 * Provides a clean summary of available checkpoints and how to use them
+	 * 
+	 * SECURITY: Emphasizes that restricted data MUST use __restore.checkpoint()
 	 */
 	generateRestoreInstructions(): string {
 		const checkpoints = this.getAllCheckpoints();
@@ -330,45 +528,38 @@ export class OperationCheckpointManager {
 			return 'No checkpoints available.';
 		}
 
+		const restrictedCount = checkpoints.filter(cp => cp.hasRestrictedProvenance).length;
+
 		const lines: string[] = [
 			`${checkpoints.length} checkpoint${checkpoints.length > 1 ? 's' : ''} available from the failed execution:`,
 			'',
 		];
 
 		for (const cp of checkpoints) {
-			lines.push(`• ${cp.operation} → checkpoint id: "${cp.id}"`);
+			const restricted = cp.hasRestrictedProvenance ? ' [RESTRICTED ACCESS]' : '';
+			lines.push(`• ${cp.operation} → checkpoint id: "${cp.id}"${restricted}`);
 		}
 
 		lines.push('');
 		lines.push('In your next code iteration, you can:');
-		lines.push('1. Directly use data returned from saved checkpoints (full_snapshot)');
-		lines.push('2. Restore a checkpoint value programmatically using:');
+		
+		if (restrictedCount > 0) {
+			lines.push('');
+			lines.push('⚠️ SECURITY NOTICE:');
+			lines.push(`${restrictedCount} checkpoint(s) contain restricted data. You MUST use:`);
+			lines.push('  const value = await __restore.checkpoint("<checkpoint_id>");');
+			lines.push('');
+			lines.push('Do NOT copy raw values from error responses into code.');
+			lines.push('Security policies only work when data is properly restored.');
+			lines.push('');
+		}
+		
+		lines.push('1. For unrestricted checkpoints: directly use data returned from full_snapshot');
+		lines.push('2. For restricted checkpoints: MUST use __restore.checkpoint():');
 		lines.push('  const value = await __restore.checkpoint("<checkpoint_id>");');
 		lines.push('');
 
 		return lines.join('\n');
-	}
-
-	/**
-	 * Clear a specific checkpoint
-	 */
-	async clear(checkpointId: string): Promise<void> {
-		const key = this.getCheckpointKey(checkpointId);
-
-		try {
-			await this.cache.delete(key);
-			this.checkpoints.delete(checkpointId);
-		} catch {
-			// Ignore errors during cleanup
-		}
-	}
-
-	/**
-	 * Clear all checkpoints for this execution
-	 */
-	async clearAll(): Promise<void> {
-		const checkpointIds = Array.from(this.checkpoints.keys());
-		await Promise.all(checkpointIds.map((id) => this.clear(id)));
 	}
 
 	/**
@@ -395,17 +586,7 @@ export class OperationCheckpointManager {
 	private getCheckpointKey(checkpointId: string): string {
 		return `${this.prefix}:${this.executionId}:${checkpointId}`;
 	}
-
-	/**
-	 * Get execution ID
-	 */
-	getExecutionId(): string {
-		return this.executionId;
-	}
 }
-
-// Per-execution checkpoint manager storage
-// Each concurrent execution has its own isolated checkpoint manager
 
 /**
  * Map of executionId -> OperationCheckpointManager
@@ -431,18 +612,6 @@ export function setCheckpointExecutionId(executionId: string): void {
  */
 export function clearCheckpointExecutionId(): void {
 	currentCheckpointExecutionId = null;
-}
-
-/**
- * Initialize a new checkpoint manager for an execution
- */
-export function initializeCheckpointManager(
-	executionId: string,
-	cache: CacheProvider,
-	config?: CheckpointConfig
-): void {
-	const manager = new OperationCheckpointManager(executionId, cache, config);
-	checkpointManagers.set(executionId, manager);
 }
 
 /**

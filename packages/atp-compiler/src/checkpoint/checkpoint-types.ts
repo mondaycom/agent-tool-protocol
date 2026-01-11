@@ -6,6 +6,26 @@
  * re-executing already completed operations.
  */
 
+import type {
+	CheckpointProvenanceSnapshot,
+	ProvenanceEntry,
+	ProvenanceExtractor,
+	ProvenanceAttacher,
+} from '@mondaydotcomorg/atp-provenance';
+
+// Re-export provenance types for convenience
+export type {
+	CheckpointProvenanceSnapshot,
+	ProvenanceEntry as CheckpointProvenanceEntry,
+	ProvenanceExtractor,
+	ProvenanceAttacher,
+};
+
+// Re-export from provenance package for backwards compatibility
+export type { ProvenanceMetadata as CheckpointProvenanceMetadata } from '@mondaydotcomorg/atp-provenance';
+export { ProvenanceSource as CheckpointProvenanceSource } from '@mondaydotcomorg/atp-provenance';
+export type { ReaderPermissions as CheckpointReaderPermissions } from '@mondaydotcomorg/atp-provenance';
+
 /**
  * Type of checkpoint storage strategy
  */
@@ -61,6 +81,11 @@ export interface BaseCheckpoint {
 	timestamp: number;
 	/** Time-to-live in seconds (optional) */
 	ttl?: number;
+	/**
+	 * Provenance snapshot for security policy enforcement
+	 * If present, provenance will be re-attached on restore
+	 */
+	provenance?: CheckpointProvenanceSnapshot;
 }
 
 /**
@@ -128,10 +153,20 @@ export interface CheckpointInfo {
 	description: string;
 	/** Reference information (only for reference checkpoints) */
 	reference?: CheckpointReference;
-	/** Full result (only for full snapshot checkpoints) */
+	/** Full result (only for full snapshot checkpoints WITHOUT restricted access) */
 	result?: unknown;
 	/** When checkpoint was created */
 	timestamp: number;
+	/**
+	 * Whether this checkpoint has restricted provenance
+	 * If true, LLM MUST use __restore.checkpoint() to access data
+	 * Full data will NOT be included in error response
+	 */
+	hasRestrictedProvenance?: boolean;
+	/**
+	 * Security notice shown to LLM when data has restricted provenance
+	 */
+	securityNotice?: string;
 }
 
 /**
@@ -151,9 +186,10 @@ export interface CheckpointStrategy {
 	/**
 	 * Decide whether to use full snapshot or reference based on result size/structure
 	 * @param result The operation result
+	 * @param provenance Optional provenance metadata for security decisions
 	 * @returns true for full snapshot, false for reference
 	 */
-	shouldUseFullSnapshot(result: unknown): boolean;
+	shouldUseFullSnapshot(result: unknown, provenance?: CheckpointProvenanceSnapshot): boolean;
 
 	/**
 	 * Create a reference for a large result

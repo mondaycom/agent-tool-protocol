@@ -10,8 +10,10 @@ import type {
 	CheckpointReference,
 	OperationMetadata,
 	CheckpointConfig,
+	CheckpointProvenanceSnapshot,
 } from './checkpoint-types.js';
 import { DEFAULT_CHECKPOINT_CONFIG } from './checkpoint-types.js';
+import { hasRestrictedProvenance } from '@mondaydotcomorg/atp-provenance';
 
 /**
  * Default strategy for checkpoint storage decisions
@@ -31,7 +33,11 @@ export class DefaultCheckpointStrategy implements CheckpointStrategy {
 	 * Full snapshots are used for small, serializable results.
 	 * References are used for large results (preview shown to LLM, full data available via restore).
 	 */
-	shouldUseFullSnapshot(result: unknown): boolean {
+	shouldUseFullSnapshot(result: unknown, provenance?: CheckpointProvenanceSnapshot): boolean {
+		if (this.hasRestrictedProvenance(provenance)) {
+			return false;
+		}
+
 		if (result === null || result === undefined) {
 			return true;
 		}
@@ -54,6 +60,14 @@ export class DefaultCheckpointStrategy implements CheckpointStrategy {
 
 		// Default to reference for anything that didn't match above rules
 		return false;
+	}
+
+	/**
+	 * Check if provenance indicates restricted access
+	 * Delegates to the provenance package's hasRestrictedProvenance utility
+	 */
+	hasRestrictedProvenance(provenance?: CheckpointProvenanceSnapshot): boolean {
+		return hasRestrictedProvenance(provenance);
 	}
 
 	/**
