@@ -21,6 +21,7 @@ export {
 	hydrateProvenance,
 	hydrateExecutionProvenance,
 	attachProvenanceMetaForCheckpoint,
+	PROVENANCE_PROPERTY_NAMES,
 } from './registry.js';
 
 export {

@@ -14,6 +14,18 @@ const PROVENANCE_ID_KEY = '__prov_id__';
 const PROVENANCE_META_KEY = '__prov_meta__'; // Stores essential metadata for cross-boundary cloning
 const provenanceStore = new WeakMap<object, ProvenanceMetadata>();
 
+/**
+ * Exported provenance property names for external use (e.g., sanitization)
+ */
+export const PROVENANCE_PROPERTY_NAMES = {
+	/** Symbol used for storing provenance data: __provenance__ */
+	PROVENANCE: PROVENANCE_KEY,
+	/** Symbol used for provenance ID: __prov_id__ */
+	PROVENANCE_ID: PROVENANCE_ID_KEY,
+	/** Symbol used for provenance metadata: __prov_meta__ */
+	PROVENANCE_META: PROVENANCE_META_KEY,
+} as const;
+
 const provenanceRegistry = new Map<string, ProvenanceMetadata>();
 
 const executionProvenanceIds = new Map<string, Set<string>>();

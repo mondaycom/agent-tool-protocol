@@ -130,6 +130,13 @@ export class OperationCheckpointTransformer {
 				t.arrayExpression(usedAPIs.map(api => t.stringLiteral(api)))
 			),
 			])),
+			// Add usedVariables at the top level for consistency
+			...(resultVariables.length > 0 ? [
+				t.objectProperty(
+					t.identifier('usedVariables'),
+					t.arrayExpression(resultVariables.map(v => t.stringLiteral(v)))
+				)
+			] : []),
 		]);
 
 		// Create the wrapped call
@@ -194,6 +201,13 @@ export class OperationCheckpointTransformer {
 				t.arrayExpression(usedAPIs.map(api => t.stringLiteral(api)))
 			),
 			])),
+			// Add usedVariables at the top level for consistency (accumulators are the used variables)
+			...(accumulators.length > 0 ? [
+				t.objectProperty(
+					t.identifier('usedVariables'),
+					t.arrayExpression(accumulators.map(v => t.stringLiteral(v)))
+				)
+			] : []),
 		]);
 
 		// Create result object with all accumulators: { var1, var2, ... }
@@ -458,6 +472,17 @@ export class OperationCheckpointTransformer {
 	 *   const [a, b] = await Promise.all(...) -> ['a', 'b']
 	 */
 	private findPromiseAllResultVariables(path: any): string[] {
+		return this.findResultVariables(path);
+	}
+
+	/**
+	 * Find the variable names that an await expression result is assigned to
+	 * Handles both regular assignment and destructuring:
+	 *   const result = await api.call(...) -> ['result']
+	 *   const [a, b] = await Promise.all(...) -> ['a', 'b']
+	 *   const { data, error } = await api.call(...) -> ['data', 'error']
+	 */
+	private findResultVariables(path: any): string[] {
 		const variables: string[] = [];
 
 		// The path is an AwaitExpression. Check if it's part of a variable declaration
@@ -468,7 +493,7 @@ export class OperationCheckpointTransformer {
 			parent = parent.parentPath;
 		}
 
-		// Check for variable declarator: const x = await Promise.all(...)
+		// Check for variable declarator: const x = await ...
 		if (parent?.isVariableDeclarator()) {
 			const id = parent.node.id;
 			
@@ -582,8 +607,11 @@ export class OperationCheckpointTransformer {
 		// Generate checkpoint ID based on location
 		const checkpointId = this.generateCheckpointId(node);
 
+		// Find result variable names
+		const usedVariables = this.findResultVariables(path);
+
 		// Extract metadata from the call
-		const metadata = this.extractMetadata(fullPath, callExpr, matchedPattern);
+		const metadata = this.extractMetadata(fullPath, callExpr, matchedPattern, usedVariables);
 
 		// Create the wrapped call
 		const wrappedCall = this.createCheckpointWrap(
@@ -633,7 +661,8 @@ export class OperationCheckpointTransformer {
 	private extractMetadata(
 		fullPath: string,
 		callExpr: t.CallExpression,
-		pattern: CheckpointablePattern
+		pattern: CheckpointablePattern,
+		usedVariables?: string[]
 	): t.ObjectExpression {
 		// Parse the path: "atp.api.github.getUser" -> namespace: "atp", group: "api.github", method: "getUser"
 		const parts = fullPath.split('.');
@@ -648,7 +677,7 @@ export class OperationCheckpointTransformer {
 		// Extract params from arguments
 		const paramsNode = this.extractParams(callExpr.arguments);
 
-		return t.objectExpression([
+		const properties = [
 			t.objectProperty(
 				t.identifier('type'),
 				t.stringLiteral(pattern.operationType)
@@ -669,7 +698,19 @@ export class OperationCheckpointTransformer {
 				t.identifier('params'),
 				paramsNode
 			),
-		]);
+		];
+
+		// Add usedVariables if available
+		if (usedVariables && usedVariables.length > 0) {
+			properties.push(
+				t.objectProperty(
+					t.identifier('usedVariables'),
+					t.arrayExpression(usedVariables.map(v => t.stringLiteral(v)))
+				)
+			);
+		}
+
+		return t.objectExpression(properties);
 	}
 
 	/**

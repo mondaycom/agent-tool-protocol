@@ -63,6 +63,8 @@ export interface OperationMetadata {
 	params: Record<string, unknown>;
 	/** Original code expression that triggered this checkpoint */
 	sourceExpression?: string;
+	/** Variable names used to store the result (e.g., ['result'], ['myUser', 'galTestUser']) */
+	usedVariables?: string[];
 }
 
 /**
@@ -102,16 +104,11 @@ export interface FullSnapshotCheckpoint extends BaseCheckpoint {
 
 /**
  * Reference to a checkpoint result stored elsewhere
+ * No preview data is provided - must use __restore.checkpoint() to access
  */
 export interface CheckpointReference {
 	/** Human-readable description of what's stored */
 	description: string;
-	/** Preview of the data (first few items/fields) */
-	preview?: unknown;
-	/** Count of items (for arrays) or keys (for objects) */
-	count?: number;
-	/** Sample of keys/indices */
-	keys?: string[];
 	/** Code snippet to restore this checkpoint */
 	restoreCode: string;
 }
@@ -167,6 +164,11 @@ export interface CheckpointInfo {
 	 * Security notice shown to LLM when data has restricted provenance
 	 */
 	securityNotice?: string;
+	/**
+	 * Variable names used to store the result (e.g., ['result'], ['myUser', 'galTestUser'])
+	 * Used to generate helpful restore code snippets
+	 */
+	usedVariables?: string[];
 }
 
 /**
@@ -222,8 +224,6 @@ export interface CheckpointConfig {
 	strategy?: CheckpointStrategy;
 	/** Enable/disable checkpointing */
 	enabled?: boolean;
-	/** Preview size for references (items to show) */
-	previewSize?: number;
 }
 
 /**
@@ -234,7 +234,6 @@ export const DEFAULT_CHECKPOINT_CONFIG: Required<Omit<CheckpointConfig, 'strateg
 	maxArrayItemsFull: 100,
 	defaultTTL: 3600, // 1 hour
 	enabled: true,
-	previewSize: 3,
 };
 
 /**

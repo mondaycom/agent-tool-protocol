@@ -6,6 +6,7 @@
  */
 
 import type { ProvenanceMetadata } from './types.js';
+import { PROVENANCE_PROPERTY_NAMES } from './registry.js';
 
 /**
  * Provenance entry with path information for nested object tracking
@@ -144,8 +145,13 @@ export function extractProvenanceRecursive(
 	} else {
 		// Recursively process object properties
 		for (const key of Object.keys(value)) {
-			if (key === '__prov_id__' || key === '__provenance__' || key === '__prov_meta__') {
-				continue; // Skip provenance markers
+			// Skip provenance metadata properties
+			if (
+				key === PROVENANCE_PROPERTY_NAMES.PROVENANCE_ID ||
+				key === PROVENANCE_PROPERTY_NAMES.PROVENANCE ||
+				key === PROVENANCE_PROPERTY_NAMES.PROVENANCE_META
+			) {
+				continue;
 			}
 			const propPath = path ? `${path}.${key}` : `.${key}`;
 			const propResult = extractProvenanceRecursive(

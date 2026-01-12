@@ -22,6 +22,7 @@ import { MemoryCache } from "@mondaydotcomorg/atp-providers";
 // Set up environment
 process.env.ATP_JWT_SECRET = process.env.ATP_JWT_SECRET || 'test-secret-key';
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 // Check for OpenAI API key
 if (!process.env.OPENAI_API_KEY) {
 	console.error('❌ Error: OPENAI_API_KEY environment variable is required');
@@ -221,21 +222,13 @@ ${result1.error.message}
 Original code:
 ${initialCode}
 
-IMPORTANT: ${stats.total} expensive API operations were already executed and checkpointed.
-You MUST use __restore.checkpoint() to restore these values instead of re-executing them!
-
 Available checkpoints:
 ${checkpoints.map(cp => `- ${cp.operation}: checkpoint id "${cp.id}"`).join('\n')}
 
 Instructions:
 ${restoreInstructions}
 
-Task: Fix the code error and use __restore.checkpoint() to recover the expensive API call results.
-Only return the fixed code, no explanations. The code should:
-1. Restore the checkpointed data using __restore.checkpoint("<id>")
-2. Fix the bug that caused the original error
-3. Complete the analysis successfully
-			`.trim();
+Task: Fix the code.`.trim();
 
 			console.log('🤖 Agent: Analyzing error and checkpoint data...\n');
 
