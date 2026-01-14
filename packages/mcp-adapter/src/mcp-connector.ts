@@ -1,9 +1,11 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import type { APIGroupConfig, CustomFunctionDef } from '@mondaydotcomorg/atp-protocol';
 import { convertMCPInputSchema } from './schema-utils.js';
+import type { MCPStdioServerConfig, MCPSSEServerConfig, MCPServerConfig } from './types.js';
 
-interface MCPServerConfig {
+interface MCPServerConfigLegacy {
 	name: string;
 	command: string;
 	args: string[];
@@ -19,11 +21,28 @@ export class MCPConnector {
 	private currentServerName: string | null = null;
 
 	/**
-	 * Connects to an MCP server and retrieves its tools.
-	 * @param config - MCP server configuration
+	 * Fetches all tools from an MCP server, handling pagination if present.
+	 */
+	private async fetchAllTools(client: Client): Promise<Array<{ name: string; description?: string; inputSchema: unknown }>> {
+		const allTools: Array<{ name: string; description?: string; inputSchema: unknown }> = [];
+		let cursor: string | undefined;
+
+		do {
+			const toolsResult = await client.listTools(cursor ? { cursor } : undefined);
+			const tools = toolsResult.tools || [];
+			allTools.push(...tools);
+			cursor = toolsResult.nextCursor;
+		} while (cursor);
+
+		return allTools;
+	}
+
+	/**
+	 * Connects to an MCP server using stdio transport.
+	 * @param config - MCP stdio server configuration
 	 * @returns APIGroupConfig with converted tools
 	 */
-	async connectToMCPServer(config: MCPServerConfig): Promise<APIGroupConfig> {
+	async connectToStdioServer(config: MCPStdioServerConfig): Promise<APIGroupConfig> {
 		const transport = new StdioClientTransport({
 			command: config.command,
 			args: config.args,
@@ -31,13 +50,8 @@ export class MCPConnector {
 		});
 
 		const client = new Client(
-			{
-				name: 'agent-tool-protocol-connector',
-				version: '1.0.0',
-			},
-			{
-				capabilities: {},
-			}
+			{ name: 'agent-tool-protocol-connector', version: '1.0.0' },
+			{ capabilities: {} }
 		);
 
 		await client.connect(transport);
@@ -45,33 +59,99 @@ export class MCPConnector {
 		this.currentClient = client;
 		this.currentServerName = config.name;
 
-		const toolsResult = await client.listTools();
-		const tools = toolsResult.tools || [];
+		const tools = await this.fetchAllTools(client);
 
-		const functions: CustomFunctionDef[] = tools.map(
-			(tool: { name: string; description?: string; inputSchema: unknown }) => {
-				const inputSchema = convertMCPInputSchema(tool.inputSchema);
+		const functions: CustomFunctionDef[] = tools.map((tool) => {
+			const inputSchema = convertMCPInputSchema(tool.inputSchema);
 
-				return {
-					name: tool.name,
-					description: tool.description || `MCP tool: ${tool.name}`,
-					inputSchema,
-					handler: async (input: unknown) => {
-						const result = await client.callTool({
-							name: tool.name,
-							arguments: input as Record<string, unknown>,
-						});
-						return result.content;
-					},
-				};
-			}
-		);
+			return {
+				name: tool.name,
+				description: tool.description || `MCP tool: ${tool.name}`,
+				inputSchema,
+				handler: async (input: unknown) => {
+					const result = await client.callTool({
+						name: tool.name,
+						arguments: input as Record<string, unknown>,
+					});
+					return result.content;
+				},
+			};
+		});
 
 		return {
 			name: config.name,
 			type: 'mcp',
 			functions,
 		};
+	}
+
+	/**
+	 * Connects to an MCP server using SSE transport.
+	 * @param config - MCP SSE server configuration
+	 * @returns APIGroupConfig with converted tools
+	 */
+	async connectToSSEServer(config: MCPSSEServerConfig): Promise<APIGroupConfig> {
+		const transport = new SSEClientTransport(new URL(config.serverUrl), {
+			requestInit: { headers: config.headers || {} },
+		});
+
+		const client = new Client(
+			{ name: 'agent-tool-protocol-connector', version: '1.0.0' },
+			{ capabilities: {} }
+		);
+
+		await client.connect(transport);
+		this.clients.set(config.name, client);
+		this.currentClient = client;
+		this.currentServerName = config.name;
+
+		const tools = await this.fetchAllTools(client);
+
+		const functions: CustomFunctionDef[] = tools.map((tool) => {
+			const inputSchema = convertMCPInputSchema(tool.inputSchema);
+
+			return {
+				name: tool.name,
+				description: tool.description || `MCP tool: ${tool.name}`,
+				inputSchema,
+				handler: async (input: unknown) => {
+					const result = await client.callTool({
+						name: tool.name,
+						arguments: input as Record<string, unknown>,
+					});
+					return result.content;
+				},
+			};
+		});
+
+		return {
+			name: config.name,
+			type: 'mcp',
+			functions,
+		};
+	}
+
+	/**
+	 * Connects to an MCP server and retrieves its tools.
+	 * @param config - MCP server configuration (supports both stdio and SSE)
+	 * @returns APIGroupConfig with converted tools
+	 */
+	async connectToMCPServer(config: MCPServerConfig | MCPServerConfigLegacy): Promise<APIGroupConfig> {
+		if ('transport' in config) {
+			if (config.transport === 'sse') {
+				return this.connectToSSEServer(config);
+			}
+			return this.connectToStdioServer(config);
+		}
+
+		// Legacy support: treat as stdio config
+		return this.connectToStdioServer({
+			name: config.name,
+			transport: 'stdio',
+			command: config.command,
+			args: config.args,
+			env: config.env,
+		});
 	}
 
 	/**
@@ -109,7 +189,7 @@ export class MCPConnector {
 	 * Lists all tools from the currently connected MCP server.
 	 * @returns Array of tools
 	 */
-	async listTools(): Promise<any[]> {
+	async listTools(): Promise<unknown[]> {
 		if (!this.currentClient) {
 			throw new Error('Not connected to any MCP server');
 		}
@@ -121,7 +201,7 @@ export class MCPConnector {
 	 * Lists all prompts from the currently connected MCP server.
 	 * @returns Array of prompts
 	 */
-	async listPrompts(): Promise<any[]> {
+	async listPrompts(): Promise<unknown[]> {
 		if (!this.currentClient) {
 			throw new Error('Not connected to any MCP server');
 		}

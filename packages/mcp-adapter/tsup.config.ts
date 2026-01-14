@@ -12,6 +12,9 @@ export default defineConfig({
 		'zod',
 		'@mondaydotcomorg/atp-protocol',
 		'@mondaydotcomorg/atp-server',
+		'@modelcontextprotocol/sdk',
+		'@modelcontextprotocol/sdk/client/index.js',
+		'@modelcontextprotocol/sdk/client/stdio.js',
+		'@modelcontextprotocol/sdk/client/sse.js',
 	],
 });
-

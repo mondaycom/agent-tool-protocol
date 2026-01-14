@@ -21,3 +21,20 @@ export interface MCPPrompt {
 		required?: boolean;
 	}>;
 }
+
+export interface MCPStdioServerConfig {
+	name: string;
+	transport: 'stdio';
+	command: string;
+	args: string[];
+	env?: Record<string, string>;
+}
+
+export interface MCPSSEServerConfig {
+	name: string;
+	transport: 'sse';
+	serverUrl: string;
+	headers?: Record<string, string>;
+}
+
+export type MCPServerConfig = MCPStdioServerConfig | MCPSSEServerConfig;
