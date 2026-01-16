@@ -1,7 +1,7 @@
 import ivm from 'isolated-vm';
 import type { Logger } from '@mondaydotcomorg/atp-runtime';
 import { isPauseError, runInExecutionContext } from '@mondaydotcomorg/atp-runtime';
-import { isBatchPauseError } from '@mondaydotcomorg/atp-compiler';
+import { isBatchPauseError, CHECKPOINT_RUNTIME_NAMESPACE } from '@mondaydotcomorg/atp-compiler';
 import { PAUSE_EXECUTION_MARKER } from './constants.js';
 import { isInIsolateFunction, getInIsolateImplementation } from './in-isolate-runtime.js';
 
@@ -407,23 +407,14 @@ export async function setupCheckpointNamespace(
 	}
 
 	// Setup __checkpoint namespace for internal use by transformed code
-	let checkpointSetup = 'globalThis.__checkpoint = {\n';
+	let checkpointSetup = `globalThis.${CHECKPOINT_RUNTIME_NAMESPACE} = {\n`;
 	checkpointSetup += checkpointKeys
 		.map(
 			(key) =>
-				`\t${key}: async (...args) => {\n\t\treturn await __checkpoint_${key}_impl.apply(undefined, args, { arguments: { copy: true }, result: { promise: true } });\n\t}`
+				`\t${key}: async (...args) => {\n\t\treturn await ${CHECKPOINT_RUNTIME_NAMESPACE}_${key}_impl.apply(undefined, args, { arguments: { copy: true }, result: { promise: true } });\n\t}`
 		)
 		.join(',\n');
 	checkpointSetup += '\n};';
-
-	// Setup __restore namespace for user-facing restore functionality
-	// The full checkpoint ID format is {executionId}:{shortId}, so no need to pass execution ID separately
-	checkpointSetup += `
-globalThis.__restore = {
-	checkpoint: async (fullCheckpointId) => {
-		return await __checkpoint_restore_impl.apply(undefined, [fullCheckpointId], { arguments: { copy: true }, result: { promise: true } });
-	}
-};`;
 
 	await ivmContext.eval(checkpointSetup);
 }

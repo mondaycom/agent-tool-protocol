@@ -9,7 +9,7 @@
  * 2. Code executes, checkpoints are created for expensive API calls
  * 3. Code fails during processing
  * 4. Agent receives error with checkpoint data
- * 5. Agent writes recovery code using __restore.checkpoint()
+ * 5. Agent writes recovery code using __checkpoint.restore()
  * 6. Recovery succeeds without re-executing expensive APIs
  */
 

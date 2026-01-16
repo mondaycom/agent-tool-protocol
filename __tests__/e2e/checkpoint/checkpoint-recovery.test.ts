@@ -615,7 +615,7 @@ describe('Checkpoint Recovery E2E', () => {
 					// Recovery: restore the Promise.all result
 					const recoveryCode = `
 						// Restore the entire Promise.all result
-						const results = await __restore.checkpoint("${promiseAllCheckpoint.id}");
+						const results = await __checkpoint.restore("${promiseAllCheckpoint.id}");
 						
 						// Continue processing with restored data
 						const [user, orders] = results;
@@ -782,7 +782,7 @@ describe('Checkpoint Recovery E2E', () => {
 					// Recovery: restore the loop's accumulated state
 					const recoveryCode = `
 						// Restore the loop's accumulated state
-						const loopState = await __restore.checkpoint("${loopCheckpoint.id}");
+						const loopState = await __checkpoint.restore("${loopCheckpoint.id}");
 						
 						// Extract the accumulated data
 						const { allUsers, cursor } = loopState;
@@ -873,8 +873,8 @@ describe('Checkpoint Recovery E2E', () => {
 				const recoveryCode = `
 					// Restore checkpointed values using full checkpoint IDs
 					// The IDs already include the execution ID (format: {executionId}:{shortId})
-					const user = await __restore.checkpoint("${userCheckpoint.id}");
-					const orders = await __restore.checkpoint("${ordersCheckpoint.id}");
+					const user = await __checkpoint.restore("${userCheckpoint.id}");
+					const orders = await __checkpoint.restore("${ordersCheckpoint.id}");
 					
 					// Continue with the rest of the operation
 					return {

@@ -6,19 +6,6 @@
  */
 
 import type { CacheProvider } from '@mondaydotcomorg/atp-protocol';
-import type {
-	Checkpoint,
-	FullSnapshotCheckpoint,
-	ReferenceCheckpoint,
-	OperationMetadata,
-	CheckpointInfo,
-	CheckpointConfig,
-	CheckpointProvenanceSnapshot,
-	CheckpointProvenanceEntry,
-} from './checkpoint-types.js';
-import { CheckpointType, OperationCheckpointError } from './checkpoint-types.js';
-import { DEFAULT_CHECKPOINT_CONFIG } from './checkpoint-types.js';
-import { DefaultCheckpointStrategy } from './checkpoint-strategy.js';
 import {
 	extractProvenanceRecursive,
 	restoreProvenanceFromSnapshot,
@@ -27,6 +14,18 @@ import {
 	type ProvenanceExtractor,
 	type ProvenanceAttacher,
 } from '@mondaydotcomorg/atp-provenance';
+import type {
+	Checkpoint,
+	FullSnapshotCheckpoint,
+	ReferenceCheckpoint,
+	OperationMetadata,
+	CheckpointInfo,
+	CheckpointConfig,
+	CheckpointProvenanceSnapshot,
+} from './checkpoint-types';
+import { CheckpointType, OperationCheckpointError } from './checkpoint-types';
+import { DEFAULT_CHECKPOINT_CONFIG, CHECKPOINT_RESTORE_METHOD_NAME } from './constants';
+import { DefaultCheckpointStrategy } from './checkpoint-strategy';
 
 /**
  * Sanitize data by removing internal provenance metadata properties
@@ -562,7 +561,7 @@ export class OperationCheckpointManager {
 
 		// References - must use restore
 		if (references.length > 0) {
-			lines.push('**Reference Checkpoints** (must use __restore.checkpoint):');
+			lines.push(`**Reference Checkpoints** (must use ${CHECKPOINT_RESTORE_METHOD_NAME}):`);
 			lines.push('');
 			for (const cp of references) {
 				const varNames = cp.usedVariables && cp.usedVariables.length > 0
@@ -571,9 +570,9 @@ export class OperationCheckpointManager {
 
 				let restoreSnippet: string;
 				if (varNames.length === 1) {
-					restoreSnippet = `const ${varNames[0]} = await __restore.checkpoint("${cp.id}");`;
+					restoreSnippet = `const ${varNames[0]} = await ${CHECKPOINT_RESTORE_METHOD_NAME}("${cp.id}");`;
 				} else {
-					restoreSnippet = `const [${varNames.join(', ')}] = await __restore.checkpoint("${cp.id}");`;
+					restoreSnippet = `const [${varNames.join(', ')}] = ${CHECKPOINT_RESTORE_METHOD_NAME}("${cp.id}");`;
 				}
 
 				lines.push(`Checkpoint: ${cp.operation}`);
@@ -584,7 +583,7 @@ export class OperationCheckpointManager {
 
 		lines.push('**Usage Guidelines:**');
 		lines.push('• Full snapshot checkpoints: Copy the inline data directly into your code');
-		lines.push('• Reference checkpoints: Use __restore.checkpoint() to access the data');
+		lines.push(`• Reference checkpoints: Use ${CHECKPOINT_RESTORE_METHOD_NAME}() to access the data`);
 
 		return lines.join('\n');
 	}

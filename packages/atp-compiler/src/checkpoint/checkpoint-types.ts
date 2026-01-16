@@ -8,15 +8,12 @@
 
 import type {
 	CheckpointProvenanceSnapshot,
-	ProvenanceEntry,
 	ProvenanceExtractor,
 	ProvenanceAttacher,
 } from '@mondaydotcomorg/atp-provenance';
 
-// Re-export provenance types for convenience
 export type {
 	CheckpointProvenanceSnapshot,
-	ProvenanceEntry as CheckpointProvenanceEntry,
 	ProvenanceExtractor,
 	ProvenanceAttacher,
 };
@@ -225,16 +222,6 @@ export interface CheckpointConfig {
 	/** Enable/disable checkpointing */
 	enabled?: boolean;
 }
-
-/**
- * Default configuration values
- */
-export const DEFAULT_CHECKPOINT_CONFIG: Required<Omit<CheckpointConfig, 'strategy'>> = {
-	maxFullSnapshotSize: 10_000, // 10KB
-	maxArrayItemsFull: 100,
-	defaultTTL: 3600, // 1 hour
-	enabled: true,
-};
 
 /**
  * Error thrown when operation checkpoint operations fail

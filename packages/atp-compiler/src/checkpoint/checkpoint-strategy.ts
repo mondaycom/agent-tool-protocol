@@ -11,8 +11,8 @@ import type {
 	OperationMetadata,
 	CheckpointConfig,
 	CheckpointProvenanceSnapshot,
-} from './checkpoint-types.js';
-import { DEFAULT_CHECKPOINT_CONFIG } from './checkpoint-types.js';
+} from './checkpoint-types';
+import {CHECKPOINT_RESTORE_METHOD_NAME, DEFAULT_CHECKPOINT_CONFIG} from './constants';
 import { hasRestrictedProvenance } from '@mondaydotcomorg/atp-provenance';
 
 /**
@@ -76,7 +76,7 @@ export class DefaultCheckpointStrategy implements CheckpointStrategy {
 	 */
 	createReference(result: unknown, metadata: OperationMetadata): CheckpointReference {
 		const description = this.generateDescription(result, metadata);
-		const restoreCode = `await __restore.checkpoint("{{CHECKPOINT_ID}}")`;
+		const restoreCode = `await ${CHECKPOINT_RESTORE_METHOD_NAME}("{{CHECKPOINT_ID}}")`;
 
 		return {
 			description,

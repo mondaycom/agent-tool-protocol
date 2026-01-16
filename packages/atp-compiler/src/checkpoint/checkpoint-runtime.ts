@@ -16,9 +16,10 @@ import {
 	type ProvenanceExtractor,
 	type ProvenanceAttacher,
 	type ProvenanceMetaAttacher,
-} from './operation-checkpoint-manager.js';
-import type { OperationMetadata, CheckpointConfig, CheckpointInfo, CheckpointProvenanceMetadata } from './checkpoint-types.js';
+} from './operation-checkpoint-manager';
+import type { OperationMetadata, CheckpointConfig, CheckpointInfo } from './checkpoint-types';
 import type { CacheProvider } from '@mondaydotcomorg/atp-protocol';
+import { CHECKPOINT_RESTORE_API_NAME } from './constants'
 
 export interface CheckpointRuntimeConfig {
 	executionId: string;
@@ -133,9 +134,7 @@ export function cleanupCheckpointRuntime(executionId?: string): void {
 export function getCheckpointRuntime(): CheckpointSandboxRuntime {
 	return {
 		buffer: checkpointBuffer,
-		restore: checkpointRestore,
-		getAll: getCheckpointInfos,
-		getInstructions: getRestoreInstructions,
+		[CHECKPOINT_RESTORE_API_NAME]: checkpointRestore,
 	};
 }
 
@@ -158,16 +157,6 @@ export interface CheckpointSandboxRuntime {
 	 *                           The execution ID is parsed from the ID automatically
 	 */
 	restore: (fullCheckpointId: string) => Promise<unknown>;
-
-	/**
-	 * Get all checkpoint infos for the current execution
-	 */
-	getAll: () => CheckpointInfo[];
-
-	/**
-	 * Get restore instructions for the LLM
-	 */
-	getInstructions: () => string;
 }
 
 /**

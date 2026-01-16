@@ -85,8 +85,8 @@ The LLM automatically generates recovery code:
 
 ```typescript
 // Restore checkpointed data instead of re-executing!
-const users = await __restore.checkpoint("exec-123:op_L3_C15");
-const analytics = await __restore.checkpoint("exec-123:op_L12_C18");
+const users = await __checkpoint.restore("exec-123:op_L3_C15");
+const analytics = await __checkpoint.restore("exec-123:op_L12_C18");
 
 // Fix the bug (correct property name)
 const avgMetrics = analytics.reduce((acc, a) => ({
@@ -173,7 +173,7 @@ const users = await (async () => {
 
 ```typescript
 // Restore from checkpoint (works across executions)
-const data = await __restore.checkpoint("exec-id:checkpoint-id");
+const data = await __checkpoint.restore("exec-id:checkpoint-id");
 ```
 
 ### Preview System
