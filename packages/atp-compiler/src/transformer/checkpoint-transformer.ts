@@ -441,6 +441,23 @@ export class OperationCheckpointTransformer {
 						accumulators.add(varName);
 					}
 				}
+				// Detect object property assignments like obj[key] = ... or obj.prop = ...
+				else if (t.isMemberExpression(left)) {
+					// Extract the base object (e.g., 'massive' from 'massive[key]' or 'obj' from 'obj.prop')
+					let baseObject = left.object;
+					// Handle nested member expressions like obj.nested[key]
+					while (t.isMemberExpression(baseObject)) {
+						baseObject = baseObject.object;
+					}
+					if (t.isIdentifier(baseObject)) {
+						const varName = baseObject.name;
+						// Only track if declared before loop
+						const binding = path.scope.getBinding(varName);
+						if (binding?.path?.node?.start && binding.path.node.start < loopStart) {
+							accumulators.add(varName);
+						}
+					}
+				}
 			}
 		});
 
