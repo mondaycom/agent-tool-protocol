@@ -7,7 +7,7 @@
 		"examples/*"
 	],
 	"scripts": {
-		"build": "nx run-many -t build",
+		"build": "nx run-many --projects=tag:atp-core -t build",
 		"dev": "nx run-many -t dev",
 		"jest": "node --no-node-snapshot --expose-gc --max-old-space-size=8192 node_modules/.bin/jest",
 		"test": "NODE_ENV=test npm run jest -- --runInBand --forceExit --logHeapUsage",
