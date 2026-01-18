@@ -427,7 +427,6 @@ export class SandboxExecutor {
 			const isAlreadyWrapped = code.trim().startsWith('(async function');
 			alreadyTransformed = isAlreadyWrapped;
 
-			console.log('------ Checking if code is already wrapped ------', { isAlreadyWrapped, isResume });
 			if (isAlreadyWrapped && provenanceMode === ProvenanceMode.AST) {
 				astInstrumented = true;
 				executionLogger.info('Code already AST-instrumented (from previous execution)', {
@@ -477,7 +476,6 @@ export class SandboxExecutor {
 			// STEP 2: AST instrumentation AFTER checkpoint transformation
 			// This ensures provenance tracking works with checkpoint-wrapped code
 			if (provenanceMode === ProvenanceMode.AST && !alreadyTransformed) {
-				console.log('------ Applying  Provenance AST instrumentation ------');
 				try {
 					// Instrument the (potentially checkpoint-transformed) code
 					const instrumentResult = astInstrumentCode(codeToExecute);
@@ -516,7 +514,6 @@ export class SandboxExecutor {
 			}
 
 			if (!useCompiler && !astInstrumented && stateManager) {
-				console.log('--- ----- Applying State Capture Instrumentation ------');
 				try {
 					const instrumentor = new CodeInstrumentor();
 					const instrumented = instrumentor.instrument(code);
@@ -548,7 +545,6 @@ export class SandboxExecutor {
 		})();
 	`;
 
-			console.log('----- Executing wrapped code -----', codeToExecute);
 			executionLogger.debug('Final wrapped code', {
 				astInstrumented,
 				codeLength: wrappedCode.length,
