@@ -492,12 +492,7 @@ function convertOperation(
 
 		if (operation.parameters) {
 			for (let param of operation.parameters) {
-				if ('$ref' in param) {
-					const resolved = resolveReference<OpenAPIParameter>(param.$ref as string, spec);
-					if (resolved) {
-						param = resolved;
-					}
-				}
+				param = resolveParamReferenceIfNeeded(param, spec);
 
 				if (param.in === 'path' && input[param.name]) {
 					requestPath = requestPath.replace(
@@ -604,6 +599,16 @@ function convertOperation(
 	};
 }
 
+function resolveParamReferenceIfNeeded(param: OpenAPIParameter | (OpenAPIParameter & { $ref: unknown }), spec: OpenAPISpec | Swagger2Spec) {
+	if ('$ref' in param) {
+		const resolved = resolveReference<OpenAPIParameter>(param.$ref as string, spec);
+		if (resolved) {
+			param = resolved;
+		}
+	}
+	return param;
+}
+
 /**
  * Build input JSON schema from parameters and requestBody
  */
@@ -613,12 +618,7 @@ function buildInputSchema(operation: OpenAPIOperation, spec: APISpec): unknown {
 
 	if (operation.parameters) {
 		for (let param of operation.parameters) {
-			if ('$ref' in param) {
-				const resolved = resolveReference<OpenAPIParameter>(param.$ref as string, spec);
-				if (resolved) {
-					param = resolved;
-				}
-			}
+			param = resolveParamReferenceIfNeeded(param, spec);
 
 			if (param.schema) {
 				const paramSchema = resolveSchema(param.schema, spec);
