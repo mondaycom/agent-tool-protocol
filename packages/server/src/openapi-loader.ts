@@ -363,6 +363,15 @@ function matchPathPattern(path: string, pattern: string): boolean {
 	return new RegExp(`^${regexPattern}$`).test(path);
 }
 
+function resolveReference<TRef = OpenAPISchema | OpenAPIParameter>(ref: string, spec: APISpec): TRef | null {
+	const refPath = ref.split('/').slice(1);
+	let resolved: unknown = spec;
+	for (const part of refPath) {
+		resolved = (resolved as Record<string, unknown>)?.[part];
+	}
+	return resolved as TRef;
+}
+
 /**
  * Convert OpenAPI operation to ATP function
  */
@@ -375,7 +384,10 @@ function convertOperation(
 	options: LoadOpenAPIOptions,
 	auth?: AuthConfig
 ): CustomFunctionDef | null {
-	const functionName = operation.operationId || `${method}_${path.replace(/[^a-zA-Z0-9]/g, '_')}`;
+	const operationName = operation.operationId || [method, path].join('_');
+	const functionName = operationName.
+		replace(/[^a-zA-Z0-9_]+/g, '_')
+		.replace(/^_+|_+$/g, '');
 
 	const operationKey = `${method.toUpperCase()} ${path}`;
 	const description =
@@ -479,7 +491,9 @@ function convertOperation(
 		}
 
 		if (operation.parameters) {
-			for (const param of operation.parameters) {
+			for (let param of operation.parameters) {
+				param = resolveParamReferenceIfNeeded(param, spec);
+
 				if (param.in === 'path' && input[param.name]) {
 					requestPath = requestPath.replace(
 						`{${param.name}}`,
@@ -585,6 +599,16 @@ function convertOperation(
 	};
 }
 
+function resolveParamReferenceIfNeeded(param: OpenAPIParameter | (OpenAPIParameter & { $ref: unknown }), spec: OpenAPISpec | Swagger2Spec) {
+	if ('$ref' in param) {
+		const resolved = resolveReference<OpenAPIParameter>(param.$ref as string, spec);
+		if (resolved) {
+			param = resolved;
+		}
+	}
+	return param;
+}
+
 /**
  * Build input JSON schema from parameters and requestBody
  */
@@ -593,7 +617,9 @@ function buildInputSchema(operation: OpenAPIOperation, spec: APISpec): unknown {
 	const required: string[] = [];
 
 	if (operation.parameters) {
-		for (const param of operation.parameters) {
+		for (let param of operation.parameters) {
+			param = resolveParamReferenceIfNeeded(param, spec);
+
 			if (param.schema) {
 				const paramSchema = resolveSchema(param.schema, spec);
 				properties[param.name] =
@@ -686,12 +712,7 @@ function resolveSchema(
 			return { type: 'object', description: 'Circular reference: ' + schema.$ref };
 		}
 
-		const refPath = schema.$ref.split('/').slice(1);
-		let resolved: unknown = spec;
-		for (const part of refPath) {
-			resolved = (resolved as Record<string, unknown>)?.[part];
-		}
-
+		const resolved = resolveReference<OpenAPISchema>(schema.$ref, spec);
 		if (resolved) {
 			visited.add(schema.$ref);
 			const result = resolveSchema(resolved as OpenAPISchema, spec, visited);
