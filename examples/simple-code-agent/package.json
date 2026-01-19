@@ -8,9 +8,9 @@
 		"start": "NODE_OPTIONS='--no-node-snapshot' tsx simple-agent.ts"
 	},
 	"dependencies": {
-		"@langchain/core": "^0.2.0",
-		"@langchain/langgraph": "^0.0.19",
-		"@langchain/openai": "^0.1.0",
+		"@langchain/core": "^1.1.5",
+		"@langchain/langgraph": "^1.0.5",
+		"@langchain/openai": "^1.1.3",
 		"@mondaydotcomorg/atp-langchain": "workspace:*",
 		"dotenv": "^16.4.5",
 		"tsx": "^4.7.2"
