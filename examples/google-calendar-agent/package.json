@@ -9,8 +9,8 @@
 		"chat:atp": "./atp/start-code-agent.sh"
 	},
 	"dependencies": {
-		"@langchain/langgraph": "^0.2.20",
-		"@langchain/openai": "^0.3.14",
+		"@langchain/langgraph": "^1.0.5",
+		"@langchain/openai": "^1.1.3",
 		"@mondaydotcomorg/atp-client": "workspace:*",
 		"@mondaydotcomorg/atp-langchain": "workspace:*",
 		"@mondaydotcomorg/atp-mcp-adapter": "workspace:*",

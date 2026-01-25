@@ -65,14 +65,14 @@
 	"dependencies": {
 		"@langchain/anthropic": "^0.3.7",
 		"@langchain/community": "^0.3.57",
-		"@langchain/core": "^0.3.78",
+		"@langchain/core": "^1.1.5",
 		"@langchain/google-genai": "^0.1.4",
-		"@langchain/langgraph": "1.0.0",
+		"@langchain/langgraph": "^1.0.5",
 		"@langchain/ollama": "^0.1.1",
-		"@langchain/openai": "^0.3.14",
+		"@langchain/openai": "^1.1.3",
 		"dotenv": "^17.2.3",
 		"ioredis": "^5.8.0",
-		"langchain": "^0.3.36",
+		"langchain": "^1.2.0",
 		"langchainhub": "^0.0.11",
 		"openai": "^6.3.0",
 		"zod": "^3.25.0"
