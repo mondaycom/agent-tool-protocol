@@ -125,6 +125,7 @@ export class LangGraphATPClient {
 	constructor(options: LangGraphATPClientOptions) {
 		const {
 			server,
+			serverUrl,
 			headers,
 			llm,
 			embeddings,
@@ -136,6 +137,7 @@ export class LangGraphATPClient {
 
 		this.client = new AgentToolProtocolClient({
 			server,
+            baseUrl: serverUrl,
 			headers,
 			hooks,
 			serviceProviders: tools ? { tools } : undefined,

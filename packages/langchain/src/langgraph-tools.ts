@@ -81,11 +81,12 @@ export interface ATPToolsResult {
  * ```
  */
 export async function createATPTools(options: CreateATPToolsOptions): Promise<ATPToolsResult> {
-	const { server, defaultExecutionConfig, ...clientOptions } = options;
+	const { serverUrl, server, defaultExecutionConfig, ...clientOptions } = options;
 
 	const client = new LangGraphATPClient({
         server,
-		...clientOptions,
+        serverUrl,
+        ...clientOptions,
 	});
 
 	await client.connect();
