@@ -137,9 +137,9 @@ const llm = new ChatOpenAI({ modelName: 'gpt-4.1' });
 
 // Create ATP tools (this initializes the client WITH your LLM)
 const { client, tools } = await createATPTools({
-    serverUrl: 'http://localhost:3333',
-    headers: { Authorization: 'Bearer token' },
-    llm, // Important: register LLM first!
+	serverUrl: 'http://localhost:3333',
+	headers: { Authorization: 'Bearer token' },
+	llm, // Important: register LLM first!
 });
 
 // Fetch complete TypeScript definitions
@@ -177,13 +177,13 @@ Use execute_code tool to run your code.`;
 
 // Create agent with filtered tools
 const filteredTools = tools.filter(
-    (tool) => tool.name === 'atp_execute_code' || tool.name === 'atp_explore_api'
+	(tool) => tool.name === 'atp_execute_code' || tool.name === 'atp_explore_api'
 );
 
 const agent = createReactAgent({
-    llm,
-    tools: filteredTools,
-    messageModifier: systemPrompt,
+	llm,
+	tools: filteredTools,
+	messageModifier: systemPrompt,
 });
 ```
 
@@ -309,7 +309,7 @@ Creates LangChain tools with ATP integration.
 import { PostgresSaver } from '@langchain/langgraph-checkpoint-postgres';
 
 const checkpointer = new PostgresSaver({
-    connectionString: process.env.DATABASE_URL,
+	connectionString: process.env.DATABASE_URL,
 });
 ```
 
@@ -318,41 +318,41 @@ const checkpointer = new PostgresSaver({
 ```typescript
 // When approval is needed:
 if (isApprovalRequired(error)) {
-    // 1. Save to database
-    await db.approvalRequests.create({
-        executionId: error.approvalRequest.executionId,
-        message: error.approvalRequest.message,
-        context: error.approvalRequest.context,
-        status: 'pending',
-    });
+	// 1. Save to database
+	await db.approvalRequests.create({
+		executionId: error.approvalRequest.executionId,
+		message: error.approvalRequest.message,
+		context: error.approvalRequest.context,
+		status: 'pending',
+	});
 
-    // 2. Notify user (Slack, email, etc.)
-    await slack.send({
-        text: `Approval needed: ${error.approvalRequest.message}`,
-        blocks: [
-            {
-                type: 'actions',
-                elements: [
-                    { type: 'button', text: 'Approve', value: 'approve' },
-                    { type: 'button', text: 'Deny', value: 'deny' },
-                ],
-            },
-        ],
-    });
+	// 2. Notify user (Slack, email, etc.)
+	await slack.send({
+		text: `Approval needed: ${error.approvalRequest.message}`,
+		blocks: [
+			{
+				type: 'actions',
+				elements: [
+					{ type: 'button', text: 'Approve', value: 'approve' },
+					{ type: 'button', text: 'Deny', value: 'deny' },
+				],
+			},
+		],
+	});
 
-    // 3. Wait for webhook callback
-    // (Express endpoint receives Slack action)
+	// 3. Wait for webhook callback
+	// (Express endpoint receives Slack action)
 }
 
 // In webhook handler:
 app.post('/approval-callback', async (req, res) => {
-    const { executionId, action } = req.body;
-    const approved = action === 'approve';
+	const { executionId, action } = req.body;
+	const approved = action === 'approve';
 
-    // Resume execution
-    const result = await resumeWithApproval(executionId, approved);
+	// Resume execution
+	const result = await resumeWithApproval(executionId, approved);
 
-    res.json({ success: true, result });
+	res.json({ success: true, result });
 });
 ```
 
