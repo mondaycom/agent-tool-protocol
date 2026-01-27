@@ -28,24 +28,38 @@ import type { ExecutorConfig, RuntimeContext } from './types.js';
 import { SandboxBuilder } from './sandbox-builder.js';
 import { CodeInstrumentor, StateManager } from '../instrumentation/index.js';
 import { ATP_COMPILER_ENABLED } from './constants.js';
-import { getCompilerRuntime, transformCodeWithCompiler } from './compiler-config.js';
+import {
+	getCompilerRuntime,
+	transformCodeWithCompiler,
+	initializeCheckpointRuntime,
+	initializeCheckpointRuntimeWithProvenance,
+	cleanupCheckpointRuntime,
+	getCheckpointRuntime,
+	type CheckpointProvenanceMetadata,
+} from './compiler-config.js';
 import { setupResumeExecution } from './resume-handler.js';
 import {
 	injectSandbox,
 	injectTimerPolyfills,
 	setupAPINamespace,
 	setupRuntimeNamespace,
+	setupCheckpointNamespace,
 } from './sandbox-injector.js';
 import { handleExecutionError } from './execution-error-handler.js';
 import {
+	attachProvenanceMetaForCheckpoint,
 	captureProvenanceSnapshot,
 	cleanupProvenanceForExecution,
 	clearProvenanceExecutionId,
+	createProvenanceProxy,
 	createTrackingRuntime,
+	getProvenance,
+	getAllProvenance,
 	instrumentCode as astInstrumentCode,
 	registerProvenanceMetadata,
 	SecurityPolicyEngine,
 	setProvenanceExecutionId,
+	type ProvenanceMetadata,
 } from '@mondaydotcomorg/atp-provenance';
 import {
 	createASTProvenanceChecker,
@@ -297,11 +311,72 @@ export class SandboxExecutor {
 				};
 			}
 
-			if (ATP_COMPILER_ENABLED) {
-				sandbox.__runtime = getCompilerRuntime();
-			}
+		if (ATP_COMPILER_ENABLED) {
+			sandbox.__runtime = getCompilerRuntime();
+		}
 
-			let hintMetadata: Map<string, any> | undefined;
+		// Initialize checkpoint runtime if cache provider is available
+		if (this.config.cacheProvider) {
+			if (provenanceMode !== ProvenanceMode.NONE) {
+				// Provenance-aware checkpoint initialization
+				initializeCheckpointRuntimeWithProvenance({
+					executionId,
+					cache: this.config.cacheProvider,
+					config: { enabled: true },
+					provenanceMetaAttacher: attachProvenanceMetaForCheckpoint,
+					provenanceExtractor: (value: unknown) => {
+						// Just return ProvenanceMetadata as-is - types are now compatible
+						return getProvenance(value);
+					},
+					provenanceAttacher: (
+						value: unknown,
+						metadata,
+						primitives?
+					): unknown => {
+						// Skip null values (primitive registration calls)
+						if (value === null) {
+							// Re-register primitive taints if present
+							if (primitives) {
+								for (const [key, primMeta] of primitives) {
+									registerProvenanceMetadata(key, primMeta, executionId);
+								}
+							}
+							return null;
+						}
+
+						// Re-attach provenance to restored value using the metadata as-is
+						const restored = createProvenanceProxy(
+							value,
+							metadata.source,
+							metadata.readers,
+							metadata.dependencies
+						);
+						
+						// Re-register primitive taints if present
+						if (primitives) {
+							for (const [key, primMeta] of primitives) {
+								registerProvenanceMetadata(key, primMeta, executionId);
+							}
+						}
+						
+						return restored;
+					},
+				});
+				executionLogger.debug('Checkpoint runtime initialized with provenance integration', {
+					provenanceMode,
+				});
+			} else {
+				// Standard checkpoint initialization (no provenance)
+				initializeCheckpointRuntime({
+					executionId,
+					cache: this.config.cacheProvider,
+					config: { enabled: true },
+				});
+			}
+			sandbox.__checkpoint = getCheckpointRuntime();
+		}
+
+		let hintMetadata: Map<string, any> | undefined;
 			if (provenanceMode === ProvenanceMode.AST) {
 				hintMetadata = getHintMap(executionId);
 
@@ -336,11 +411,16 @@ export class SandboxExecutor {
 
 			await setupAPINamespace(ivmContext, sandbox, provenanceMode);
 
-			if (ATP_COMPILER_ENABLED) {
-				await setupRuntimeNamespace(ivmContext, sandbox);
-			}
+		if (ATP_COMPILER_ENABLED) {
+			await setupRuntimeNamespace(ivmContext, sandbox);
+		}
 
-			let useCompiler = false;
+		// Setup checkpoint namespace if available
+		if (this.config.cacheProvider) {
+			await setupCheckpointNamespace(ivmContext, sandbox);
+		}
+
+		let useCompiler = false;
 			let astInstrumented = false;
 
 			const isResume = resumeData !== undefined;
@@ -366,13 +446,44 @@ export class SandboxExecutor {
 				codePreview: code.substring(0, 100),
 			});
 
-			if (provenanceMode === ProvenanceMode.AST && !useCompiler && !alreadyTransformed) {
+			// STEP 1: Checkpoint transformation FIRST (before AST instrumentation)
+			// This ensures checkpoints are tracked even in AST provenance mode
+			if (
+				ATP_COMPILER_ENABLED &&
+				this.config.cacheProvider &&
+				!alreadyTransformed
+			) {
+				const compilerResult = await transformCodeWithCompiler(
+					code,
+					executionId,
+					this.config.cacheProvider,
+					executionLogger,
+					this.compiler
+				);
+				codeToExecute = compilerResult.code;
+				useCompiler = compilerResult.useCompiler;
+				executionLogger.debug('Checkpoint transformation applied', {
+					useCompiler,
+					originalLength: code.length,
+					transformedLength: codeToExecute.length,
+				});
+			} else if (alreadyTransformed) {
+				codeToExecute = code;
+				useCompiler = true;
+				executionLogger.debug('Using already-transformed code on resume');
+			}
+
+			// STEP 2: AST instrumentation AFTER checkpoint transformation
+			// This ensures provenance tracking works with checkpoint-wrapped code
+			if (provenanceMode === ProvenanceMode.AST && !alreadyTransformed) {
 				try {
-					const instrumentResult = astInstrumentCode(code);
+					// Instrument the (potentially checkpoint-transformed) code
+					const instrumentResult = astInstrumentCode(codeToExecute);
 					codeToExecute = instrumentResult.code;
 					astInstrumented = true;
 					executionLogger.info('Code instrumented for provenance tracking (AST mode)', {
 						trackingCalls: instrumentResult.metadata.trackingCalls,
+						checkpointsPreserved: useCompiler,
 						instrumentedCodeStart: codeToExecute.substring(0, 150),
 						instrumentedCodeEnd: codeToExecute.substring(codeToExecute.length - 150),
 					});
@@ -400,27 +511,6 @@ export class SandboxExecutor {
 						}
 					);
 				}
-			}
-
-			if (
-				ATP_COMPILER_ENABLED &&
-				this.config.cacheProvider &&
-				!astInstrumented &&
-				!alreadyTransformed
-			) {
-				const compilerResult = await transformCodeWithCompiler(
-					code,
-					executionId,
-					this.config.cacheProvider,
-					executionLogger,
-					this.compiler
-				);
-				codeToExecute = compilerResult.code;
-				useCompiler = compilerResult.useCompiler;
-			} else if (alreadyTransformed) {
-				codeToExecute = code;
-				useCompiler = true;
-				executionLogger.debug('Using already-transformed code on resume');
 			}
 
 			if (!useCompiler && !astInstrumented && stateManager) {
@@ -580,7 +670,7 @@ export class SandboxExecutor {
 				}
 			}
 
-			return handleExecutionError(
+			return await handleExecutionError(
 				error,
 				pauseError,
 				context,
@@ -642,6 +732,11 @@ export class SandboxExecutor {
 		setProgressCallback(null);
 
 		clearVectorStoreExecutionId();
+
+		// Cleanup checkpoint runtime
+		try {
+			cleanupCheckpointRuntime();
+		} catch (e) {}
 
 		if (executionId) {
 			try {

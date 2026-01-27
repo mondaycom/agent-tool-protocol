@@ -146,6 +146,7 @@ export class PluggableCompiler implements ICompiler {
 					arrayMethodCount: 0,
 					parallelCallCount: 0,
 					batchableCount: 0,
+					checkpointCount: 0,
 				},
 			};
 		}
@@ -203,6 +204,7 @@ export class PluggableCompiler implements ICompiler {
 				arrayMethodCount: 0,
 				parallelCallCount: 0,
 				batchableCount: detection.batchableParallel ? 1 : 0,
+				checkpointCount: 0,
 			};
 
 			for (const transformer of transformers) {

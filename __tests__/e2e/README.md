@@ -1,11 +1,13 @@
-# E2E Test Suite for ATP Security and State Capture
+# E2E Test Suite for ATP Security, State Capture, and Checkpointing
 
-This directory contains end-to-end tests for the security improvements and state capture system implemented in ATP.
+This directory contains end-to-end tests for the security improvements, state capture system, and operation checkpointing implemented in ATP.
 
 ## Test Structure
 
 ```
 __tests__/e2e/
+├── checkpoint/
+│   └── checkpoint-recovery.test.ts     # Operation checkpointing and recovery
 ├── security/
 │   ├── jwt-authentication.test.ts      # JWT auth with sliding window tokens
 │   ├── multi-tenancy.test.ts           # Cache isolation between clients
@@ -47,6 +49,11 @@ yarn jest __tests__/e2e/security/tool-metadata.test.ts
 
 # State Capture Infrastructure tests
 yarn jest __tests__/e2e/state-capture/infrastructure.test.ts
+
+# Checkpoint Recovery tests
+yarn jest __tests__/e2e/checkpoint/checkpoint-recovery.test.ts
+# or use the dedicated command:
+yarn test:e2e:checkpointer
 ```
 
 ### Run with Coverage
@@ -101,7 +108,21 @@ yarn test:e2e --coverage
 - [x] Guidance field in init request
 - [x] Guidance returned in definitions response
 
-### Phase 2: State Capture Infrastructure (70% Covered)
+### Phase 2: Operation Checkpointing (100% Covered)
+
+#### 2.0 Checkpoint Recovery ✓
+
+- [x] Checkpoint API calls during execution
+- [x] Include checkpoint data in error responses
+- [x] Full snapshot for small results
+- [x] Reference checkpoint for large data
+- [x] Multiple sequential checkpoints
+- [x] LLM-readable restore instructions
+- [x] Checkpoint statistics tracking
+- [x] Successful execution (no checkpoints in response)
+- [x] Recovery using checkpointed data
+
+### Phase 3: State Capture Infrastructure (70% Covered)
 
 #### 2.1-2.4 Core Infrastructure ✓
 
@@ -139,19 +160,21 @@ Each test suite uses a different port to avoid conflicts:
 - Multi-Tenancy: 3501
 - Resume Validation: 3502
 - Tool Metadata: 3503
+- Checkpoint Recovery: 3510
 
 ## Expected Test Results
 
 All tests should pass with the current implementation:
 
 ```
+PASS  __tests__/e2e/checkpoint/checkpoint-recovery.test.ts
 PASS  __tests__/e2e/security/jwt-authentication.test.ts
 PASS  __tests__/e2e/security/multi-tenancy.test.ts
 PASS  __tests__/e2e/security/resume-validation.test.ts
 PASS  __tests__/e2e/security/tool-metadata.test.ts
 PASS  __tests__/e2e/state-capture/infrastructure.test.ts
 
-Test Suites: 5 passed, 5 total
+Test Suites: 6 passed, 6 total
 Tests:       XX passed, XX total
 ```
 

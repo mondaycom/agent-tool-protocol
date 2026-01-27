@@ -18,10 +18,15 @@ import {
 	resumablePromiseAll,
 	resumablePromiseAllSettled,
 	batchParallel,
+	initializeCheckpointRuntime,
+	initializeCheckpointRuntimeWithProvenance,
+	cleanupCheckpointRuntime,
+	getCheckpointRuntime,
+	getCheckpointDataForError,
 	type TransformResult,
 	type DetectionResult,
 	type ICompiler,
-	type CacheStats,
+	type CheckpointProvenanceMetadata,
 } from '@mondaydotcomorg/atp-compiler';
 import { ATP_COMPILER_ENABLED, ATP_BATCH_SIZE_THRESHOLD } from './constants.js';
 
@@ -31,8 +36,11 @@ import { ATP_COMPILER_ENABLED, ATP_BATCH_SIZE_THRESHOLD } from './constants.js';
 class ATPCompilerAdapter implements ICompiler {
 	private compiler: ATPCompiler;
 
-	constructor(config: { enableBatchParallel: boolean; batchSizeThreshold: number }) {
-		this.compiler = new ATPCompiler(config);
+	constructor(config: { enableBatchParallel: boolean; batchSizeThreshold: number; enableOperationCheckpoints?: boolean }) {
+		this.compiler = new ATPCompiler({
+			...config,
+			enableOperationCheckpoints: config.enableOperationCheckpoints ?? true,
+		});
 	}
 
 	detect(code: string): DetectionResult {
@@ -58,8 +66,11 @@ class ATPCompilerAdapter implements ICompiler {
 class PluggableCompilerAdapter implements ICompiler {
 	private compiler: ReturnType<typeof createDefaultCompiler>;
 
-	constructor(config: { enableBatchParallel: boolean; batchSizeThreshold: number }) {
-		this.compiler = createDefaultCompiler(config);
+	constructor(config: { enableBatchParallel: boolean; batchSizeThreshold: number; enableOperationCheckpoints?: boolean }) {
+		this.compiler = createDefaultCompiler({
+			...config,
+			enableOperationCheckpoints: config.enableOperationCheckpoints ?? true,
+		});
 	}
 
 	async detect(code: string): Promise<DetectionResult> {
@@ -84,7 +95,7 @@ class PluggableCompilerAdapter implements ICompiler {
  * This is where you can easily add new compiler types
  */
 class CompilerFactory {
-	static create(config: { enableBatchParallel: boolean; batchSizeThreshold: number }): ICompiler {
+	static create(config: { enableBatchParallel: boolean; batchSizeThreshold: number; enableOperationCheckpoints?: boolean }): ICompiler {
 		const compilerType = process.env.ATP_USE_PLUGGABLE_COMPILER === 'true' ? 'pluggable' : 'atp';
 
 		switch (compilerType) {
@@ -173,6 +184,16 @@ export function getCompilerRuntime() {
 	};
 }
 
+// Re-export checkpoint functions for executor use
+export {
+	initializeCheckpointRuntime,
+	initializeCheckpointRuntimeWithProvenance,
+	cleanupCheckpointRuntime,
+	getCheckpointRuntime,
+	getCheckpointDataForError,
+	type CheckpointProvenanceMetadata,
+};
+
 export async function transformCodeWithCompiler(
 	code: string,
 	executionId: string,
@@ -202,13 +223,19 @@ export async function transformCodeWithCompiler(
 		// Detect patterns (abstracted sync/async handling)
 		const detection = await compiler.detect(code);
 
+		// With enableOperationCheckpoints, we always need to transform to wrap API calls
+		const enableCheckpoints = process.env.ATP_DISABLE_CHECKPOINTS !== 'true';
+		const needsTransform = detection.needsTransform || enableCheckpoints;
+
 		executionLogger.info('ATP Compiler detection result', {
 			needsTransform: detection.needsTransform,
 			patterns: detection.patterns,
 			batchable: detection.batchableParallel,
+			checkpointsEnabled: enableCheckpoints,
+			willTransform: needsTransform,
 		});
 
-		if (detection.needsTransform) {
+		if (needsTransform) {
 			const codeHash = getCodeHash(code);
 			const cached = transformCache.get(codeHash);
 			if (cached) {
@@ -244,6 +271,7 @@ export async function transformCodeWithCompiler(
 				loopCount: transformed.metadata.loopCount,
 				arrayMethodCount: transformed.metadata.arrayMethodCount,
 				parallelCallCount: transformed.metadata.parallelCallCount,
+				checkpointCount: transformed.metadata.checkpointCount,
 				batchSizeThreshold: ATP_BATCH_SIZE_THRESHOLD,
 			};
 

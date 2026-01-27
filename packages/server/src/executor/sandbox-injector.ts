@@ -1,7 +1,7 @@
 import ivm from 'isolated-vm';
 import type { Logger } from '@mondaydotcomorg/atp-runtime';
 import { isPauseError, runInExecutionContext } from '@mondaydotcomorg/atp-runtime';
-import { isBatchPauseError } from '@mondaydotcomorg/atp-compiler';
+import { isBatchPauseError, CHECKPOINT_RUNTIME_NAMESPACE } from '@mondaydotcomorg/atp-compiler';
 import { PAUSE_EXECUTION_MARKER } from './constants.js';
 import { isInIsolateFunction, getInIsolateImplementation } from './in-isolate-runtime.js';
 
@@ -117,14 +117,16 @@ export async function injectSandbox(
 							// In AST mode, tag result with provenance ID before copying so tag survives
 							if (isASTMode && result && typeof result === 'object') {
 								try {
-									// Generate unique ID for this API result
-									const provId = `tracked_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-									Object.defineProperty(result, '__prov_id__', {
-										value: provId,
-										writable: false,
-										enumerable: true,
-										configurable: true,
-									});
+									// Only add __prov_id__ if not already present (avoids overwriting UUID from createProvenanceProxy)
+									if (!Object.prototype.hasOwnProperty.call(result, '__prov_id__')) {
+										const provId = `tracked_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+										Object.defineProperty(result, '__prov_id__', {
+											value: provId,
+											writable: false,
+											enumerable: true,
+											configurable: true,
+										});
+									}
 								} catch (e) {
 									// If can't define property, that's ok
 								}
@@ -173,6 +175,41 @@ export async function injectSandbox(
 				namespace.startsWith('__get_provenance') ||
 				namespace.startsWith('__mark_tainted'))
 		) {
+			continue;
+		}
+
+		// Handle checkpoint namespace
+		if (namespace === '__checkpoint' && typeof value === 'object' && value !== null) {
+			for (const [key, fn] of Object.entries(value)) {
+				if (typeof fn === 'function') {
+					await jail.set(
+						`__checkpoint_${key}_impl`,
+						new ivm.Reference(async (...args: unknown[]) => {
+							try {
+								const execute = async () => {
+									const result = await fn(...args);
+									return new ivm.ExternalCopy(result).copyInto();
+								};
+
+								if (executionId) {
+									return await runInExecutionContext(executionId, execute);
+								} else {
+									return await execute();
+								}
+							} catch (error) {
+								const err = error as Error;
+								if (isPauseError(error) || err.message === PAUSE_EXECUTION_MARKER) {
+									if (isPauseError(error)) {
+										onPauseError(error);
+									}
+									throw new Error(PAUSE_EXECUTION_MARKER);
+								}
+								throw error;
+							}
+						})
+					);
+				}
+			}
 			continue;
 		}
 
@@ -351,4 +388,33 @@ ${newAccessPath} = async function(...args) {
 
 	setupNestedAPI(apiObject, '', 'globalThis.api');
 	await ivmContext.eval(apiSetup);
+}
+
+export async function setupCheckpointNamespace(
+	ivmContext: ivm.Context,
+	sandbox: Record<string, unknown>
+): Promise<void> {
+	const checkpointObject = sandbox.__checkpoint as Record<string, unknown>;
+	if (!checkpointObject || typeof checkpointObject !== 'object') {
+		return;
+	}
+
+	const checkpointKeys = Object.keys(checkpointObject).filter(
+		(k) => typeof checkpointObject[k] === 'function'
+	);
+	if (checkpointKeys.length === 0) {
+		return;
+	}
+
+	// Setup __checkpoint namespace for internal use by transformed code
+	let checkpointSetup = `globalThis.${CHECKPOINT_RUNTIME_NAMESPACE} = {\n`;
+	checkpointSetup += checkpointKeys
+		.map(
+			(key) =>
+				`\t${key}: async (...args) => {\n\t\treturn await ${CHECKPOINT_RUNTIME_NAMESPACE}_${key}_impl.apply(undefined, args, { arguments: { copy: true }, result: { promise: true } });\n\t}`
+		)
+		.join(',\n');
+	checkpointSetup += '\n};';
+
+	await ivmContext.eval(checkpointSetup);
 }

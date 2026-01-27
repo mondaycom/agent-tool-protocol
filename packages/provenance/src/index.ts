@@ -20,6 +20,8 @@ export {
 	setGlobalProvenanceStore,
 	hydrateProvenance,
 	hydrateExecutionProvenance,
+	attachProvenanceMetaForCheckpoint,
+	PROVENANCE_PROPERTY_NAMES,
 } from './registry.js';
 
 export {
@@ -72,3 +74,16 @@ export { DynamicPolicyRegistry } from './policies/dynamic.js';
 export { instrumentCode, createTrackingRuntime } from './ast/instrumentor.js';
 
 export { type ProvenanceStore, InMemoryProvenanceStore } from './store.js';
+
+// Checkpoint integration exports
+export {
+	extractProvenanceRecursive,
+	restoreProvenanceFromSnapshot,
+	hasRestrictedProvenance,
+	parsePath,
+	deepClone,
+	type CheckpointProvenanceSnapshot,
+	type ProvenanceEntry,
+	type ProvenanceExtractor,
+	type ProvenanceAttacher,
+} from './checkpoint-integration.js';

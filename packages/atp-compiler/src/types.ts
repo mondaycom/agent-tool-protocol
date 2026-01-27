@@ -32,6 +32,10 @@ export interface TransformMetadata {
 	arrayMethodCount: number;
 	parallelCallCount: number;
 	batchableCount: number;
+	/** Number of operations wrapped with checkpoint logic */
+	checkpointCount: number;
+	/** Checkpoint IDs generated during transformation */
+	checkpointIds?: string[];
 }
 
 export interface LoopCheckpoint {
@@ -92,6 +96,8 @@ export interface CompilerConfig {
 	checkpointInterval?: number;
 	debugMode?: boolean;
 	batchSizeThreshold?: number;
+	/** Enable operation-level checkpointing for recovery from failures */
+	enableOperationCheckpoints?: boolean;
 }
 
 export const DEFAULT_COMPILER_CONFIG: CompilerConfig = {
@@ -100,4 +106,5 @@ export const DEFAULT_COMPILER_CONFIG: CompilerConfig = {
 	checkpointInterval: 1,
 	debugMode: false,
 	batchSizeThreshold: 10,
+	enableOperationCheckpoints: false, // Disabled by default, opt-in feature
 };

@@ -1,0 +1,18 @@
+{
+	"name": "checkpoint-recovery-example",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "NODE_OPTIONS='--no-node-snapshot' tsx index.ts",
+		"demo": "NODE_OPTIONS='--no-node-snapshot' tsx test-demo.ts"
+	},
+	"dependencies": {
+		"@langchain/core": "^0.3.0",
+		"@langchain/openai": "^0.3.0",
+		"@mondaydotcomorg/atp-client": "workspace:*",
+		"@mondaydotcomorg/atp-server": "workspace:*",
+		"langchain": "^0.3.0",
+		"tsx": "^4.19.2"
+	}
+}

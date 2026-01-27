@@ -1,6 +1,6 @@
 import ivm from 'isolated-vm';
 import { ExecutionStatus } from '@mondaydotcomorg/atp-protocol';
-import type { ExecutionResult } from '@mondaydotcomorg/atp-protocol';
+import type { ExecutionResult, ExecutionCheckpointData } from '@mondaydotcomorg/atp-protocol';
 import type { Logger } from '@mondaydotcomorg/atp-runtime';
 import {
 	isPauseError,
@@ -10,17 +10,20 @@ import {
 	getAPICallResults,
 	clearAPICallResults,
 	setCurrentExecutionId,
-	clearCurrentExecutionId,
 	type PauseExecutionError,
 } from '@mondaydotcomorg/atp-runtime';
-import { isBatchPauseError, type BatchPauseExecutionError } from '@mondaydotcomorg/atp-compiler';
+import {
+	isBatchPauseError,
+	getCheckpointDataForError,
+	type BatchPauseExecutionError,
+} from '@mondaydotcomorg/atp-compiler';
 import { randomUUID } from 'node:crypto';
 import type { CallbackRecord } from '../execution-state/index.js';
 import type { RuntimeContext } from './types.js';
 import { categorizeError } from './error-handler.js';
 import { PAUSE_EXECUTION_MARKER } from './constants.js';
 
-export function handleExecutionError(
+export async function handleExecutionError(
 	error: unknown,
 	pauseError: unknown,
 	context: RuntimeContext,
@@ -30,7 +33,7 @@ export function handleExecutionError(
 	executionLogger: Logger,
 	isolate: ivm.Isolate,
 	transformedCode?: string
-): ExecutionResult {
+): Promise<ExecutionResult> {
 	const errMsg = error instanceof Error ? error.message : String(error);
 
 	if (errMsg.includes(PAUSE_EXECUTION_MARKER) && pauseError) {
@@ -192,6 +195,35 @@ export function handleExecutionError(
 	const memoryAfter = process.memoryUsage().heapUsed;
 	const memoryUsed = Math.max(0, memoryAfter - memoryBefore);
 
+	// Collect checkpoint data if available
+	// This also flushes buffered checkpoints to cache for recovery
+	let checkpointData: ExecutionCheckpointData | undefined;
+	try {
+		const rawCheckpointData = await getCheckpointDataForError();
+		if (rawCheckpointData && rawCheckpointData.checkpoints.length > 0) {
+			checkpointData = {
+				checkpoints: rawCheckpointData.checkpoints.map((cp) => ({
+					id: cp.id,
+					type: cp.type,
+					operation: cp.operation,
+					description: cp.description,
+					timestamp: cp.timestamp,
+				})),
+				restoreInstructions: rawCheckpointData.restoreInstructions,
+				stats: rawCheckpointData.stats,
+			};
+			executionLogger.info('Checkpoint data included in error response', {
+				checkpointCount: checkpointData.checkpoints.length,
+				fullSnapshots: checkpointData.stats.fullSnapshots,
+				references: checkpointData.stats.references,
+			});
+		}
+	} catch (checkpointError) {
+		executionLogger.debug('No checkpoint data available', {
+			reason: checkpointError instanceof Error ? checkpointError.message : String(checkpointError),
+		});
+	}
+
 	try {
 		isolate.dispose();
 	} catch (e) {}
@@ -208,6 +240,7 @@ export function handleExecutionError(
 			stack: err.stack,
 			retryable: errorInfo.retryable,
 			suggestion: errorInfo.suggestion,
+			checkpointData,
 		},
 		stats: {
 			duration: Date.now() - context.startTime,
