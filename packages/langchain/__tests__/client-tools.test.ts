@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { LangGraphATPClient } from '../src/langgraph-client.js';
-import { createServer } from '@mondaydotcomorg/atp-server';
+import {AgentToolProtocolServer, createServer} from '@mondaydotcomorg/atp-server';
 import { ChatOpenAI } from '@langchain/openai';
 import { ToolOperationType, type ClientTool, ExecutionStatus } from '@mondaydotcomorg/atp-protocol';
 
@@ -8,7 +8,7 @@ import { ToolOperationType, type ClientTool, ExecutionStatus } from '@mondaydotc
  * Tests for client tools integration with LangChain/LangGraph
  */
 describe('LangChain Client Tools', () => {
-	let server: any;
+	let server: AgentToolProtocolServer;
 	const PORT = 3789;
 
 	beforeAll(async () => {
@@ -55,6 +55,7 @@ describe('LangChain Client Tools', () => {
 			},
 		];
 
+
 		// Mock LLM (not actually called in this test)
 		const mockLLM = {
 			invoke: async () => ({ content: 'test' }),
@@ -62,7 +63,7 @@ describe('LangChain Client Tools', () => {
 		} as any as ChatOpenAI;
 
 		const client = new LangGraphATPClient({
-			serverUrl: `http://localhost:${PORT}`,
+			server,
 			llm: mockLLM,
 			tools, // Client tools provided here
 			useLangGraphInterrupts: false,

@@ -1,9 +1,10 @@
-import { createServer, loadOpenAPI } from '@mondaydotcomorg/atp-server';
+import {AgentToolProtocolServer, createServer, loadOpenAPI} from '@mondaydotcomorg/atp-server';
 import { ChatOpenAI } from '@langchain/openai';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { createATPTools } from '@mondaydotcomorg/atp-langchain';
 
 process.env.ATP_JWT_SECRET = process.env.ATP_JWT_SECRET || 'test-secret-key';
+let atpServer: AgentToolProtocolServer;
 
 async function startServer() {
 	const server = createServer({});
@@ -14,6 +15,7 @@ async function startServer() {
 	});
 
 	server.use([petstore]);
+    atpServer = server;
 	await server.listen(3333);
 	console.log('ATP Server started on http://localhost:3333\n');
 }
@@ -22,7 +24,7 @@ async function runAgent() {
 	const llm = new ChatOpenAI({ modelName: 'gpt-4o-mini', temperature: 0 });
 
 	const { tools } = await createATPTools({
-		serverUrl: 'http://localhost:3333',
+		server: atpServer,
 		llm,
 	});
 

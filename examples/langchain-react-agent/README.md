@@ -137,7 +137,7 @@ const llm = new ChatOpenAI({ modelName: 'gpt-4.1' });
 
 // Create ATP tools (this initializes the client WITH your LLM)
 const { client, tools } = await createATPTools({
-	serverUrl: 'http://localhost:3333',
+	server,
 	headers: { Authorization: 'Bearer token' },
 	llm, // Important: register LLM first!
 });
@@ -225,7 +225,7 @@ const hooks: ClientHooks = {
 };
 
 const { tools } = await createATPTools({
-	serverUrl: 'http://localhost:3333',
+	server,
 	llm,
 	hooks, // Pass the hooks
 	useLangGraphInterrupts: false,
@@ -262,7 +262,7 @@ const approval = await atp.approval.request('Delete 100 records?', { count: 100 
 
 ```typescript
 const { client, tools, isApprovalRequired, resumeWithApproval } =
-  await createATPTools(serverUrl, apiKey, { llm });
+  await createATPTools(server, apiKey, { llm });
 
 const agent = createReactAgent({
   llm,
@@ -284,7 +284,7 @@ try {
 
 ## API Reference
 
-### `createATPTools(serverUrl, apiKey, options)`
+### `createATPTools(server, apiKey, options)`
 
 Creates LangChain tools with ATP integration.
 

@@ -166,7 +166,7 @@ describe('LangChain: MCP + OpenAPI Combined', () => {
 	it('should execute OpenAPI + MCP through LangChain tools', async () => {
 		const llm = new ChatOpenAI({ modelName: 'gpt-4', openAIApiKey: 'sk-fake-key' });
 		const { client, tools } = await createATPTools({
-			serverUrl: `http://localhost:${atpServer.port}`,
+			server: atpServer,
 			llm,
 		});
 		createdTools.push({ client });
@@ -198,7 +198,7 @@ describe('LangChain: MCP + OpenAPI Combined', () => {
 	it('should search APIs through LangChain', async () => {
 		const llm = new ChatOpenAI({ modelName: 'gpt-4', openAIApiKey: 'sk-fake-key' });
 		const { client, tools } = await createATPTools({
-			serverUrl: `http://localhost:${atpServer.port}`,
+			server: atpServer,
 			llm,
 		});
 		createdTools.push({ client });
@@ -216,7 +216,7 @@ describe('LangChain: MCP + OpenAPI Combined', () => {
 	it('should handle MCP auth validation through LangChain', async () => {
 		const llm = new ChatOpenAI({ modelName: 'gpt-4', openAIApiKey: 'sk-fake-key' });
 		const { client, tools } = await createATPTools({
-			serverUrl: `http://localhost:${atpServer.port}`,
+			server: atpServer,
 			llm,
 		});
 		createdTools.push({ client });
@@ -239,7 +239,7 @@ describe('LangChain: MCP + OpenAPI Combined', () => {
 	it('should execute complex workflow combining OpenAPI and MCP through LangChain', async () => {
 		const llm = new ChatOpenAI({ modelName: 'gpt-4', openAIApiKey: 'sk-fake-key' });
 		const { client, tools } = await createATPTools({
-			serverUrl: `http://localhost:${atpServer.port}`,
+			server: atpServer,
 			llm,
 		});
 		createdTools.push({ client });
