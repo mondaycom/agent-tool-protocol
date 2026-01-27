@@ -417,7 +417,6 @@ export class OperationCheckpointManager {
 	/**
 	 * Convert checkpoint to info format for error responses
 	 * Returns full checkpoint ID that includes execution ID for easy restore
-	 * 
 	 */
 	private checkpointToInfo(checkpoint: Checkpoint): CheckpointInfo {
 		const operation = this.formatOperation(checkpoint.operation);
@@ -444,19 +443,10 @@ export class OperationCheckpointManager {
 			usedVariables: checkpoint.operation.usedVariables,
 		};
 
-		if (checkpoint.type === CheckpointType.FULL_SNAPSHOT) {
-			// (This shouldn't happen as restricted data forces reference, but defense in depth)
-			if (!hasRestricted) {
-				// Sanitize provenance metadata before exposing to LLM
-				info.result = sanitizeProvenanceMetadata((checkpoint as FullSnapshotCheckpoint).result);
-			}
-		} else {
-			// Update restoreCode to use the full ID
-			const reference = (checkpoint as ReferenceCheckpoint).reference;
-			info.reference = {
-				...reference,
-				restoreCode: reference.restoreCode.replace(checkpoint.id, fullId),
-			};
+		// Include result for full_snapshot checkpoints (when not restricted)
+		if (checkpoint.type === CheckpointType.FULL_SNAPSHOT && !hasRestricted) {
+			// Sanitize provenance metadata before exposing to LLM
+			info.result = sanitizeProvenanceMetadata((checkpoint as FullSnapshotCheckpoint).result);
 		}
 
 		return info;
@@ -528,7 +518,7 @@ export class OperationCheckpointManager {
 			return 'No checkpoints available.';
 		}
 
-		// Separate full snapshots from references
+		// Separate full snapshots (with result data) from references
 		const fullSnapshots = checkpoints.filter(cp => cp.type === CheckpointType.FULL_SNAPSHOT && cp.result !== undefined);
 		const references = checkpoints.filter(cp => cp.type === CheckpointType.REFERENCE || cp.result === undefined);
 
@@ -546,14 +536,11 @@ export class OperationCheckpointManager {
 					? cp.usedVariables
 					: ['result'];
 
-				// Sanitize result to remove provenance metadata before stringifying
-				const sanitizedResult = sanitizeProvenanceMetadata(cp.result);
-
 				lines.push(`Checkpoint: ${cp.operation}`);
 				if (varNames.length === 1) {
-					lines.push(`  const ${varNames[0]} = ${JSON.stringify(sanitizedResult)};`);
+					lines.push(`  const ${varNames[0]} = ${JSON.stringify(cp.result)};`);
 				} else {
-					lines.push(`  const [${varNames.join(', ')}] = ${JSON.stringify(sanitizedResult)};`);
+					lines.push(`  const [${varNames.join(', ')}] = ${JSON.stringify(cp.result)};`);
 				}
 				lines.push('');
 			}
@@ -572,7 +559,7 @@ export class OperationCheckpointManager {
 				if (varNames.length === 1) {
 					restoreSnippet = `const ${varNames[0]} = await ${CHECKPOINT_RESTORE_METHOD_NAME}("${cp.id}");`;
 				} else {
-					restoreSnippet = `const [${varNames.join(', ')}] = ${CHECKPOINT_RESTORE_METHOD_NAME}("${cp.id}");`;
+					restoreSnippet = `const [${varNames.join(', ')}] = await ${CHECKPOINT_RESTORE_METHOD_NAME}("${cp.id}");`;
 				}
 
 				lines.push(`Checkpoint: ${cp.operation}`);
@@ -583,7 +570,7 @@ export class OperationCheckpointManager {
 
 		lines.push('**Usage Guidelines:**');
 		lines.push('• Full snapshot checkpoints: Copy the inline data directly into your code');
-		lines.push(`• Reference checkpoints: Use ${CHECKPOINT_RESTORE_METHOD_NAME}() to access the data`);
+		lines.push(`• Reference checkpoints: Use await ${CHECKPOINT_RESTORE_METHOD_NAME}(<checkpoint_id>) to access the data`);
 
 		return lines.join('\n');
 	}

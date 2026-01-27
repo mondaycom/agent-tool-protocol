@@ -145,12 +145,10 @@ export interface CheckpointInfo {
 	operation: string;
 	/** Description of the checkpointed data */
 	description: string;
-	/** Reference information (only for reference checkpoints) */
-	reference?: CheckpointReference;
-	/** Full result (only for full snapshot checkpoints WITHOUT restricted access) */
-	result?: unknown;
 	/** When checkpoint was created */
 	timestamp: number;
+	/** Full result (only for full_snapshot checkpoints WITHOUT restricted access) */
+	result?: unknown;
 	/**
 	 * Whether this checkpoint has restricted provenance
 	 * If true, LLM MUST use __restore.checkpoint() to access data

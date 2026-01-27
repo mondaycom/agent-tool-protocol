@@ -10,7 +10,6 @@ import {
 	getAPICallResults,
 	clearAPICallResults,
 	setCurrentExecutionId,
-	clearCurrentExecutionId,
 	type PauseExecutionError,
 } from '@mondaydotcomorg/atp-runtime';
 import {
@@ -209,8 +208,6 @@ export async function handleExecutionError(
 					operation: cp.operation,
 					description: cp.description,
 					timestamp: cp.timestamp,
-					result: cp.result,
-					reference: cp.reference,
 				})),
 				restoreInstructions: rawCheckpointData.restoreInstructions,
 				stats: rawCheckpointData.stats,

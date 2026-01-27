@@ -236,8 +236,10 @@ describe('Checkpoint + Provenance Integration E2E', () => {
 				expect(cp.securityNotice).toContain('__checkpoint.restore');
 			}
 
-			// Reference checkpoint should have restore code
-			expect(cp.reference?.restoreCode).toContain('__checkpoint.restore');
+			// Reference checkpoint should NOT have result (data is accessed via restore)
+			expect(cp.result).toBeUndefined();
+			// Restore instructions should contain the restore code
+			expect(checkpointData!.restoreInstructions).toContain('__checkpoint.restore');
 		});
 
 		test('should create FULL_SNAPSHOT checkpoint for public data', async () => {
@@ -538,8 +540,8 @@ describe('Checkpoint + Provenance Integration E2E', () => {
 			for (const cp of restrictedCheckpoints) {
 				// Should not expose data
 				expect(cp.result).toBeUndefined();
-				// Should provide restore instructions
-				expect(cp.reference?.restoreCode || cp.securityNotice).toBeDefined();
+				// Should provide restore instructions via restoreInstructions or securityNotice
+				expect(checkpointData!.restoreInstructions || cp.securityNotice).toBeDefined();
 			}
 		});
 	});

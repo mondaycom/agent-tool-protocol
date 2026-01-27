@@ -278,15 +278,24 @@ describe('Checkpoint Recovery E2E', () => {
 			if (result.error?.checkpointData) {
 				const checkpointData = result.error.checkpointData;
 
-				// Look for reference checkpoints
+				// Look for reference checkpoints (no result included)
 				const references = checkpointData.checkpoints.filter(
-					(cp: any) => cp.reference !== undefined
+					(cp: any) => cp.type === 'reference'
 				);
 
 				if (references.length > 0) {
-					expect(references[0].reference).toBeDefined();
-					expect(references[0].reference).toHaveProperty('description');
-					expect(references[0].reference).toHaveProperty('restoreCode');
+					// Verify checkpoint metadata is present
+					expect(references[0]).toHaveProperty('id');
+					expect(references[0]).toHaveProperty('operation');
+					expect(references[0]).toHaveProperty('description');
+					expect(references[0]).toHaveProperty('type');
+					// Reference checkpoints should NOT have result
+					expect(references[0].result).toBeUndefined();
+				}
+
+				// RestoreInstructions should contain instructions for reference checkpoints
+				if (references.length > 0) {
+					expect(checkpointData.restoreInstructions).toContain('__checkpoint.restore');
 				}
 
 				console.log('[TEST] Reference checkpoint data:', JSON.stringify(checkpointData, null, 2));
@@ -553,7 +562,7 @@ describe('Checkpoint Recovery E2E', () => {
 
 				if (promiseAllCheckpoint) {
 					// The checkpoint should have the aggregated result
-					expect(promiseAllCheckpoint.result || promiseAllCheckpoint.reference).toBeDefined();
+					expect(promiseAllCheckpoint.result).toBeDefined();
 					
 					// If result is an array, it should have both user and order data
 					if (Array.isArray(promiseAllCheckpoint.result)) {
@@ -713,7 +722,7 @@ describe('Checkpoint Recovery E2E', () => {
 
 				if (loopCheckpoint) {
 					// The checkpoint should have the accumulated result
-					expect(loopCheckpoint.result || loopCheckpoint.reference).toBeDefined();
+					expect(loopCheckpoint.result).toBeDefined();
 					
 					// Description should be present
 					expect(loopCheckpoint.description).toBeDefined();

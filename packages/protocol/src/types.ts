@@ -366,16 +366,8 @@ export interface ExecutionCheckpointInfo {
 	description: string;
 	/** Timestamp when checkpoint was created */
 	timestamp: number;
-	/** Full result (for full_snapshot type) */
+	/** Full result (only for full_snapshot type without restricted provenance) */
 	result?: unknown;
-	/** Reference info (for reference type) */
-	reference?: {
-		description: string;
-		preview?: unknown;
-		count?: number;
-		keys?: string[];
-		restoreCode: string;
-	};
 }
 
 /**
