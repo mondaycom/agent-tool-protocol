@@ -11,7 +11,20 @@ import { type ProvenanceStore, InMemoryProvenanceStore } from './store.js';
 
 const PROVENANCE_KEY = '__provenance__';
 const PROVENANCE_ID_KEY = '__prov_id__';
+const PROVENANCE_META_KEY = '__prov_meta__'; // Stores essential metadata for cross-boundary cloning
 const provenanceStore = new WeakMap<object, ProvenanceMetadata>();
+
+/**
+ * Exported provenance property names for external use (e.g., sanitization)
+ */
+export const PROVENANCE_PROPERTY_NAMES = {
+	/** Symbol used for storing provenance data: __provenance__ */
+	PROVENANCE: PROVENANCE_KEY,
+	/** Symbol used for provenance ID: __prov_id__ */
+	PROVENANCE_ID: PROVENANCE_ID_KEY,
+	/** Symbol used for provenance metadata: __prov_meta__ */
+	PROVENANCE_META: PROVENANCE_META_KEY,
+} as const;
 
 const provenanceRegistry = new Map<string, ProvenanceMetadata>();
 
@@ -429,7 +442,10 @@ export function createProvenanceProxy<T>(
 		}
 	} else if (typeof value === 'object') {
 		for (const key in value as Record<string, unknown>) {
-			if (Object.prototype.hasOwnProperty.call(value, key) && key !== PROVENANCE_ID_KEY) {
+			// Skip provenance metadata keys to avoid infinite recursion
+			if (Object.prototype.hasOwnProperty.call(value, key) && 
+				key !== PROVENANCE_ID_KEY && 
+				key !== PROVENANCE_META_KEY) {
 				const nestedValue = (value as Record<string, unknown>)[key];
 				if (
 					typeof nestedValue === 'object' &&
@@ -455,7 +471,7 @@ export function createProvenanceProxy<T>(
 
 /**
  * Get provenance metadata from a value
- * Looks up by ID from global registry (survives isolated-vm cloning)
+ * Looks up by ID from global registry, or uses embedded metadata (for cross-boundary cloning)
  */
 export function getProvenance(value: unknown): ProvenanceMetadata | null {
 	if (value === null || value === undefined) {
@@ -472,8 +488,31 @@ export function getProvenance(value: unknown): ProvenanceMetadata | null {
 	if (typeof value === 'object') {
 		const id = (value as any)[PROVENANCE_ID_KEY];
 		if (id && typeof id === 'string') {
+			// First try the registry (same process)
 			const metadata = provenanceRegistry.get(id);
 			if (metadata) {
+				return metadata;
+			}
+		}
+
+		// Check for embedded metadata (survives isolated-vm cloning)
+		// This is the fallback when registry lookup fails (e.g., after ExternalCopy)
+		if (PROVENANCE_META_KEY in (value as any)) {
+			// TODO Checkpoint - Stable this
+			const embeddedMeta = (value as any)[PROVENANCE_META_KEY];
+			if (embeddedMeta && typeof embeddedMeta === 'object') {
+				// Reconstruct full metadata from embedded data
+				const metadata: ProvenanceMetadata = {
+					id: embeddedMeta.id || id || crypto.randomUUID(),
+					source: embeddedMeta.source,
+					readers: embeddedMeta.readers || { type: 'public' },
+					dependencies: embeddedMeta.dependencies || [],
+					context: {},
+				};
+				// Re-register in the registry for subsequent lookups
+				if (metadata.id) {
+					provenanceRegistry.set(metadata.id, metadata);
+				}
 				return metadata;
 			}
 		}
@@ -496,6 +535,66 @@ export function getProvenance(value: unknown): ProvenanceMetadata | null {
  */
 export function hasProvenance(value: unknown): boolean {
 	return getProvenance(value) !== null;
+}
+
+/**
+ * Attach __prov_meta__ to an object for checkpoint restoration
+ * This is called only during checkpoint buffering to ensure provenance
+ * survives isolated-vm boundary crossing. Not called for every object
+ * to avoid polluting objects with extra properties.
+ */
+export function attachProvenanceMetaForCheckpoint(
+	value: unknown,
+	visited: WeakSet<object> = new WeakSet()
+): void {
+	if (value === null || value === undefined || typeof value !== 'object') {
+		return;
+	}
+
+	if (visited.has(value as object)) {
+		return;
+	}
+	visited.add(value as object);
+
+	// Get provenance for this object
+	const metadata = getProvenance(value);
+	if (metadata) {
+		try {
+			// Only add if not already present
+			if (!(PROVENANCE_META_KEY in (value as any))) {
+				Object.defineProperty(value, PROVENANCE_META_KEY, {
+					value: {
+						id: metadata.id,
+						source: metadata.source,
+						readers: metadata.readers,
+						dependencies: metadata.dependencies,
+					},
+					writable: false,
+					enumerable: true,
+					configurable: true,
+				});
+			}
+		} catch (e) {
+			// Object might be frozen or non-extensible, ignore
+		}
+	}
+
+	// Recursively process nested objects
+	if (Array.isArray(value)) {
+		for (const item of value) {
+			attachProvenanceMetaForCheckpoint(item, visited);
+		}
+	} else {
+		for (const key in value as Record<string, unknown>) {
+			if (
+				Object.prototype.hasOwnProperty.call(value, key) &&
+				key !== PROVENANCE_ID_KEY &&
+				key !== PROVENANCE_META_KEY
+			) {
+				attachProvenanceMetaForCheckpoint((value as any)[key], visited);
+			}
+		}
+	}
 }
 
 /**
@@ -538,24 +637,6 @@ export function getAllProvenance(value: unknown, visited = new Set<any>()): Prov
 }
 
 /**
- * Merge reader permissions (intersection for security)
- */
-export function mergeReaders(
-	readers1: ReaderPermissions,
-	readers2: ReaderPermissions
-): ReaderPermissions {
-	if (readers1.type === 'public') {
-		return readers2;
-	}
-	if (readers2.type === 'public') {
-		return readers1;
-	}
-
-	const intersection = readers1.readers.filter((r: string) => readers2.readers.includes(r));
-	return { type: 'restricted', readers: intersection };
-}
-
-/**
  * Check if a reader can access data with given permissions
  */
 export function canRead(reader: string, permissions: ReaderPermissions): boolean {
@@ -563,77 +644,4 @@ export function canRead(reader: string, permissions: ReaderPermissions): boolean
 		return true;
 	}
 	return permissions.readers.includes(reader);
-}
-
-/**
- * Extract provenance for serialization (pause/resume)
- */
-export function extractProvenanceMap(
-	sandbox: Record<string, unknown>
-): Map<string, ProvenanceMetadata> {
-	const provenanceMap = new Map<string, ProvenanceMetadata>();
-	const visited = new Set<any>();
-
-	function traverse(value: unknown, path: string = '') {
-		if (value === null || value === undefined || typeof value !== 'object') {
-			return;
-		}
-
-		if (visited.has(value)) {
-			return;
-		}
-		visited.add(value);
-
-		const metadata = getProvenance(value);
-		if (metadata) {
-			provenanceMap.set(path || metadata.id, metadata);
-		}
-
-		if (Array.isArray(value)) {
-			value.forEach((item, index) => {
-				traverse(item, `${path}[${index}]`);
-			});
-		} else if (typeof value === 'object') {
-			for (const key in value) {
-				if (Object.prototype.hasOwnProperty.call(value, key)) {
-					traverse((value as any)[key], path ? `${path}.${key}` : key);
-				}
-			}
-		}
-	}
-
-	for (const [key, value] of Object.entries(sandbox)) {
-		traverse(value, key);
-	}
-
-	return provenanceMap;
-}
-
-/**
- * Restore provenance from serialized state
- */
-export function restoreProvenanceMap(
-	provenanceMap: Map<string, ProvenanceMetadata>,
-	sandbox: Record<string, unknown>
-): void {
-	for (const [path, metadata] of provenanceMap.entries()) {
-		const value = resolvePath(sandbox, path);
-		if (value !== undefined && typeof value === 'object') {
-			provenanceStore.set(value as object, metadata);
-		}
-	}
-}
-
-function resolvePath(obj: Record<string, unknown>, path: string): unknown {
-	const parts = path.split(/[\.\[]/).map((p) => p.replace(/\]$/, ''));
-	let current: any = obj;
-
-	for (const part of parts) {
-		if (current === null || current === undefined) {
-			return undefined;
-		}
-		current = current[part];
-	}
-
-	return current;
 }

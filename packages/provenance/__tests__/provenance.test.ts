@@ -81,7 +81,7 @@ describe('ProvenanceProxy', () => {
 
 		const allProvenance = getAllProvenance(wrapped);
 		expect(allProvenance.length).toBeGreaterThan(0);
-		expect(allProvenance[0].source.type).toBe(ProvenanceSource.USER);
+		expect(allProvenance?.[0]?.source?.type).toBe(ProvenanceSource.USER);
 	});
 
 	it('should handle reader permissions correctly', () => {
