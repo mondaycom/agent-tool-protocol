@@ -208,22 +208,12 @@ function isOpenAPI3(spec: APISpec): spec is OpenAPISpec {
 }
 
 /**
- * Extract parameter names from path template (e.g., /users/{id}/posts/{postId} -> ['id', 'postId'])
- */
-function extractPathParameters(path: string): string[] {
-	const matches = path.matchAll(/\{([^}]+)\}/g);
-	return Array.from(matches, (match) => match[1]).filter((name): name is string => name !== undefined);
-}
-
-/**
  * Merge path-level and operation-level parameters.
  * Operation-level parameters override path-level ones with the same name.
- * Also ensures path parameters from the template are included.
  */
 function mergeParameters(
 	pathParameters: OpenAPIParameter[],
-	operationParameters: OpenAPIParameter[],
-	pathParamNames: string[]
+	operationParameters: OpenAPIParameter[]
 ): OpenAPIParameter[] {
 	const merged = new Map<string, OpenAPIParameter>();
 
@@ -235,19 +225,6 @@ function mergeParameters(
 	// Then, add/override with operation-level parameters
 	for (const param of operationParameters) {
 		merged.set(param.name, param);
-	}
-
-	// Finally, ensure all path template parameters are included
-	// If a path parameter exists in the template but not in parameters, create a default one
-	for (const paramName of pathParamNames) {
-		if (!merged.has(paramName)) {
-			merged.set(paramName, {
-				name: paramName,
-				in: 'path',
-				required: true,
-				schema: { type: 'string' },
-			});
-		}
 	}
 
 	return Array.from(merged.values());
@@ -447,13 +424,10 @@ function convertOperation(
 		operation.description ||
 		`${method.toUpperCase()} ${path}`;
 
-	// Extract path parameters from path template
-	const pathParamNames = extractPathParameters(path);
-
 	// Merge path-level parameters with operation-level parameters
-	const allParameters = mergeParameters(pathParameters, operation.parameters || [], pathParamNames);
+	const mergedParameters = mergeParameters(pathParameters, operation.parameters || []);
 
-	const inputSchema = buildInputSchema(allParameters, operation, spec) as any;
+	const inputSchema = buildInputSchema(mergedParameters, operation, spec) as any;
 	const outputSchema = buildOutputSchema(operation, spec) as any;
 
 	const annotations = extractAnnotations(operation, operationKey, options.annotations);
@@ -548,7 +522,7 @@ function convertOperation(
 		}
 
 		// Use merged parameters (path-level + operation-level + extracted from template)
-		for (let param of allParameters) {
+		for (let param of mergedParameters) {
 			param = resolveParamReferenceIfNeeded(param, spec);
 
 			if (param.in === 'path' && input[param.name]) {
@@ -566,7 +540,7 @@ function convertOperation(
 		if (operation.requestBody && ['post', 'put', 'patch'].includes(method.toLowerCase())) {
 			const bodyParams: Record<string, any> = {};
 			// Exclude all parameters (path, query, header) from body - use merged parameters
-			const paramNames = allParameters.map((p) => p.name);
+			const paramNames = mergedParameters.map((p) => p.name);
 			for (const key in input) {
 				if (!paramNames.includes(key)) {
 					bodyParams[key] = input[key];
