@@ -19,13 +19,21 @@ interface OpenAPISpec {
 		version: string;
 		description?: string;
 	};
-	paths: Record<string, Record<string, OpenAPIOperation>>;
+	paths: Record<string, Record<string, OpenAPIOperation> & { parameters?: OpenAPIParameter[] }>;
 	servers?: Array<{ url: string; description?: string }>;
 	components?: {
 		schemas?: Record<string, unknown>;
 		securitySchemes?: Record<string, OpenAPISecurityScheme>;
 	};
 	security?: Array<Record<string, string[]>>;
+}
+
+interface OpenAPIParameter {
+	name: string;
+	in: string;
+	required?: boolean;
+	schema?: { type?: string; description?: string };
+	description?: string;
 }
 
 interface OpenAPISecurityScheme {
@@ -63,13 +71,7 @@ interface OpenAPIOperation {
 	summary?: string;
 	description?: string;
 	operationId?: string;
-	parameters?: Array<{
-		name: string;
-		in: string;
-		required?: boolean;
-		schema?: { type?: string; description?: string };
-		description?: string;
-	}>;
+	parameters?: OpenAPIParameter[];
 	requestBody?: {
 		content?: {
 			'application/json'?: {
@@ -105,8 +107,16 @@ export class OpenAPIConverter {
 		const globalSecurity = spec.security;
 
 		for (const [path, methods] of Object.entries(spec.paths)) {
+			// Extract path-level parameters (apply to all operations under this path)
+			const pathParameters = Array.isArray(methods.parameters) ? methods.parameters : [];
+
 			for (const [method, operation] of Object.entries(methods)) {
-				const func = this.convertOperation(path, method, operation, httpClient, globalSecurity);
+				// Skip non-operation keys
+				if (['parameters', 'servers', 'summary', 'description'].includes(method)) {
+					continue;
+				}
+
+				const func = this.convertOperation(path, method, operation as OpenAPIOperation, pathParameters, httpClient, globalSecurity);
 				if (func) {
 					functions.push(func);
 				}
@@ -132,6 +142,7 @@ export class OpenAPIConverter {
 		path: string,
 		method: string,
 		operation: OpenAPIOperation,
+		pathParameters: OpenAPIParameter[],
 		httpClient?: (method: string, path: string, params?: unknown) => Promise<unknown>,
 		globalSecurity?: Array<Record<string, string[]>>
 	): CustomFunctionDef | null {
@@ -139,7 +150,14 @@ export class OpenAPIConverter {
 		const description =
 			operation.summary || operation.description || `${method.toUpperCase()} ${path}`;
 
-		const inputSchema = this.buildInputSchema(operation);
+		// Extract path parameters from path template (e.g., /users/{id} -> id)
+		const pathParamNames = this.extractPathParameters(path);
+
+		// Merge path-level parameters with operation-level parameters
+		// Operation-level parameters override path-level ones with the same name
+		const allParameters = this.mergeParameters(pathParameters, operation.parameters || [], pathParamNames);
+
+		const inputSchema = this.buildInputSchema(allParameters, operation);
 
 		const requiredScopes = this.extractRequiredScopes(operation.security || globalSecurity);
 
@@ -166,9 +184,58 @@ export class OpenAPIConverter {
 	}
 
 	/**
+	 * Extracts parameter names from path template (e.g., /users/{id}/posts/{postId} -> ['id', 'postId'])
+	 */
+	private static extractPathParameters(path: string): string[] {
+		const matches = path.matchAll(/\{([^}]+)\}/g);
+		return Array.from(matches, (match) => match[1]).filter((name): name is string => name !== undefined);
+	}
+
+	/**
+	 * Merges path-level and operation-level parameters.
+	 * Operation-level parameters override path-level ones with the same name.
+	 * Also ensures path parameters from the template are included.
+	 */
+	private static mergeParameters(
+		pathParameters: OpenAPIParameter[],
+		operationParameters: OpenAPIParameter[],
+		pathParamNames: string[]
+	): OpenAPIParameter[] {
+		const merged = new Map<string, OpenAPIParameter>();
+
+		// First, add path-level parameters
+		for (const param of pathParameters) {
+			merged.set(param.name, param);
+		}
+
+		// Then, add/override with operation-level parameters
+		for (const param of operationParameters) {
+			merged.set(param.name, param);
+		}
+
+		// Finally, ensure all path template parameters are included
+		// If a path parameter exists in the template but not in parameters, create a default one
+		for (const paramName of pathParamNames) {
+			if (!merged.has(paramName)) {
+				merged.set(paramName, {
+					name: paramName,
+					in: 'path',
+					required: true,
+					schema: { type: 'string' },
+				});
+			}
+		}
+
+		return Array.from(merged.values());
+	}
+
+	/**
 	 * Builds JSON schema from OpenAPI operation parameters and request body.
 	 */
-	private static buildInputSchema(operation: OpenAPIOperation): {
+	private static buildInputSchema(
+		parameters: OpenAPIParameter[],
+		operation: OpenAPIOperation
+	): {
 		type: string;
 		properties: Record<string, unknown>;
 		required?: string[];
@@ -176,15 +243,15 @@ export class OpenAPIConverter {
 		const properties: Record<string, unknown> = {};
 		const required: string[] = [];
 
-		if (operation.parameters) {
-			for (const param of operation.parameters) {
-				properties[param.name] = {
-					type: param.schema?.type || 'string',
-					description: param.description || param.schema?.description,
-				};
-				if (param.required) {
-					required.push(param.name);
-				}
+		// Process all parameters (path-level + operation-level + extracted from path template)
+		for (const param of parameters) {
+			properties[param.name] = {
+				type: param.schema?.type || 'string',
+				description: param.description || param.schema?.description,
+			};
+			// Path parameters are always required
+			if (param.required || param.in === 'path') {
+				required.push(param.name);
 			}
 		}
 

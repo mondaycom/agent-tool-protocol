@@ -20,7 +20,7 @@ interface BaseAPISpec {
 		version: string;
 		description?: string;
 	};
-	paths: Record<string, Record<string, OpenAPIOperation>>;
+	paths: Record<string, Record<string, OpenAPIOperation> & { parameters?: OpenAPIParameter[] }>;
 	security?: Array<Record<string, string[]>>;
 }
 
@@ -244,16 +244,19 @@ export async function loadOpenAPI(
 	const functions: CustomFunctionDef[] = [];
 
 	for (const [path, methods] of Object.entries(spec.paths)) {
+		// Extract path-level parameters (apply to all operations under this path)
+		const pathParameters = Array.isArray(methods.parameters) ? methods.parameters : [];
+
 		for (const [method, operation] of Object.entries(methods)) {
 			if (['parameters', 'servers', 'summary', 'description'].includes(method)) {
 				continue;
 			}
 
-			if (!shouldIncludeOperation(operation, path, method, options.filter)) {
+			if (!shouldIncludeOperation(operation as OpenAPIOperation, path, method, options.filter)) {
 				continue;
 			}
 
-			const func = convertOperation(path, method, operation, spec, baseURL, options, auth);
+			const func = convertOperation(path, method, operation as OpenAPIOperation, pathParameters, spec, baseURL, options, auth);
 
 			if (func) {
 				functions.push(func);
@@ -364,12 +367,59 @@ function matchPathPattern(path: string, pattern: string): boolean {
 }
 
 /**
+ * Extract parameter names from path template (e.g., /users/{id}/posts/{postId} -> ['id', 'postId'])
+ */
+function extractPathParameters(path: string): string[] {
+	const matches = path.matchAll(/\{([^}]+)\}/g);
+	return Array.from(matches, (match) => match[1]).filter((name): name is string => name !== undefined);
+}
+
+/**
+ * Merge path-level and operation-level parameters.
+ * Operation-level parameters override path-level ones with the same name.
+ * Also ensures path parameters from the template are included.
+ */
+function mergeParameters(
+	pathParameters: OpenAPIParameter[],
+	operationParameters: OpenAPIParameter[],
+	pathParamNames: string[]
+): OpenAPIParameter[] {
+	const merged = new Map<string, OpenAPIParameter>();
+
+	// First, add path-level parameters
+	for (const param of pathParameters) {
+		merged.set(param.name, param);
+	}
+
+	// Then, add/override with operation-level parameters
+	for (const param of operationParameters) {
+		merged.set(param.name, param);
+	}
+
+	// Finally, ensure all path template parameters are included
+	// If a path parameter exists in the template but not in parameters, create a default one
+	for (const paramName of pathParamNames) {
+		if (!merged.has(paramName)) {
+			merged.set(paramName, {
+				name: paramName,
+				in: 'path',
+				required: true,
+				schema: { type: 'string' },
+			});
+		}
+	}
+
+	return Array.from(merged.values());
+}
+
+/**
  * Convert OpenAPI operation to ATP function
  */
 function convertOperation(
 	path: string,
 	method: string,
 	operation: OpenAPIOperation,
+	pathParameters: OpenAPIParameter[],
 	spec: APISpec,
 	baseURL: string,
 	options: LoadOpenAPIOptions,
@@ -384,7 +434,13 @@ function convertOperation(
 		operation.description ||
 		`${method.toUpperCase()} ${path}`;
 
-	const inputSchema = buildInputSchema(operation, spec) as any;
+	// Extract path parameters from path template
+	const pathParamNames = extractPathParameters(path);
+
+	// Merge path-level parameters with operation-level parameters
+	const allParameters = mergeParameters(pathParameters, operation.parameters || [], pathParamNames);
+
+	const inputSchema = buildInputSchema(allParameters, operation, spec) as any;
 	const outputSchema = buildOutputSchema(operation, spec) as any;
 
 	const annotations = extractAnnotations(operation, operationKey, options.annotations);
@@ -478,32 +534,28 @@ function convertOperation(
 			}
 		}
 
-		if (operation.parameters) {
-			for (const param of operation.parameters) {
-				if (param.in === 'path' && input[param.name]) {
-					requestPath = requestPath.replace(
-						`{${param.name}}`,
-						encodeURIComponent(String(input[param.name]))
-					);
-				} else if (param.in === 'query' && input[param.name] !== undefined) {
-					queryParams[param.name] = String(input[param.name]);
-				} else if (param.in === 'header' && input[param.name]) {
-					headers[param.name] = String(input[param.name]);
-				}
+		// Use merged parameters (path-level + operation-level + extracted from template)
+		for (const param of allParameters) {
+			if (param.in === 'path' && input[param.name]) {
+				requestPath = requestPath.replace(
+					`{${param.name}}`,
+					encodeURIComponent(String(input[param.name]))
+				);
+			} else if (param.in === 'query' && input[param.name] !== undefined) {
+				queryParams[param.name] = String(input[param.name]);
+			} else if (param.in === 'header' && input[param.name]) {
+				headers[param.name] = String(input[param.name]);
 			}
 		}
 
 		if (operation.requestBody && ['post', 'put', 'patch'].includes(method.toLowerCase())) {
 			const bodyParams: Record<string, any> = {};
-			if (operation.parameters) {
-				const paramNames = operation.parameters.map((p) => p.name);
-				for (const key in input) {
-					if (!paramNames.includes(key)) {
-						bodyParams[key] = input[key];
-					}
+			// Exclude all parameters (path, query, header) from body - use merged parameters
+			const paramNames = allParameters.map((p) => p.name);
+			for (const key in input) {
+				if (!paramNames.includes(key)) {
+					bodyParams[key] = input[key];
 				}
-			} else {
-				Object.assign(bodyParams, input);
 			}
 			if (Object.keys(bodyParams).length > 0) {
 				body = bodyParams;
@@ -588,24 +640,24 @@ function convertOperation(
 /**
  * Build input JSON schema from parameters and requestBody
  */
-function buildInputSchema(operation: OpenAPIOperation, spec: APISpec): unknown {
+function buildInputSchema(parameters: OpenAPIParameter[], operation: OpenAPIOperation, spec: APISpec): unknown {
 	const properties: Record<string, unknown> = {};
 	const required: string[] = [];
 
-	if (operation.parameters) {
-		for (const param of operation.parameters) {
-			if (param.schema) {
-				const paramSchema = resolveSchema(param.schema, spec);
-				properties[param.name] =
-					typeof paramSchema === 'object' && paramSchema !== null
-						? { ...paramSchema, description: param.description || (paramSchema as any).description }
-						: paramSchema;
-			} else {
-				properties[param.name] = { type: 'string', description: param.description };
-			}
-			if (param.required) {
-				required.push(param.name);
-			}
+	// Process all parameters (path-level + operation-level + extracted from path template)
+	for (const param of parameters) {
+		if (param.schema) {
+			const paramSchema = resolveSchema(param.schema, spec);
+			properties[param.name] =
+				typeof paramSchema === 'object' && paramSchema !== null
+					? { ...paramSchema, description: param.description || (paramSchema as any).description }
+					: paramSchema;
+		} else {
+			properties[param.name] = { type: 'string', description: param.description };
+		}
+		// Path parameters are always required
+		if (param.required || param.in === 'path') {
+			required.push(param.name);
 		}
 	}
 
