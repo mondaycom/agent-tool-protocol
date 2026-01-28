@@ -1,9 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { OpenAPIConverter } from '../src/openapi';
+import { loadOpenAPI } from '../src/openapi-loader';
+import { writeFileSync, unlinkSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { randomBytes } from 'crypto';
+
+const getTempFilePath = (prefix: string) => {
+	return join(tmpdir(), `${prefix}-${randomBytes(8).toString('hex')}.json`);
+};
 
 describe('OpenAPI Scope Extraction', () => {
 	describe('extractRequiredScopes', () => {
-		it('should extract scopes from OpenAPI operation', () => {
+		it('should extract scopes from OpenAPI operation', async () => {
 			const spec = {
 				openapi: '3.0.0',
 				info: { title: 'Test API', version: '1.0.0' },
@@ -51,7 +59,10 @@ describe('OpenAPI Scope Extraction', () => {
 				},
 			};
 
-			const apiGroup = OpenAPIConverter.fromSpec(spec);
+			const specPath = getTempFilePath('openapi-scope');
+			writeFileSync(specPath, JSON.stringify(spec));
+			const apiGroup = await loadOpenAPI(specPath);
+			unlinkSync(specPath);
 
 			// Find the getRepository function
 			const getRepoFunc = apiGroup.functions?.find((f) => f.name === 'getRepository');
@@ -66,7 +77,7 @@ describe('OpenAPI Scope Extraction', () => {
 			expect(deleteRepoFunc?.metadata?.operationType).toBe('destructive');
 		});
 
-		it('should use global security if operation has no security', () => {
+		it('should use global security if operation has no security', async () => {
 			const spec = {
 				openapi: '3.0.0',
 				info: { title: 'Test API', version: '1.0.0' },
@@ -95,13 +106,16 @@ describe('OpenAPI Scope Extraction', () => {
 				},
 			};
 
-			const apiGroup = OpenAPIConverter.fromSpec(spec);
+			const specPath = getTempFilePath('openapi-global');
+			writeFileSync(specPath, JSON.stringify(spec));
+			const apiGroup = await loadOpenAPI(specPath);
+			unlinkSync(specPath);
 			const listUsersFunc = apiGroup.functions?.find((f) => f.name === 'listUsers');
 
 			expect(listUsersFunc?.metadata?.requiredScopes).toEqual(['global:scope']);
 		});
 
-		it('should infer operation type from HTTP method', () => {
+		it('should infer operation type from HTTP method', async () => {
 			const spec = {
 				openapi: '3.0.0',
 				info: { title: 'Test API', version: '1.0.0' },
@@ -127,7 +141,10 @@ describe('OpenAPI Scope Extraction', () => {
 				},
 			};
 
-			const apiGroup = OpenAPIConverter.fromSpec(spec);
+			const specPath = getTempFilePath('openapi-operation-type');
+			writeFileSync(specPath, JSON.stringify(spec));
+			const apiGroup = await loadOpenAPI(specPath);
+			unlinkSync(specPath);
 
 			const listItems = apiGroup.functions?.find((f) => f.name === 'listItems');
 			expect(listItems?.metadata?.operationType).toBe('read');
@@ -142,7 +159,7 @@ describe('OpenAPI Scope Extraction', () => {
 			expect(deleteItem?.metadata?.operationType).toBe('destructive');
 		});
 
-		it('should handle operations without security requirements', () => {
+		it('should handle operations without security requirements', async () => {
 			const spec = {
 				openapi: '3.0.0',
 				info: { title: 'Test API', version: '1.0.0' },
@@ -156,7 +173,10 @@ describe('OpenAPI Scope Extraction', () => {
 				},
 			};
 
-			const apiGroup = OpenAPIConverter.fromSpec(spec);
+			const specPath = getTempFilePath('openapi-no-security');
+			writeFileSync(specPath, JSON.stringify(spec));
+			const apiGroup = await loadOpenAPI(specPath);
+			unlinkSync(specPath);
 			const publicFunc = apiGroup.functions?.find((f) => f.name === 'getPublicData');
 
 			expect(publicFunc?.metadata?.requiredScopes).toBeUndefined();

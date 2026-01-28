@@ -6,6 +6,7 @@ import type {
 	BearerAuthConfig,
 	BasicAuthConfig,
 	APIKeyAuthConfig,
+	ToolOperationType,
 } from '@mondaydotcomorg/atp-protocol';
 import { log } from '@mondaydotcomorg/atp-runtime';
 import { readFile } from 'node:fs/promises';
@@ -207,6 +208,52 @@ function isOpenAPI3(spec: APISpec): spec is OpenAPISpec {
 }
 
 /**
+ * Extract parameter names from path template (e.g., /users/{id}/posts/{postId} -> ['id', 'postId'])
+ */
+function extractPathParameters(path: string): string[] {
+	const matches = path.matchAll(/\{([^}]+)\}/g);
+	return Array.from(matches, (match) => match[1]).filter((name): name is string => name !== undefined);
+}
+
+/**
+ * Merge path-level and operation-level parameters.
+ * Operation-level parameters override path-level ones with the same name.
+ * Also ensures path parameters from the template are included.
+ */
+function mergeParameters(
+	pathParameters: OpenAPIParameter[],
+	operationParameters: OpenAPIParameter[],
+	pathParamNames: string[]
+): OpenAPIParameter[] {
+	const merged = new Map<string, OpenAPIParameter>();
+
+	// First, add path-level parameters
+	for (const param of pathParameters) {
+		merged.set(param.name, param);
+	}
+
+	// Then, add/override with operation-level parameters
+	for (const param of operationParameters) {
+		merged.set(param.name, param);
+	}
+
+	// Finally, ensure all path template parameters are included
+	// If a path parameter exists in the template but not in parameters, create a default one
+	for (const paramName of pathParamNames) {
+		if (!merged.has(paramName)) {
+			merged.set(paramName, {
+				name: paramName,
+				in: 'path',
+				required: true,
+				schema: { type: 'string' },
+			});
+		}
+	}
+
+	return Array.from(merged.values());
+}
+
+/**
  * Type guard to check if spec is Swagger 2.0
  */
 function isSwagger2(spec: APISpec): spec is Swagger2Spec {
@@ -366,51 +413,6 @@ function matchPathPattern(path: string, pattern: string): boolean {
 	return new RegExp(`^${regexPattern}$`).test(path);
 }
 
-/**
- * Extract parameter names from path template (e.g., /users/{id}/posts/{postId} -> ['id', 'postId'])
- */
-function extractPathParameters(path: string): string[] {
-	const matches = path.matchAll(/\{([^}]+)\}/g);
-	return Array.from(matches, (match) => match[1]).filter((name): name is string => name !== undefined);
-}
-
-/**
- * Merge path-level and operation-level parameters.
- * Operation-level parameters override path-level ones with the same name.
- * Also ensures path parameters from the template are included.
- */
-function mergeParameters(
-	pathParameters: OpenAPIParameter[],
-	operationParameters: OpenAPIParameter[],
-	pathParamNames: string[]
-): OpenAPIParameter[] {
-	const merged = new Map<string, OpenAPIParameter>();
-
-	// First, add path-level parameters
-	for (const param of pathParameters) {
-		merged.set(param.name, param);
-	}
-
-	// Then, add/override with operation-level parameters
-	for (const param of operationParameters) {
-		merged.set(param.name, param);
-	}
-
-	// Finally, ensure all path template parameters are included
-	// If a path parameter exists in the template but not in parameters, create a default one
-	for (const paramName of pathParamNames) {
-		if (!merged.has(paramName)) {
-			merged.set(paramName, {
-				name: paramName,
-				in: 'path',
-				required: true,
-				schema: { type: 'string' },
-			});
-		}
-	}
-
-	return Array.from(merged.values());
-}
 
 /**
  * Convert OpenAPI operation to ATP function
@@ -627,6 +629,12 @@ function convertOperation(
 		}
 	};
 
+	// Extract required OAuth scopes from security requirements
+	const requiredScopes = extractRequiredScopes(operation.security || spec.security);
+
+	// Infer operation type from HTTP method
+	const operationType = inferOperationType(method);
+
 	return {
 		name: functionName,
 		description,
@@ -634,7 +642,43 @@ function convertOperation(
 		outputSchema,
 		handler,
 		keywords: operation.tags || [],
+		metadata: {
+			operationType,
+			...(requiredScopes.length > 0 && { requiredScopes }),
+		},
 	};
+}
+
+/**
+ * Extracts required OAuth scopes from security requirements
+ */
+function extractRequiredScopes(security?: Array<Record<string, string[]>>): string[] {
+	if (!security || security.length === 0) {
+		return [];
+	}
+
+	const allScopes = new Set<string>();
+	for (const secReq of security) {
+		for (const scopes of Object.values(secReq)) {
+			scopes.forEach((scope) => allScopes.add(scope));
+		}
+	}
+
+	return Array.from(allScopes);
+}
+
+/**
+ * Infers operation type from HTTP method
+ */
+function inferOperationType(method: string): ToolOperationType {
+	const m = method.toLowerCase();
+	if (m === 'get' || m === 'head' || m === 'options') {
+		return 'read' as ToolOperationType;
+	}
+	if (m === 'delete') {
+		return 'destructive' as ToolOperationType;
+	}
+	return 'write' as ToolOperationType;
 }
 
 /**
