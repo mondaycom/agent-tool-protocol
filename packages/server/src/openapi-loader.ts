@@ -12,6 +12,17 @@ import { readFile } from 'node:fs/promises';
 import yaml from 'js-yaml';
 
 /**
+ * Path item object that can contain HTTP methods and path-level fields
+ */
+interface OpenAPIPathItem {
+	parameters?: Array<OpenAPIParameter | (OpenAPIParameter & { $ref: string })>;
+	servers?: Array<{ url: string; description?: string }>;
+	summary?: string;
+	description?: string;
+	[method: string]: OpenAPIOperation | Array<OpenAPIParameter | (OpenAPIParameter & { $ref: string })> | Array<{ url: string; description?: string }> | string | undefined;
+}
+
+/**
  * Base HTTP API specification (common to both OpenAPI and Swagger)
  */
 interface BaseAPISpec {
@@ -20,7 +31,7 @@ interface BaseAPISpec {
 		version: string;
 		description?: string;
 	};
-	paths: Record<string, Record<string, OpenAPIOperation>>;
+	paths: Record<string, OpenAPIPathItem>;
 	security?: Array<Record<string, string[]>>;
 }
 
@@ -243,17 +254,40 @@ export async function loadOpenAPI(
 
 	const functions: CustomFunctionDef[] = [];
 
-	for (const [path, methods] of Object.entries(spec.paths)) {
-		for (const [method, operation] of Object.entries(methods)) {
+	for (const [path, pathItem] of Object.entries(spec.paths)) {
+		// Extract path-level parameters
+		const pathParameters = Array.isArray(pathItem.parameters)
+			? pathItem.parameters
+			: undefined;
+
+		for (const [method, operation] of Object.entries(pathItem)) {
 			if (['parameters', 'servers', 'summary', 'description'].includes(method)) {
 				continue;
 			}
 
-			if (!shouldIncludeOperation(operation, path, method, options.filter)) {
+			// Skip if not an operation object
+			if (
+				typeof operation !== 'object' ||
+				operation === null ||
+				!('operationId' in operation || 'summary' in operation || 'description' in operation || 'responses' in operation)
+			) {
 				continue;
 			}
 
-			const func = convertOperation(path, method, operation, spec, baseURL, options, auth);
+			if (!shouldIncludeOperation(operation as OpenAPIOperation, path, method, options.filter)) {
+				continue;
+			}
+
+			const func = convertOperation(
+				path,
+				method,
+				operation as OpenAPIOperation,
+				spec,
+				baseURL,
+				options,
+				auth,
+				pathParameters
+			);
 
 			if (func) {
 				functions.push(func);
@@ -373,6 +407,36 @@ function resolveReference<TRef = OpenAPISchema | OpenAPIParameter>(ref: string, 
 }
 
 /**
+ * Merge path-level and operation-level parameters.
+ * Operation-level parameters take precedence when there's a conflict (same name + in).
+ */
+function mergeParameters(
+	pathParameters: Array<OpenAPIParameter | (OpenAPIParameter & { $ref: string })> | undefined,
+	operationParameters: Array<OpenAPIParameter | (OpenAPIParameter & { $ref: string })> | undefined,
+	spec: APISpec
+): Array<OpenAPIParameter> {
+	const paramMap = new Map<string, OpenAPIParameter>();
+
+	// Add path-level parameters first
+	if (pathParameters) {
+		for (let param of pathParameters) {
+			param = resolveParamReferenceIfNeeded(param, spec);
+			paramMap.set(`${param.in}:${param.name}`, param);
+		}
+	}
+
+	// Add operation-level parameters (overriding path-level ones)
+	if (operationParameters) {
+		for (let param of operationParameters) {
+			param = resolveParamReferenceIfNeeded(param, spec);
+			paramMap.set(`${param.in}:${param.name}`, param);
+		}
+	}
+
+	return Array.from(paramMap.values());
+}
+
+/**
  * Convert OpenAPI operation to ATP function
  */
 function convertOperation(
@@ -382,7 +446,8 @@ function convertOperation(
 	spec: APISpec,
 	baseURL: string,
 	options: LoadOpenAPIOptions,
-	auth?: AuthConfig
+	auth?: AuthConfig,
+	pathParameters?: Array<OpenAPIParameter | (OpenAPIParameter & { $ref: string })>
 ): CustomFunctionDef | null {
 	const operationName = operation.operationId || [method, path].join('_');
 	const functionName = operationName.
@@ -396,7 +461,12 @@ function convertOperation(
 		operation.description ||
 		`${method.toUpperCase()} ${path}`;
 
-	const inputSchema = buildInputSchema(operation, spec) as any;
+	// Merge path-level and operation-level parameters
+	const mergedParameters = mergeParameters(pathParameters, operation.parameters, spec);
+	// Create temporary operation with merged parameters for buildInputSchema
+	const operationWithMergedParams = { ...operation, parameters: mergedParameters };
+
+	const inputSchema = buildInputSchema(operationWithMergedParams, spec) as any;
 	const outputSchema = buildOutputSchema(operation, spec) as any;
 
 	const annotations = extractAnnotations(operation, operationKey, options.annotations);
@@ -490,8 +560,9 @@ function convertOperation(
 			}
 		}
 
-		if (operation.parameters) {
-			for (let param of operation.parameters) {
+		// Use merged parameters (includes both path-level and operation-level)
+		if (mergedParameters.length > 0) {
+			for (let param of mergedParameters) {
 				param = resolveParamReferenceIfNeeded(param, spec);
 
 				if (param.in === 'path' && input[param.name]) {
@@ -509,8 +580,8 @@ function convertOperation(
 
 		if (operation.requestBody && ['post', 'put', 'patch'].includes(method.toLowerCase())) {
 			const bodyParams: Record<string, any> = {};
-			if (operation.parameters) {
-				const paramNames = operation.parameters.map((p) => p.name);
+			if (mergedParameters.length > 0) {
+				const paramNames = mergedParameters.map((p) => p.name);
 				for (const key in input) {
 					if (!paramNames.includes(key)) {
 						bodyParams[key] = input[key];

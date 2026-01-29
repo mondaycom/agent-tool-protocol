@@ -1,0 +1,26 @@
+## Fix: Process Path-Level Parameters in OpenAPI Loader
+
+### Issue
+The OpenAPI loader only processed operation-level parameters (`get: parameters: []`) and ignored path-level parameters (`/foo/{bar}: parameters: []`). Per OpenAPI spec, path-level parameters should apply to all operations under that path.
+
+**Example:**
+```yaml
+paths:
+  /foo/{bar}:
+    parameters:                    # ❌ Ignored
+      - name: bar
+        in: path
+        required: true
+    get:
+      parameters:                   # ✅ Processed
+        - name: limit
+          in: query
+```
+
+
+### Solution
+- Added `mergeParameters()` to merge path and operation parameters
+- Extract path-level parameters in `loadOpenAPI()` before processing operations
+- Merge parameters in `convertOperation()` (operation-level overrides path-level on conflict)
+
+**Result:** Path-level parameters are now included in schema and handlers. Operation-level parameters override path-level ones when conflicts exist (same `name` + `in`).
