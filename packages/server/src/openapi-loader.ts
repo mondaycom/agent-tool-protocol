@@ -6,7 +6,6 @@ import type {
 	BearerAuthConfig,
 	BasicAuthConfig,
 	APIKeyAuthConfig,
-	ToolOperationType,
 } from '@mondaydotcomorg/atp-protocol';
 import { log } from '@mondaydotcomorg/atp-runtime';
 import { readFile } from 'node:fs/promises';
@@ -212,13 +211,13 @@ function isOpenAPI3(spec: APISpec): spec is OpenAPISpec {
  * Operation-level parameters override path-level ones with the same name.
  */
 function mergeParameters(
-	pathParameters: OpenAPIParameter[],
+	pathLevelParameters: OpenAPIParameter[],
 	operationParameters: OpenAPIParameter[]
 ): OpenAPIParameter[] {
 	const merged = new Map<string, OpenAPIParameter>();
 
 	// First, add path-level parameters
-	for (const param of pathParameters) {
+	for (const param of pathLevelParameters) {
 		merged.set(param.name, param);
 	}
 
@@ -269,7 +268,8 @@ export async function loadOpenAPI(
 
 	for (const [path, methods] of Object.entries(spec.paths)) {
 		// Extract path-level parameters (apply to all operations under this path)
-		const pathParameters = Array.isArray(methods.parameters) ? methods.parameters : [];
+		// These can be query, header, path, or cookie parameters - they're just defined at the path level
+		const pathLevelParameters = Array.isArray(methods.parameters) ? methods.parameters : [];
 
 		for (const [method, operation] of Object.entries(methods)) {
 			if (['parameters', 'servers', 'summary', 'description'].includes(method)) {
@@ -280,7 +280,7 @@ export async function loadOpenAPI(
 				continue;
 			}
 
-			const func = convertOperation(path, method, operation as OpenAPIOperation, pathParameters, spec, baseURL, options, auth);
+			const func = convertOperation(path, method, operation as OpenAPIOperation, pathLevelParameters, spec, baseURL, options, auth);
 
 			if (func) {
 				functions.push(func);
@@ -406,7 +406,7 @@ function convertOperation(
 	path: string,
 	method: string,
 	operation: OpenAPIOperation,
-	pathParameters: OpenAPIParameter[],
+	pathLevelParameters: OpenAPIParameter[],
 	spec: APISpec,
 	baseURL: string,
 	options: LoadOpenAPIOptions,
@@ -425,7 +425,7 @@ function convertOperation(
 		`${method.toUpperCase()} ${path}`;
 
 	// Merge path-level parameters with operation-level parameters
-	const mergedParameters = mergeParameters(pathParameters, operation.parameters || []);
+	const mergedParameters = mergeParameters(pathLevelParameters, operation.parameters || []);
 
 	const inputSchema = buildInputSchema(mergedParameters, operation, spec) as any;
 	const outputSchema = buildOutputSchema(operation, spec) as any;
@@ -616,12 +616,6 @@ function convertOperation(
 		}
 	};
 
-	// Extract required OAuth scopes from security requirements
-	const requiredScopes = extractRequiredScopes(operation.security || spec.security);
-
-	// Infer operation type from HTTP method
-	const operationType = inferOperationType(method);
-
 	return {
 		name: functionName,
 		description,
@@ -629,10 +623,6 @@ function convertOperation(
 		outputSchema,
 		handler,
 		keywords: operation.tags || [],
-		metadata: {
-			operationType,
-			...(requiredScopes.length > 0 && { requiredScopes }),
-		},
 	};
 }
 
@@ -644,38 +634,6 @@ function resolveParamReferenceIfNeeded(param: OpenAPIParameter | (OpenAPIParamet
 		}
 	}
 	return param;
-}
-
-/**
- * Extracts required OAuth scopes from security requirements
- */
-function extractRequiredScopes(security?: Array<Record<string, string[]>>): string[] {
-	if (!security || security.length === 0) {
-		return [];
-	}
-
-	const allScopes = new Set<string>();
-	for (const secReq of security) {
-		for (const scopes of Object.values(secReq)) {
-			scopes.forEach((scope) => allScopes.add(scope));
-		}
-	}
-
-	return Array.from(allScopes);
-}
-
-/**
- * Infers operation type from HTTP method
- */
-function inferOperationType(method: string): ToolOperationType {
-	const m = method.toLowerCase();
-	if (m === 'get' || m === 'head' || m === 'options') {
-		return 'read' as ToolOperationType;
-	}
-	if (m === 'delete') {
-		return 'destructive' as ToolOperationType;
-	}
-	return 'write' as ToolOperationType;
 }
 
 /**
