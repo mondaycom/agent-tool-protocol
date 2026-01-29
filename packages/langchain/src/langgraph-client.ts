@@ -20,6 +20,7 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import type { BaseMessage } from '@langchain/core/messages';
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 import type { Embeddings } from '@langchain/core/embeddings';
+import { AgentToolProtocolServer } from '@mondaydotcomorg/atp-server';
 
 /**
  * Approval request that needs human decision
@@ -44,8 +45,10 @@ export interface ApprovalResponse {
  * Options for creating the LangGraph ATP client
  */
 export interface LangGraphATPClientOptions {
-	/** Base URL of ATP server */
-	serverUrl: string;
+    /** ATP server instance */
+    server?: AgentToolProtocolServer;
+    /** Base URL of ATP server used for http server (not inProcess) */
+	serverUrl?: string;
 	/** Custom headers for authentication (e.g., { Authorization: 'Bearer token' }) */
 	headers?: Record<string, string>;
 	/** LangChain LLM for atp.llm.call() sampling */
@@ -121,6 +124,7 @@ export class LangGraphATPClient {
 
 	constructor(options: LangGraphATPClientOptions) {
 		const {
+			server,
 			serverUrl,
 			headers,
 			llm,
@@ -132,7 +136,8 @@ export class LangGraphATPClient {
 		} = options;
 
 		this.client = new AgentToolProtocolClient({
-			baseUrl: serverUrl,
+			server,
+            baseUrl: serverUrl,
 			headers,
 			hooks,
 			serviceProviders: tools ? { tools } : undefined,

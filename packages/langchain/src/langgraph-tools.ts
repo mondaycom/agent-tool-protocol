@@ -24,9 +24,7 @@ import { ExecutionStatus, type ExecutionConfig } from '@mondaydotcomorg/atp-prot
 /**
  * Options for creating ATP tools with LangGraph integration
  */
-export interface CreateATPToolsOptions extends Omit<LangGraphATPClientOptions, 'serverUrl'> {
-	/** ATP server URL */
-	serverUrl: string;
+export interface CreateATPToolsOptions extends LangGraphATPClientOptions {
 	/**
 	 * Default execution config for all ATP code executions
 	 */
@@ -83,11 +81,12 @@ export interface ATPToolsResult {
  * ```
  */
 export async function createATPTools(options: CreateATPToolsOptions): Promise<ATPToolsResult> {
-	const { serverUrl, defaultExecutionConfig, ...clientOptions } = options;
+	const { serverUrl, server, defaultExecutionConfig, ...clientOptions } = options;
 
 	const client = new LangGraphATPClient({
-		serverUrl,
-		...clientOptions,
+        server,
+        serverUrl,
+        ...clientOptions,
 	});
 
 	await client.connect();
