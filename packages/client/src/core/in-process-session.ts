@@ -1,5 +1,6 @@
 import type { ClientToolDefinition } from '@mondaydotcomorg/atp-protocol';
-import type { ISession, TokenRefreshConfig } from './session.js';
+import type { TokenRefreshConfig } from './types.js';
+import type { ISession } from './session.js';
 
 interface InProcessServer {
 	start(): Promise<void>;
@@ -149,10 +150,6 @@ export class InProcessSession implements ISession {
 
 	getBaseUrl(): string {
 		return '';
-	}
-
-	updateToken(_response: Response): void {
-		// No-op for in-process - tokens are managed via refreshTokenIfNeeded
 	}
 
 	/**

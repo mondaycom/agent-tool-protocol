@@ -58,17 +58,6 @@ export async function handleHTTPRequest(
 			await runMiddleware(ctx, deps.middleware, deps.routeHandler);
 
 			try {
-				if (ctx.clientId && deps.sessionManager && ctx.path !== '/api/init') {
-					try {
-						const tokenSettings = deps.sessionManager.getTokenSettings();
-						const newToken = deps.sessionManager.generateToken(ctx.clientId);
-						const expiresAt = Date.now() + (tokenSettings.tokenTTL ??  60 * 60 * 1000);
-
-						headers.set('X-ATP-Token', newToken);
-						headers.set('X-ATP-Token-Expires', expiresAt.toString());
-					} catch (error) {}
-				}
-
 				const isStringResponse = typeof ctx.responseBody === 'string';
 				res.writeHead(ctx.status, {
 					'Content-Type': isStringResponse ? 'text/plain; charset=utf-8' : 'application/json',
@@ -78,32 +67,6 @@ export async function handleHTTPRequest(
 			} catch (writeError) {}
 		} catch (error) {
 			try {
-				if (ctx.clientId && deps.sessionManager && ctx.path !== '/api/init') {
-					try {
-						const tokenSettings = deps.sessionManager.getTokenSettings();
-						const newToken = deps.sessionManager.generateToken(ctx.clientId);
-						const expiresAt = Date.now() + tokenSettings.tokenTTL;
-
-						headers.set('X-ATP-Token', newToken);
-						headers.set('X-ATP-Token-Expires', expiresAt.toString());
-
-						log.debug('Token refresh headers set on error', {
-							clientId: ctx.clientId,
-							path: ctx.path,
-							hasSessionManager: !!deps.sessionManager,
-							headerCount: headers.size,
-						});
-					} catch (tokenError) {
-						log.warn('Token refresh failed on error', { error: tokenError });
-					}
-				} else {
-					log.debug('Token refresh skipped on error', {
-						hasClientId: !!ctx.clientId,
-						hasSessionManager: !!deps.sessionManager,
-						path: ctx.path,
-					});
-				}
-
 				handleError(res, error as Error, randomUUID(), headers);
 			} catch (handlerError) {
 				try {

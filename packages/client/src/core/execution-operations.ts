@@ -169,8 +169,6 @@ export class ExecutionOperations {
 				body,
 			});
 
-			this.session.updateToken(response);
-
 			if (!response.ok) {
 				const error = (await response.json()) as { error: string };
 				throw new Error(`Execution failed: ${error.error || response.statusText}`);
@@ -426,8 +424,6 @@ export class ExecutionOperations {
 				body,
 			});
 
-			this.session.updateToken(response);
-
 			if (!response.ok) {
 				const error = (await response.json()) as { error: string };
 				throw new Error(`Resume failed: ${error.error || response.statusText}`);
@@ -479,8 +475,6 @@ export class ExecutionOperations {
 				headers,
 				body,
 			});
-
-			this.session.updateToken(response);
 
 			if (!response.ok) {
 				const error = (await response.json()) as { error: string };

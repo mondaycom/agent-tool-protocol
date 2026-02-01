@@ -1,15 +1,5 @@
-import type { ClientHooks } from './types.js';
+import type { ClientHooks, TokenRefreshConfig } from './types.js';
 import type { ClientToolDefinition } from '@mondaydotcomorg/atp-protocol';
-
-/**
- * Configuration for automatic token refresh behavior
- */
-export interface TokenRefreshConfig {
-	/** Enable automatic token refresh (default: true) */
-	enabled: boolean;
-	/** Buffer time in ms before rotateAt to trigger refresh (default: 1000ms) */
-	bufferMs: number;
-}
 
 export interface ISession {
 	init(
@@ -26,11 +16,8 @@ export interface ISession {
 	ensureInitialized(): Promise<void>;
 	getHeaders(): Record<string, string>;
 	getBaseUrl(): string;
-	updateToken(response: Response): void;
 	prepareHeaders(method: string, url: string, body?: unknown): Promise<Record<string, string>>;
-	/** Refresh token if needed (past rotateAt time) */
 	refreshTokenIfNeeded(): Promise<void>;
-	/** Configure automatic token refresh behavior */
 	setTokenRefreshConfig(config: Partial<TokenRefreshConfig>): void;
 }
 
@@ -178,25 +165,6 @@ export class ClientSession implements ISession {
 
 	getBaseUrl(): string {
 		return this.baseUrl;
-	}
-
-	/**
-	 * Updates the client token from response headers (token refresh).
-	 */
-	updateToken(response: Response): void {
-		const newToken = response.headers.get('X-ATP-Token');
-		const newExpiresAt = response.headers.get('X-ATP-Token-Expires');
-
-		if (newToken) {
-			this.clientToken = newToken;
-		}
-		if (newExpiresAt) {
-			this.tokenExpiresAt = parseInt(newExpiresAt, 10);
-			// Estimate tokenRotateAt as halfway between now and expiry
-			const now = Date.now();
-			const ttl = this.tokenExpiresAt - now;
-			this.tokenRotateAt = now + ttl / 2;
-		}
 	}
 
 	/**

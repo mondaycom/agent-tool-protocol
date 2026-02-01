@@ -77,3 +77,13 @@ export interface ClientHooks {
 	// onError?: ErrorHook;
 	// onRetry?: RetryHook;
 }
+
+/**
+ * Configuration for automatic token refresh behavior
+ */
+export interface TokenRefreshConfig {
+	/** Enable automatic token refresh (default: true) */
+	enabled: boolean;
+	/** Buffer time in ms before rotateAt to trigger refresh (default: 1000ms) */
+	bufferMs: number;
+}
