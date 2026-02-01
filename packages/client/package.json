@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-client",
-	"version": "0.22.0",
+	"version": "0.22.1-rc-auto-referesh-token1.0",
 	"description": "Client SDK for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.cjs",
@@ -48,8 +48,8 @@
 	},
 	"license": "MIT",
 	"dependencies": {
-		"@mondaydotcomorg/atp-protocol": "0.21.0",
-		"@mondaydotcomorg/atp-runtime": "0.21.0",
+		"@mondaydotcomorg/atp-protocol": "0.21.1-rc-auto-referesh-token1.0",
+		"@mondaydotcomorg/atp-runtime": "0.21.1-rc-auto-referesh-token1.0",
 		"undici": "*",
 		"zod-to-json-schema": "^3.24.6"
 	},
