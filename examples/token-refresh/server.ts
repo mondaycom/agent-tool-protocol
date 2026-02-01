@@ -26,6 +26,7 @@ async function main() {
 	// Create ATP client - automatic token refresh is enabled by default
 	const client = new AgentToolProtocolClient({
 		baseUrl: process.env.ATP_SERVER_URL || 'http://localhost:3333',
+		tokenRefresh: { enabled: true },
 		hooks: {
 			preRequest: async (context) => {
 				console.log('[Hook] Request to:', context.url);

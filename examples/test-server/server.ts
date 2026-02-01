@@ -24,6 +24,10 @@ async function main() {
 	// In production, use longer TTLs (e.g., 1 hour default)
 	const server = new AgentToolProtocolServer({
 		execution: { timeout: 30000 },
+/*		clientInit: {
+			tokenTTL: 10000, // 10 seconds for testing
+			tokenRotation: 5000,
+		}*/
 	});
 
 	// Register tools

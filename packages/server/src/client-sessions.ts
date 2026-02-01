@@ -215,29 +215,33 @@ export class ClientSessionManager {
 	 */
 	async refreshToken(clientId: string): Promise<ClientInitResponse | null> {
 		// Get session directly from cache without expiry check
-		// Refresh should work even for "expired" sessions as long as they exist in cache
 		const session = await this.cache.get<ClientSession>(`session:${clientId}`);
 		if (!session) {
+			// Throw happens in handler
 			return null;
 		}
 
+		// Remove old client session entry.
+		await this.cache.delete(`session:${clientId}`);;
+
+		const newClientId = this.generateClientId();
 		const now = Date.now();
 		const newExpiresAt = now + this.tokenTTL;
 		const newTokenRotateAt = now + this.tokenRotation;
 
-		// Update session with new expiry in cache
+		// Update session with both new clientId and new expiresAt
 		const updatedSession: ClientSession = {
 			...session,
+			clientId,
 			expiresAt: newExpiresAt,
 		};
 
-		const ttlSeconds = Math.floor(this.tokenTTL / 1000);
-		await this.cache.set(`session:${clientId}`, updatedSession, ttlSeconds);
+		await this.cache.set(`session:${newClientId}`, updatedSession);
 
-		const newToken = this.generateToken(clientId);
+		const newToken = this.generateToken(newClientId);
 
 		return {
-			clientId,
+			clientId: newClientId,
 			token: newToken,
 			expiresAt: newExpiresAt,
 			tokenRotateAt: newTokenRotateAt,
