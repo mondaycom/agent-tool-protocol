@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { loadOpenAPI } from '../src/openapi-loader';
 import { APIAggregator } from '../src/aggregator';
 import type { APIGroupConfig, CustomFunctionDef } from '@mondaydotcomorg/atp-protocol';
