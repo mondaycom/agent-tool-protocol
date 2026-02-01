@@ -1,6 +1,6 @@
 import type { SearchOptions, SearchResult, ExploreResult, ApiGroupRules } from '@mondaydotcomorg/atp-protocol';
 import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
-import type { ISession } from './session.js';
+import type { ISession } from './base-session.js';
 import type { InProcessSession } from './in-process-session.js';
 
 export class APIOperations {

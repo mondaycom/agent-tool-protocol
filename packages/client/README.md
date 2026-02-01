@@ -210,24 +210,19 @@ const result = await client.execute({
 
 ### Pre-Request Hooks
 
-Intercept and modify requests (e.g., token refresh):
+Intercept and modify requests (e.g., custom tokens set):
 
 ```typescript
 const client = new AgentToolProtocolClient({
 	baseUrl: 'http://localhost:3333',
 	hooks: {
 		preRequest: async (context) => {
-			// Refresh token if needed
-			if (tokenExpired()) {
-				const newToken = await refreshToken();
-				return {
-					headers: {
-						...context.currentHeaders,
-						Authorization: `Bearer ${newToken}`,
-					},
-				};
-			}
-			return {};
+            return {
+                headers: {
+                    ...context.currentHeaders,
+                    'X-Custom-Token': `Bearer ${newToken}`,
+                },
+            };
 		},
 	},
 });

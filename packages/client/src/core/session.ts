@@ -1,9 +1,6 @@
 import type { ClientToolDefinition } from '@mondaydotcomorg/atp-protocol';
 import type { ClientHooks, TokenRefreshConfig } from './types.js';
-import { BaseSession, type TokenCredentials, type ISession } from './base-session.js';
-
-// Re-export for backward compatibility
-export type { ISession, TokenCredentials, TokenRefreshConfig };
+import { BaseSession, type TokenCredentials } from './base-session.js';
 
 /**
  * HTTP-based session for connecting to remote ATP servers.

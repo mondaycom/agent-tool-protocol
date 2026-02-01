@@ -1,7 +1,7 @@
 import type { ExecutionResult, ExecutionConfig, ATPEvent } from '@mondaydotcomorg/atp-protocol';
 import { ExecutionStatus, CallbackType } from '@mondaydotcomorg/atp-protocol';
 import { log } from '@mondaydotcomorg/atp-runtime';
-import type { ISession } from './session.js';
+import type { ISession } from './base-session.js';
 import type { InProcessSession } from './in-process-session.js';
 import type { ServiceProviders } from './service-providers';
 import { ClientCallbackError } from '../errors.js';
