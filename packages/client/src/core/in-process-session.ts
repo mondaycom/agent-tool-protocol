@@ -1,8 +1,11 @@
 import type { ClientToolDefinition } from '@mondaydotcomorg/atp-protocol';
 import type { TokenRefreshConfig } from './types.js';
-import type { ISession } from './session.js';
+import { BaseSession, type TokenCredentials } from './base-session.js';
 
-interface InProcessServer {
+/**
+ * Server interface for in-process communication
+ */
+export interface InProcessServer {
 	start(): Promise<void>;
 	handleInit(ctx: InProcessRequestContext): Promise<unknown>;
 	getDefinitions(ctx?: InProcessRequestContext): Promise<unknown>;
@@ -15,7 +18,10 @@ interface InProcessServer {
 	handleTokenRefresh(ctx: InProcessRequestContext): Promise<unknown>;
 }
 
-interface InProcessRequestContext {
+/**
+ * Request context for in-process server calls
+ */
+export interface InProcessRequestContext {
 	method: string;
 	path: string;
 	query: Record<string, string>;
@@ -38,37 +44,27 @@ interface InProcessRequestContext {
 	set(header: string, value: string): void;
 }
 
-export class InProcessSession implements ISession {
+/**
+ * In-process session for direct server communication without HTTP.
+ * Used when the client and server run in the same process.
+ */
+export class InProcessSession extends BaseSession {
 	private server: InProcessServer;
-	private clientId?: string;
-	private clientToken?: string;
-	private tokenExpiresAt?: number;
-	private tokenRotateAt?: number;
 	private initialized: boolean = false;
-	private initPromise?: Promise<void>;
-	private refreshPromise?: Promise<void>;
-	private tokenRefreshConfig: TokenRefreshConfig = {
-		enabled: true,
-		bufferMs: 1000,
-	};
 
 	constructor(server: InProcessServer, tokenRefreshConfig?: Partial<TokenRefreshConfig>) {
+		super(tokenRefreshConfig);
 		this.server = server;
-		if (tokenRefreshConfig) {
-			this.tokenRefreshConfig = { ...this.tokenRefreshConfig, ...tokenRefreshConfig };
-		}
 	}
 
+	/**
+	 * Initializes the client session with the in-process server.
+	 */
 	async init(
 		clientInfo?: { name?: string; version?: string; [key: string]: unknown },
 		tools?: ClientToolDefinition[],
 		services?: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean }
-	): Promise<{
-		clientId: string;
-		token: string;
-		expiresAt: number;
-		tokenRotateAt: number;
-	}> {
+	): Promise<TokenCredentials> {
 		if (this.initPromise) {
 			await this.initPromise;
 			return {
@@ -79,12 +75,7 @@ export class InProcessSession implements ISession {
 			};
 		}
 
-		let initResult: {
-			clientId: string;
-			token: string;
-			expiresAt: number;
-			tokenRotateAt: number;
-		};
+		let initResult: TokenCredentials;
 
 		this.initPromise = (async () => {
 			await this.server.start();
@@ -99,17 +90,8 @@ export class InProcessSession implements ISession {
 				},
 			});
 
-			const result = (await this.server.handleInit(ctx)) as {
-				clientId: string;
-				token: string;
-				expiresAt: number;
-				tokenRotateAt: number;
-			};
-
-			this.clientId = result.clientId;
-			this.clientToken = result.token;
-			this.tokenExpiresAt = result.expiresAt;
-			this.tokenRotateAt = result.tokenRotateAt;
+			const result = (await this.server.handleInit(ctx)) as TokenCredentials;
+			this.updateTokenState(result);
 			this.initialized = true;
 			initResult = result;
 		})();
@@ -119,19 +101,18 @@ export class InProcessSession implements ISession {
 		return initResult!;
 	}
 
-	getClientId(): string {
-		if (!this.clientId) {
-			throw new Error('Client not initialized. Call init() first.');
-		}
-		return this.clientId;
-	}
-
+	/**
+	 * Ensures the client is initialized before making requests.
+	 */
 	async ensureInitialized(): Promise<void> {
 		if (!this.initialized) {
 			throw new Error('Client not initialized. Call init() first.');
 		}
 	}
 
+	/**
+	 * Creates headers for in-process requests (lowercase for consistency with Node.js)
+	 */
 	getHeaders(): Record<string, string> {
 		const headers: Record<string, string> = {
 			'content-type': 'application/json',
@@ -153,91 +134,37 @@ export class InProcessSession implements ISession {
 	}
 
 	/**
-	 * Configure automatic token refresh behavior
-	 */
-	setTokenRefreshConfig(config: Partial<TokenRefreshConfig>): void {
-		this.tokenRefreshConfig = { ...this.tokenRefreshConfig, ...config };
-	}
-
-	/**
-	 * Refresh token if needed (past rotateAt time or expired).
-	 * For in-process mode, this directly calls the server's handleTokenRefresh.
-	 *
-	 * Note: Even expired tokens can be refreshed as long as the server session
-	 * still exists. The server accepts expired JWTs for the refresh endpoint.
-	 */
-	async refreshTokenIfNeeded(): Promise<void> {
-		// Skip if auto-refresh is disabled
-		if (!this.tokenRefreshConfig.enabled) {
-			return;
-		}
-
-		// Skip if not initialized
-		if (!this.clientId || !this.clientToken) {
-			return;
-		}
-
-		// Check if we need to refresh:
-		// - Past rotateAt time (proactive refresh), OR
-		// - Token has expired (reactive refresh - still allowed by server)
-		const now = Date.now();
-		const needsRefresh =
-			(this.tokenRotateAt && now >= this.tokenRotateAt - this.tokenRefreshConfig.bufferMs) ||
-			(this.tokenExpiresAt && now >= this.tokenExpiresAt);
-
-		if (!needsRefresh) {
-			return; // Token is still fresh
-		}
-
-		// Prevent concurrent refresh requests
-		if (this.refreshPromise) {
-			await this.refreshPromise;
-			return;
-		}
-
-		this.refreshPromise = this.doRefreshToken();
-
-		try {
-			await this.refreshPromise;
-		} finally {
-			this.refreshPromise = undefined;
-		}
-	}
-
-	/**
 	 * Perform the actual token refresh via in-process server call
 	 */
-	private async doRefreshToken(): Promise<void> {
+	protected async doRefreshToken(): Promise<void> {
 		const ctx = await this.createContext({
 			method: 'POST',
 			path: '/api/token/refresh',
 			body: { clientId: this.clientId },
 		});
 
-		const result = (await this.server.handleTokenRefresh(ctx)) as {
-			clientId: string;
-			token: string;
-			expiresAt: number;
-			tokenRotateAt: number;
-		};
-
-		this.clientToken = result.token;
-		this.tokenExpiresAt = result.expiresAt;
-		this.tokenRotateAt = result.tokenRotateAt;
+		const result = (await this.server.handleTokenRefresh(ctx)) as TokenCredentials;
+		this.updateTokenState(result);
 	}
 
+	/**
+	 * Prepares headers for a request, refreshing token if needed
+	 */
 	async prepareHeaders(
 		_method: string,
 		url: string,
 		_body?: unknown
 	): Promise<Record<string, string>> {
 		// Refresh token if needed BEFORE preparing headers
-		// Skip for token refresh and init endpoints
-		if (!url.includes('/api/token/refresh') && !url.includes('/api/init')) {
+		if (!this.shouldSkipRefreshForUrl(url)) {
 			await this.refreshTokenIfNeeded();
 		}
 		return this.getHeaders();
 	}
+
+	// ============================================
+	// In-process specific methods for direct server calls
+	// ============================================
 
 	async getDefinitions(options?: { apiGroups?: string[] }): Promise<{
 		typescript: string;
@@ -345,6 +272,9 @@ export class InProcessSession implements ISession {
 		return await this.server.handleResume(ctx, executionId);
 	}
 
+	/**
+	 * Creates a request context for in-process server calls
+	 */
 	private async createContext(options: {
 		method: string;
 		path: string;

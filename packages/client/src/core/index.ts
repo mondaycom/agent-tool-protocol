@@ -1,3 +1,4 @@
+export * from './base-session.js';
 export * from './session.js';
 export * from './in-process-session.js';
 export * from './api-operations.js';
