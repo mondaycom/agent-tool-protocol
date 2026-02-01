@@ -20,4 +20,5 @@ export {
 } from './tools/index.js';
 export type { AgentToolProtocolClientOptions } from './client.js';
 export { InProcessSession } from './core/in-process-session.js';
-export type { ISession } from './core/session.js';
+export type { InProcessServer } from './core/in-process-session.js';
+export type { ISession } from './core/base-session.js';

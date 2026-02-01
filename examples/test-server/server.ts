@@ -1,5 +1,10 @@
 /**
  * Minimal ATP Test Server for LangChain Integration Testing
+ *
+ * This server uses SHORT token TTL (5 seconds) to demonstrate and test
+ * the automatic token refresh feature. In production, use longer TTLs.
+ *
+ * Run with: npx tsx server.ts
  */
 import { config } from 'dotenv';
 config({ path: '../../.env' });
@@ -12,12 +17,17 @@ if (!process.env.ATP_JWT_SECRET) {
 	);
 }
 
-import { AgentToolProtocolServer, loadOpenAPI } from '@mondaydotcomorg/atp-server';
+import { AgentToolProtocolServer } from '@mondaydotcomorg/atp-server';
 
 async function main() {
-	// Create ATP server
+	// Create ATP server with SHORT token TTL for testing auto-refresh
+	// In production, use longer TTLs (e.g., 1 hour default)
 	const server = new AgentToolProtocolServer({
 		execution: { timeout: 30000 },
+/*		clientInit: {
+			tokenTTL: 10000, // 10 seconds for testing
+			tokenRotation: 5000,
+		}*/
 	});
 
 	// Register tools

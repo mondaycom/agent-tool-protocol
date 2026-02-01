@@ -1,7 +1,11 @@
 import type { ClientToolDefinition } from '@mondaydotcomorg/atp-protocol';
-import type { ISession } from './session.js';
+import type { TokenRefreshConfig } from './types.js';
+import { BaseSession, type TokenCredentials } from './base-session.js';
 
-interface InProcessServer {
+/**
+ * Server interface for in-process communication
+ */
+export interface InProcessServer {
 	start(): Promise<void>;
 	handleInit(ctx: InProcessRequestContext): Promise<unknown>;
 	getDefinitions(ctx?: InProcessRequestContext): Promise<unknown>;
@@ -11,9 +15,13 @@ interface InProcessServer {
 	handleExplore(ctx: InProcessRequestContext): Promise<unknown>;
 	handleExecute(ctx: InProcessRequestContext): Promise<unknown>;
 	handleResume(ctx: InProcessRequestContext, executionId: string): Promise<unknown>;
+	handleTokenRefresh(ctx: InProcessRequestContext): Promise<unknown>;
 }
 
-interface InProcessRequestContext {
+/**
+ * Request context for in-process server calls
+ */
+export interface InProcessRequestContext {
 	method: string;
 	path: string;
 	query: Record<string, string>;
@@ -36,41 +44,43 @@ interface InProcessRequestContext {
 	set(header: string, value: string): void;
 }
 
-export class InProcessSession implements ISession {
+/**
+ * In-process session for direct server communication without HTTP.
+ * Used when the client and server run in the same process.
+ */
+export class InProcessSession extends BaseSession {
 	private server: InProcessServer;
-	private clientId?: string;
-	private clientToken?: string;
 	private initialized: boolean = false;
-	private initPromise?: Promise<void>;
 
-	constructor(server: InProcessServer) {
+	constructor(server: InProcessServer, tokenRefreshConfig?: Partial<TokenRefreshConfig>) {
+		super(tokenRefreshConfig);
 		this.server = server;
 	}
 
+	/**
+	 * Initializes the client session with the in-process server.
+	 */
 	async init(
 		clientInfo?: { name?: string; version?: string; [key: string]: unknown },
 		tools?: ClientToolDefinition[],
 		services?: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean }
-	): Promise<{
-		clientId: string;
-		token: string;
-		expiresAt: number;
-		tokenRotateAt: number;
-	}> {
+	): Promise<TokenCredentials> {
 		if (this.initPromise) {
 			await this.initPromise;
 			return {
 				clientId: this.clientId!,
 				token: this.clientToken!,
-				expiresAt: 0,
-				tokenRotateAt: 0,
+				expiresAt: this.tokenExpiresAt!,
+				tokenRotateAt: this.tokenRotateAt!,
 			};
 		}
+
+		let initResult: TokenCredentials;
 
 		this.initPromise = (async () => {
 			await this.server.start();
 
-			const ctx = this.createContext({
+			const ctx = await this.createContext({
 				method: 'POST',
 				path: '/api/init',
 				body: {
@@ -80,41 +90,29 @@ export class InProcessSession implements ISession {
 				},
 			});
 
-			const result = (await this.server.handleInit(ctx)) as {
-				clientId: string;
-				token: string;
-				expiresAt: number;
-				tokenRotateAt: number;
-			};
-
-			this.clientId = result.clientId;
-			this.clientToken = result.token;
+			const result = (await this.server.handleInit(ctx)) as TokenCredentials;
+			this.updateTokenState(result);
 			this.initialized = true;
+			initResult = result;
 		})();
 
 		await this.initPromise;
 
-		return {
-			clientId: this.clientId!,
-			token: this.clientToken!,
-			expiresAt: 0,
-			tokenRotateAt: 0,
-		};
+		return initResult!;
 	}
 
-	getClientId(): string {
-		if (!this.clientId) {
-			throw new Error('Client not initialized. Call init() first.');
-		}
-		return this.clientId;
-	}
-
+	/**
+	 * Ensures the client is initialized before making requests.
+	 */
 	async ensureInitialized(): Promise<void> {
 		if (!this.initialized) {
 			throw new Error('Client not initialized. Call init() first.');
 		}
 	}
 
+	/**
+	 * Creates headers for in-process requests (lowercase for consistency with Node.js)
+	 */
 	getHeaders(): Record<string, string> {
 		const headers: Record<string, string> = {
 			'content-type': 'application/json',
@@ -135,17 +133,38 @@ export class InProcessSession implements ISession {
 		return '';
 	}
 
-	updateToken(_response: Response): void {
-		// No-op for in-process - tokens are managed directly
+	/**
+	 * Perform the actual token refresh via in-process server call
+	 */
+	protected async doRefreshToken(): Promise<void> {
+		const ctx = await this.createContext({
+			method: 'POST',
+			path: '/api/token/refresh',
+			body: { clientId: this.clientId },
+		});
+
+		const result = (await this.server.handleTokenRefresh(ctx)) as TokenCredentials;
+		this.updateTokenState(result);
 	}
 
+	/**
+	 * Prepares headers for a request, refreshing token if needed
+	 */
 	async prepareHeaders(
 		_method: string,
-		_url: string,
+		url: string,
 		_body?: unknown
 	): Promise<Record<string, string>> {
+		// Refresh token if needed BEFORE preparing headers
+		if (!this.shouldSkipRefreshForUrl(url)) {
+			await this.refreshTokenIfNeeded();
+		}
 		return this.getHeaders();
 	}
+
+	// ============================================
+	// In-process specific methods for direct server calls
+	// ============================================
 
 	async getDefinitions(options?: { apiGroups?: string[] }): Promise<{
 		typescript: string;
@@ -154,7 +173,7 @@ export class InProcessSession implements ISession {
 	}> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'GET',
 			path: '/api/definitions',
 			query: options?.apiGroups ? { apiGroups: options.apiGroups.join(',') } : {},
@@ -170,7 +189,7 @@ export class InProcessSession implements ISession {
 	async getRuntimeDefinitions(options?: { apis?: string[] }): Promise<string> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'GET',
 			path: '/api/runtime',
 			query: options?.apis?.length ? { apis: options.apis.join(',') } : {},
@@ -193,7 +212,7 @@ export class InProcessSession implements ISession {
 	async search(query: string, options?: Record<string, unknown>): Promise<{ results: unknown[] }> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'POST',
 			path: '/api/search',
 			body: { query, ...options },
@@ -205,7 +224,7 @@ export class InProcessSession implements ISession {
 	async explore(path: string, options?: Record<string, unknown>): Promise<unknown> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'POST',
 			path: '/api/explore',
 			body: { path, ...options },
@@ -217,7 +236,7 @@ export class InProcessSession implements ISession {
 	async execute(code: string, config?: Record<string, unknown>): Promise<unknown> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'POST',
 			path: '/api/execute',
 			body: { code, config },
@@ -229,7 +248,7 @@ export class InProcessSession implements ISession {
 	async resume(executionId: string, callbackResult: unknown): Promise<unknown> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'POST',
 			path: `/api/resume/${executionId}`,
 			body: { result: callbackResult },
@@ -244,7 +263,7 @@ export class InProcessSession implements ISession {
 	): Promise<unknown> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'POST',
 			path: `/api/resume/${executionId}`,
 			body: { results: batchResults },
@@ -253,12 +272,15 @@ export class InProcessSession implements ISession {
 		return await this.server.handleResume(ctx, executionId);
 	}
 
-	private createContext(options: {
+	/**
+	 * Creates a request context for in-process server calls
+	 */
+	private async createContext(options: {
 		method: string;
 		path: string;
 		query?: Record<string, string>;
 		body?: unknown;
-	}): InProcessRequestContext {
+	}): Promise<InProcessRequestContext> {
 		const noopLogger = {
 			debug: () => {},
 			info: () => {},
@@ -270,7 +292,7 @@ export class InProcessSession implements ISession {
 			method: options.method,
 			path: options.path,
 			query: options.query || {},
-			headers: this.getHeaders(),
+			headers: await this.prepareHeaders(options.method, options.path, options.body),
 			body: options.body,
 			clientId: this.clientId,
 			clientToken: this.clientToken,

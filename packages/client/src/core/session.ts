@@ -1,34 +1,22 @@
-import type { ClientHooks } from './types.js';
 import type { ClientToolDefinition } from '@mondaydotcomorg/atp-protocol';
+import type { ClientHooks, TokenRefreshConfig } from './types.js';
+import { BaseSession, type TokenCredentials } from './base-session.js';
 
-export interface ISession {
-	init(
-		clientInfo?: { name?: string; version?: string; [key: string]: unknown },
-		tools?: ClientToolDefinition[],
-		services?: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean }
-	): Promise<{
-		clientId: string;
-		token: string;
-		expiresAt: number;
-		tokenRotateAt: number;
-	}>;
-	getClientId(): string;
-	ensureInitialized(): Promise<void>;
-	getHeaders(): Record<string, string>;
-	getBaseUrl(): string;
-	updateToken(response: Response): void;
-	prepareHeaders(method: string, url: string, body?: unknown): Promise<Record<string, string>>;
-}
-
-export class ClientSession implements ISession {
+/**
+ * HTTP-based session for connecting to remote ATP servers.
+ */
+export class ClientSession extends BaseSession {
 	private baseUrl: string;
 	private customHeaders: Record<string, string>;
-	private clientId?: string;
-	private clientToken?: string;
-	private initPromise?: Promise<void>;
 	private hooks?: ClientHooks;
 
-	constructor(baseUrl: string, headers?: Record<string, string>, hooks?: ClientHooks) {
+	constructor(
+		baseUrl: string,
+		headers?: Record<string, string>,
+		hooks?: ClientHooks,
+		tokenRefreshConfig?: Partial<TokenRefreshConfig>
+	) {
+		super(tokenRefreshConfig);
 		this.baseUrl = baseUrl;
 		this.customHeaders = headers || {};
 		this.hooks = hooks;
@@ -38,29 +26,23 @@ export class ClientSession implements ISession {
 	 * Initializes the client session with the server.
 	 * This MUST be called before any other operations.
 	 * The server generates and returns a unique client ID and token.
-	 * @param clientInfo - Optional client information
-	 * @param tools - Optional client tool definitions to register with the server
-	 * @param services - Optional client service capabilities (LLM, approval, embedding)
 	 */
 	async init(
 		clientInfo?: { name?: string; version?: string; [key: string]: unknown },
 		tools?: ClientToolDefinition[],
 		services?: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean }
-	): Promise<{
-		clientId: string;
-		token: string;
-		expiresAt: number;
-		tokenRotateAt: number;
-	}> {
+	): Promise<TokenCredentials> {
 		if (this.initPromise) {
 			await this.initPromise;
 			return {
 				clientId: this.clientId!,
 				token: this.clientToken!,
-				expiresAt: 0,
-				tokenRotateAt: 0,
+				expiresAt: this.tokenExpiresAt!,
+				tokenRotateAt: this.tokenRotateAt!,
 			};
 		}
+
+		let initResult: TokenCredentials;
 
 		this.initPromise = (async () => {
 			const url = `${this.baseUrl}/api/init`;
@@ -69,6 +51,7 @@ export class ClientSession implements ISession {
 				tools: tools || [],
 				services,
 			});
+
 			const headers = await this.prepareHeaders('POST', url, body);
 
 			const response = await fetch(url, {
@@ -81,35 +64,14 @@ export class ClientSession implements ISession {
 				throw new Error(`Client initialization failed: ${response.status} ${response.statusText}`);
 			}
 
-			const data = (await response.json()) as {
-				clientId: string;
-				token: string;
-				expiresAt: number;
-				tokenRotateAt: number;
-			};
-
-			this.clientId = data.clientId;
-			this.clientToken = data.token;
+			const data = (await response.json()) as TokenCredentials;
+			this.updateTokenState(data);
+			initResult = data;
 		})();
 
 		await this.initPromise;
 
-		return {
-			clientId: this.clientId!,
-			token: this.clientToken!,
-			expiresAt: 0,
-			tokenRotateAt: 0,
-		};
-	}
-
-	/**
-	 * Gets the unique client ID.
-	 */
-	getClientId(): string {
-		if (!this.clientId) {
-			throw new Error('Client not initialized. Call init() first.');
-		}
-		return this.clientId;
+		return initResult!;
 	}
 
 	/**
@@ -146,54 +108,64 @@ export class ClientSession implements ISession {
 	}
 
 	/**
-	 * Updates the client token from response headers (token refresh).
+	 * Perform the actual token refresh via HTTP
 	 */
-	updateToken(response: Response): void {
-		const newToken = response.headers.get('X-ATP-Token');
-		if (newToken) {
-			this.clientToken = newToken;
+	protected async doRefreshToken(): Promise<void> {
+		const url = `${this.baseUrl}/api/token/refresh`;
+		const body = JSON.stringify({ clientId: this.clientId });
+
+		// Use current token for auth, but don't recursively try to refresh
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			...this.customHeaders,
+			'X-Client-ID': this.clientId!,
+			Authorization: `Bearer ${this.clientToken}`,
+		};
+
+		const response = await fetch(url, {
+			method: 'POST',
+			headers,
+			body,
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			throw new Error(`Token refresh failed: ${response.status} ${response.statusText} - ${errorText}`);
 		}
+
+		const data = (await response.json()) as TokenCredentials;
+		this.updateTokenState(data);
 	}
 
 	/**
-	 * Prepares headers for a request, calling preRequest hook if configured
+	 * Prepares headers for a request, refreshing token if needed and calling preRequest hook if configured
 	 */
 	async prepareHeaders(
 		method: string,
 		url: string,
 		body?: unknown
 	): Promise<Record<string, string>> {
-		let headers: Record<string, string> = {
-			'Content-Type': 'application/json',
-			...this.customHeaders,
-		};
-
-		if (this.clientId) {
-			headers['X-Client-ID'] = this.clientId;
+		// Refresh token if needed BEFORE preparing headers
+		if (!this.shouldSkipRefreshForUrl(url)) {
+			await this.refreshTokenIfNeeded();
 		}
 
-		if (this.clientToken) {
-			headers['Authorization'] = `Bearer ${this.clientToken}`;
-		}
+		let headers = this.getHeaders();
 
 		if (this.hooks?.preRequest) {
-			try {
-				const result = await this.hooks.preRequest({
-					url,
-					method,
-					currentHeaders: headers,
-					body,
-				});
+			const result = await this.hooks.preRequest({
+				url,
+				method,
+				currentHeaders: headers,
+				body,
+			});
 
-				if (result.abort) {
-					throw new Error(result.abortReason || 'Request aborted by preRequest hook');
-				}
+			if (result.abort) {
+				throw new Error(result.abortReason || 'Request aborted by preRequest hook');
+			}
 
-				if (result.headers) {
-					headers = result.headers;
-				}
-			} catch (error) {
-				throw error;
+			if (result.headers) {
+				headers = result.headers;
 			}
 		}
 

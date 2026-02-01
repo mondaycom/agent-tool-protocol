@@ -1,7 +1,7 @@
 import type { ExecutionResult, ExecutionConfig, ATPEvent } from '@mondaydotcomorg/atp-protocol';
 import { ExecutionStatus, CallbackType } from '@mondaydotcomorg/atp-protocol';
 import { log } from '@mondaydotcomorg/atp-runtime';
-import type { ISession } from './session.js';
+import type { ISession } from './base-session.js';
 import type { InProcessSession } from './in-process-session.js';
 import type { ServiceProviders } from './service-providers';
 import { ClientCallbackError } from '../errors.js';
@@ -168,8 +168,6 @@ export class ExecutionOperations {
 				headers,
 				body,
 			});
-
-			this.session.updateToken(response);
 
 			if (!response.ok) {
 				const error = (await response.json()) as { error: string };
@@ -426,8 +424,6 @@ export class ExecutionOperations {
 				body,
 			});
 
-			this.session.updateToken(response);
-
 			if (!response.ok) {
 				const error = (await response.json()) as { error: string };
 				throw new Error(`Resume failed: ${error.error || response.statusText}`);
@@ -479,8 +475,6 @@ export class ExecutionOperations {
 				headers,
 				body,
 			});
-
-			this.session.updateToken(response);
 
 			if (!response.ok) {
 				const error = (await response.json()) as { error: string };

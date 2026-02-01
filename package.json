@@ -13,6 +13,7 @@
 		"test": "NODE_ENV=test npm run jest -- --runInBand --forceExit --logHeapUsage",
 		"test:unit": "npm run jest -- __tests__/unit --runInBand --logHeapUsage && cd packages/atp-compiler && npm test",
 		"test:e2e": "npm run jest -- __tests__/e2e --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
+		"test:e2e:core": "npm run jest -- __tests__/e2e/core-flows --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
 		"test:e2e:checkpointer": "npm run jest -- __tests__/e2e/checkpoint --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
 		"test:e2e:runtime": "npm run jest -- __tests__/e2e/runtime --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
 		"test:e2e:server": "npm run jest -- __tests__/e2e/server --runInBand --forceExit --testTimeout=120000 --logHeapUsage",
