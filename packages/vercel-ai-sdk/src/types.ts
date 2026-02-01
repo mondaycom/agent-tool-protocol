@@ -1,5 +1,5 @@
 import type { ExecutionConfig, ClientTool } from '@mondaydotcomorg/atp-protocol';
-import type { ClientHooks } from '@mondaydotcomorg/atp-client';
+import type { ClientHooks, InProcessServer } from '@mondaydotcomorg/atp-client';
 import type { UIMessageStreamWriter } from './event-adapter.js';
 import type { generateText, generateObject } from 'ai';
 
@@ -65,18 +65,6 @@ export type GenerateObjectResult = Awaited<ReturnType<typeof generateObject>>;
 export type GenerateObjectFunction = (
 	options: GenerateObjectOptions
 ) => Promise<GenerateObjectResult>;
-
-export interface InProcessServer {
-	start(): Promise<void>;
-	handleInit(ctx: unknown): Promise<unknown>;
-	getDefinitions(ctx?: unknown): Promise<unknown>;
-	getRuntimeDefinitions(ctx?: unknown): Promise<string>;
-	getInfo(): unknown;
-	handleSearch(ctx: unknown): Promise<unknown>;
-	handleExplore(ctx: unknown): Promise<unknown>;
-	handleExecute(ctx: unknown): Promise<unknown>;
-	handleResume(ctx: unknown, executionId: string): Promise<unknown>;
-}
 
 interface BaseClientOptions {
 	model: any;
