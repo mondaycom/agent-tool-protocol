@@ -12,6 +12,17 @@ import { readFile } from 'node:fs/promises';
 import yaml from 'js-yaml';
 
 /**
+ * Path item object that can contain HTTP methods and path-level fields
+ */
+interface OpenAPIPathItem {
+	parameters?: Array<OpenAPIParameterWithRef>;
+	servers?: Array<{ url: string; description?: string }>;
+	summary?: string;
+	description?: string;
+	[method: string]: OpenAPIOperation | Array<OpenAPIParameterWithRef> | Array<{ url: string; description?: string }> | string | undefined;
+}
+
+/**
  * Base HTTP API specification (common to both OpenAPI and Swagger)
  */
 interface BaseAPISpec {
@@ -20,7 +31,7 @@ interface BaseAPISpec {
 		version: string;
 		description?: string;
 	};
-	paths: Record<string, Record<string, OpenAPIOperation>>;
+	paths: Record<string, OpenAPIPathItem>;
 	security?: Array<Record<string, string[]>>;
 }
 
@@ -79,6 +90,8 @@ interface OpenAPIParameter {
 	schema?: OpenAPISchema;
 	description?: string;
 }
+
+type OpenAPIParameterWithRef = OpenAPIParameter | (OpenAPIParameter & { $ref: string });
 
 interface OpenAPIRequestBody {
 	required?: boolean;
@@ -243,8 +256,11 @@ export async function loadOpenAPI(
 
 	const functions: CustomFunctionDef[] = [];
 
-	for (const [path, methods] of Object.entries(spec.paths)) {
-		for (const [method, operation] of Object.entries(methods)) {
+	for (const [path, pathItem] of Object.entries(spec.paths)) {
+		// Extract path-level parameters (always an array)
+		const pathParameters = pathItem.parameters || [];
+
+		for (const [method, operation] of Object.entries(pathItem)) {
 			if (['parameters', 'servers', 'summary', 'description'].includes(method)) {
 				continue;
 			}
@@ -253,7 +269,16 @@ export async function loadOpenAPI(
 				continue;
 			}
 
-			const func = convertOperation(path, method, operation, spec, baseURL, options, auth);
+			const func = convertOperation(
+				path,
+				method,
+				operation as OpenAPIOperation,
+				spec,
+				baseURL,
+				options,
+				pathParameters,
+				auth
+			);
 
 			if (func) {
 				functions.push(func);
@@ -312,15 +337,25 @@ async function loadSpec(source: string): Promise<APISpec> {
  * Check if operation should be included based on filters
  */
 function shouldIncludeOperation(
-	operation: OpenAPIOperation,
+	operation: unknown,
 	path: string,
 	method: string,
 	filter?: LoadOpenAPIOptions['filter']
 ): boolean {
+	// Skip if not an operation object
+	if (
+		typeof operation !== 'object' ||
+		operation === null ||
+		!('operationId' in operation || 'summary' in operation || 'description' in operation || 'responses' in operation)
+	) {
+		return false;
+	}
+
+	const op = operation as OpenAPIOperation;
 	if (!filter) return true;
 
 	if (filter.tags && filter.tags.length > 0) {
-		if (!operation.tags || !operation.tags.some((t) => filter.tags!.includes(t))) {
+		if (!op.tags || !op.tags.some((t) => filter.tags!.includes(t))) {
 			return false;
 		}
 	}
@@ -343,12 +378,12 @@ function shouldIncludeOperation(
 		}
 	}
 
-	if (operation.deprecated) {
+	if (op.deprecated) {
 		return false;
 	}
 
 	if (filter.operation) {
-		return filter.operation(operation, path, method);
+		return filter.operation(op, path, method);
 	}
 
 	return true;
@@ -373,6 +408,32 @@ function resolveReference<TRef = OpenAPISchema | OpenAPIParameter>(ref: string, 
 }
 
 /**
+ * Merge path-level and operation-level parameters.
+ * Operation-level parameters take precedence when there's a conflict (same name + in).
+ */
+function mergeParameters(
+	pathParameters: Array<OpenAPIParameterWithRef>,
+	operationParameters: Array<OpenAPIParameterWithRef>,
+	spec: APISpec
+): Array<OpenAPIParameter> {
+	const paramMap = new Map<string, OpenAPIParameter>();
+
+	// Add path-level parameters first
+	for (let param of pathParameters) {
+		param = resolveParamReferenceIfNeeded(param, spec);
+		paramMap.set(`${param.in}:${param.name}`, param);
+	}
+
+	// Add operation-level parameters (overriding path-level ones)
+	for (let param of operationParameters) {
+		param = resolveParamReferenceIfNeeded(param, spec);
+		paramMap.set(`${param.in}:${param.name}`, param);
+	}
+
+	return Array.from(paramMap.values());
+}
+
+/**
  * Convert OpenAPI operation to ATP function
  */
 function convertOperation(
@@ -382,6 +443,7 @@ function convertOperation(
 	spec: APISpec,
 	baseURL: string,
 	options: LoadOpenAPIOptions,
+	pathParameters: Array<OpenAPIParameterWithRef>,
 	auth?: AuthConfig
 ): CustomFunctionDef | null {
 	const operationName = operation.operationId || [method, path].join('_');
@@ -395,6 +457,9 @@ function convertOperation(
 		operation.summary ||
 		operation.description ||
 		`${method.toUpperCase()} ${path}`;
+
+	// Merge path-level and operation-level parameters
+	operation.parameters = mergeParameters(pathParameters, operation.parameters || [], spec);
 
 	const inputSchema = buildInputSchema(operation, spec) as any;
 	const outputSchema = buildOutputSchema(operation, spec) as any;
@@ -490,7 +555,8 @@ function convertOperation(
 			}
 		}
 
-		if (operation.parameters) {
+		// Use merged parameters (includes both path-level and operation-level)
+		if (operation.parameters && operation.parameters.length > 0) {
 			for (let param of operation.parameters) {
 				param = resolveParamReferenceIfNeeded(param, spec);
 
@@ -509,7 +575,7 @@ function convertOperation(
 
 		if (operation.requestBody && ['post', 'put', 'patch'].includes(method.toLowerCase())) {
 			const bodyParams: Record<string, any> = {};
-			if (operation.parameters) {
+			if (operation.parameters && operation.parameters.length > 0) {
 				const paramNames = operation.parameters.map((p) => p.name);
 				for (const key in input) {
 					if (!paramNames.includes(key)) {
@@ -599,7 +665,7 @@ function convertOperation(
 	};
 }
 
-function resolveParamReferenceIfNeeded(param: OpenAPIParameter | (OpenAPIParameter & { $ref: unknown }), spec: OpenAPISpec | Swagger2Spec) {
+function resolveParamReferenceIfNeeded(param: OpenAPIParameterWithRef, spec: OpenAPISpec | Swagger2Spec) {
 	if ('$ref' in param) {
 		const resolved = resolveReference<OpenAPIParameter>(param.$ref as string, spec);
 		if (resolved) {
