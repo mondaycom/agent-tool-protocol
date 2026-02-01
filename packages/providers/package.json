@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-providers",
-	"version": "0.21.0",
+	"version": "0.21.1-rc-auto-referesh-token2.0",
 	"description": "Built-in providers for Agent Tool Protocol (cache, auth, audit)",
 	"type": "module",
 	"main": "./dist/index.cjs",
@@ -35,8 +35,8 @@
 		"agent"
 	],
 	"dependencies": {
-		"@mondaydotcomorg/atp-protocol": "0.21.0",
-		"@mondaydotcomorg/atp-runtime": "0.21.0",
+		"@mondaydotcomorg/atp-protocol": "0.21.1-rc-auto-referesh-token2.0",
+		"@mondaydotcomorg/atp-runtime": "0.21.1-rc-auto-referesh-token2.0",
 		"@opentelemetry/api": "^1.9.0"
 	},
 	"devDependencies": {
