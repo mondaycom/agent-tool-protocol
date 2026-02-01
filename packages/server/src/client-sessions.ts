@@ -45,22 +45,22 @@ export interface ClientInitResponse {
 	clientId: string;
 	token: string;
 	expiresAt: number;
-	tokenRotateAt?: number;
+	tokenRotateAt: number;
 }
 
 /**
  * Client session manager with JWT-based authentication
  */
 export class ClientSessionManager {
-	private cache?: CacheProvider;
-	private inMemorySessions: Map<string, ClientSession> = new Map();
-	private cleanupTimers: Map<string, NodeJS.Timeout> = new Map();
-	private tokenTTL: number;
-	private jwtSecret: string;
+	private cache: CacheProvider;
+	private readonly tokenTTL: number;
+	private readonly tokenRotation: number;
+	private readonly jwtSecret: string;
 
-	constructor(options: { cache?: CacheProvider; tokenTTL: number; tokenRotation: number }) {
+	constructor(options: { cache: CacheProvider; tokenTTL: number; tokenRotation: number }) {
 		this.cache = options.cache;
 		this.tokenTTL = options.tokenTTL;
+		this.tokenRotation = options.tokenRotation;
 
 		const secret = process.env.ATP_JWT_SECRET;
 		if (!secret) {
@@ -74,6 +74,19 @@ export class ClientSessionManager {
 		}
 	}
 
+	private ensureClientJWT(token: string, clientId: string, ignoreExpiration = false) {
+		const decoded = jwt.verify(token, this.jwtSecret, {
+			algorithms: ['HS256'],
+			ignoreExpiration,
+		}) as { clientId: string; type: string };
+
+		if (decoded.clientId !== clientId || decoded.type !== 'client') {
+			return false;
+		}
+
+		return decoded;
+	}
+
 	/**
 	 * Initialize a new client session
 	 */
@@ -82,27 +95,22 @@ export class ClientSessionManager {
 
 		const now = Date.now();
 		const expiresAt = now + this.tokenTTL;
-		const tokenRotateAt = now + this.tokenTTL / 2;
+		const tokenRotateAt = now + this.tokenRotation;
 
 		const token = this.generateToken(clientId);
 
 		const session: ClientSession = {
 			clientId,
 			createdAt: now,
-			expiresAt,
+			expiresAt: expiresAt,
 			clientInfo: request.clientInfo,
 			guidance: request.guidance,
 			tools: request.tools || [],
 			services: request.services,
 		};
 
-		if (this.cache) {
-			const ttlSeconds = Math.floor(this.tokenTTL / 1000);
-			await this.cache.set(`session:${clientId}`, session, ttlSeconds);
-		} else {
-			this.inMemorySessions.set(clientId, session);
-			this.scheduleCleanup(clientId, this.tokenTTL);
-		}
+		// Caching client session with default cache provider ttl, sessionExpiresAt is enforced programmatically on get.
+		await this.cache.set(`session:${clientId}`, session);
 
 		return {
 			clientId,
@@ -117,18 +125,34 @@ export class ClientSessionManager {
 	 */
 	async verifyClient(clientId: string, token: string): Promise<boolean> {
 		try {
-			// Prevent algorithm confusion attacks - only allow HS256
-			const decoded = jwt.verify(token, this.jwtSecret, {
-				algorithms: ['HS256'],
-			}) as { clientId: string; type: string };
-
-			if (decoded.clientId !== clientId || decoded.type !== 'client') {
+			if (!this.ensureClientJWT(token, clientId)) {
 				return false;
 			}
 
 			const session = await this.getSession(clientId);
 			return session !== null;
-		} catch (error) {
+		} catch {
+			return false;
+		}
+	}
+
+	/**
+	 * Verify client token for refresh purposes - allows expired JWT tokens.
+	 * This is used during token refresh when the JWT may have expired but
+	 * the session still exists in cache.
+	 */
+	async verifyClientForRefresh(clientId: string, token: string): Promise<boolean> {
+		try {
+			// Verify token structure but ignore expiration - token refresh should work
+			// even if the JWT has expired, as long as the session still exists in cache
+			if (!this.ensureClientJWT(token, clientId, true)) {
+				return false;
+			}
+
+			// Check if session exists in cache - don't check session.expiresAt
+			const session = await this.cache.get<ClientSession>(`session:${clientId}`);
+			return session !== null;
+		} catch {
 			return false;
 		}
 	}
@@ -137,24 +161,14 @@ export class ClientSessionManager {
 	 * Get client session
 	 */
 	async getSession(clientId: string): Promise<ClientSession | null> {
-		let session: ClientSession | null = null;
-
-		if (this.cache) {
-			session = await this.cache.get<ClientSession>(`session:${clientId}`);
-		} else {
-			session = this.inMemorySessions.get(clientId) || null;
-		}
+		const session = await this.cache.get<ClientSession>(`session:${clientId}`);
 
 		if (!session) {
 			return null;
 		}
 
 		if (Date.now() > session.expiresAt) {
-			if (this.cache) {
-				await this.cache.delete(`session:${clientId}`);
-			} else {
-				this.inMemorySessions.delete(clientId);
-			}
+			await this.cache.delete(`session:${clientId}`);
 			return null;
 		}
 
@@ -165,11 +179,7 @@ export class ClientSessionManager {
 	 * Revoke client session
 	 */
 	async revokeClient(clientId: string): Promise<void> {
-		if (this.cache) {
-			await this.cache.delete(`session:${clientId}`);
-		} else {
-			this.inMemorySessions.delete(clientId);
-		}
+		await this.cache.delete(`session:${clientId}`);
 	}
 
 	/**
@@ -192,56 +202,55 @@ export class ClientSessionManager {
 			},
 			this.jwtSecret,
 			{
-				expiresIn: 3600,
+				expiresIn: Math.ceil(this.tokenTTL / 1000),
 			}
 		);
 	}
 
 	/**
-	 * Schedule cleanup of expired in-memory session
+	 * Refresh token for an existing client session.
+	 * Returns new token credentials if session exists in cache.
+	 * This works even if the session's expiresAt has passed - the refresh
+	 * will update expiresAt to extend the session.
 	 */
-	private scheduleCleanup(clientId: string, ttl: number): void {
-		const existingTimer = this.cleanupTimers.get(clientId);
-		if (existingTimer) {
-			clearTimeout(existingTimer);
+	async refreshToken(clientId: string): Promise<ClientInitResponse | null> {
+		// Get session directly from cache without expiry check
+		// Refresh should work even for "expired" sessions as long as they exist in cache
+		const session = await this.cache.get<ClientSession>(`session:${clientId}`);
+		if (!session) {
+			return null;
 		}
 
-		const timer = setTimeout(() => {
-			this.inMemorySessions.delete(clientId);
-			this.cleanupTimers.delete(clientId);
-		}, ttl);
+		const now = Date.now();
+		const newExpiresAt = now + this.tokenTTL;
+		const newTokenRotateAt = now + this.tokenRotation;
 
-		this.cleanupTimers.set(clientId, timer);
+		// Update session with new expiry in cache
+		const updatedSession: ClientSession = {
+			...session,
+			expiresAt: newExpiresAt,
+		};
+
+		const ttlSeconds = Math.floor(this.tokenTTL / 1000);
+		await this.cache.set(`session:${clientId}`, updatedSession, ttlSeconds);
+
+		const newToken = this.generateToken(clientId);
+
+		return {
+			clientId,
+			token: newToken,
+			expiresAt: newExpiresAt,
+			tokenRotateAt: newTokenRotateAt,
+		};
 	}
 
 	/**
-	 * Manually cleanup a session (useful for tests and explicit cleanup)
+	 * Get token TTL and rotation settings (useful for clients)
 	 */
-	async cleanup(clientId: string): Promise<void> {
-		const timer = this.cleanupTimers.get(clientId);
-		if (timer) {
-			clearTimeout(timer);
-			this.cleanupTimers.delete(clientId);
-		}
-
-		if (this.cache) {
-			await this.cache.delete(`session:${clientId}`);
-		} else {
-			this.inMemorySessions.delete(clientId);
-		}
-	}
-
-	/**
-	 * Cleanup all sessions (useful for shutdown)
-	 */
-	async cleanupAll(): Promise<void> {
-		for (const timer of this.cleanupTimers.values()) {
-			clearTimeout(timer);
-		}
-		this.cleanupTimers.clear();
-
-		if (!this.cache) {
-			this.inMemorySessions.clear();
-		}
+	getTokenSettings(): { tokenTTL: number; tokenRotation: number } {
+		return {
+			tokenTTL: this.tokenTTL,
+			tokenRotation: this.tokenRotation,
+		};
 	}
 }

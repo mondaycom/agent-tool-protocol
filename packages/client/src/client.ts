@@ -18,6 +18,7 @@ import {
 	type ClientServiceProviders,
 	type ClientHooks,
 	type ISession,
+	type TokenRefreshConfig,
 	ClientSession,
 	InProcessSession,
 	APIOperations,
@@ -42,6 +43,7 @@ interface InProcessServer {
 	handleExplore(ctx: unknown): Promise<unknown>;
 	handleExecute(ctx: unknown): Promise<unknown>;
 	handleResume(ctx: unknown, executionId: string): Promise<unknown>;
+	handleTokenRefresh(ctx: unknown): Promise<unknown>;
 }
 
 /**
@@ -58,6 +60,14 @@ export interface AgentToolProtocolClientOptions {
 	serviceProviders?: ClientServiceProviders;
 	/** Optional hooks for intercepting and modifying client behavior */
 	hooks?: ClientHooks;
+	/**
+	 * Configuration for automatic token refresh behavior.
+	 * By default, ATP client automatically refreshes tokens before they expire.
+	 * Set `enabled: false` to disable and manage tokens manually via preRequest hook.
+	 *
+	 * @default { enabled: true, bufferMs: 1000 }
+	 */
+	tokenRefresh?: Partial<TokenRefreshConfig>;
 }
 
 /**
@@ -76,13 +86,25 @@ export class AgentToolProtocolClient {
 	 *
 	 * @example
 	 * ```typescript
-	 * // HTTP mode
+	 * // HTTP mode with automatic token refresh (default)
 	 * const client = new AgentToolProtocolClient({
 	 *   baseUrl: 'http://localhost:3333',
 	 *   headers: { Authorization: 'Bearer token' },
+	 * });
+	 *
+	 * // HTTP mode with custom token refresh behavior
+	 * const client = new AgentToolProtocolClient({
+	 *   baseUrl: 'http://localhost:3333',
+	 *   tokenRefresh: { enabled: true, bufferMs: 5000 }, // Refresh 5s before rotateAt
+	 * });
+	 *
+	 * // Disable automatic token refresh (use preRequest hook instead)
+	 * const client = new AgentToolProtocolClient({
+	 *   baseUrl: 'http://localhost:3333',
+	 *   tokenRefresh: { enabled: false },
 	 *   hooks: {
 	 *     preRequest: async (context) => {
-	 *       const token = await refreshToken();
+	 *       const token = await myCustomRefresh();
 	 *       return { headers: { ...context.currentHeaders, Authorization: `Bearer ${token}` } };
 	 *     }
 	 *   }
@@ -95,7 +117,7 @@ export class AgentToolProtocolClient {
 	 * ```
 	 */
 	constructor(options: AgentToolProtocolClientOptions) {
-		const { baseUrl, server, headers, serviceProviders, hooks } = options;
+		const { baseUrl, server, headers, serviceProviders, hooks, tokenRefresh } = options;
 
 		if (!baseUrl && !server) {
 			throw new Error('Either baseUrl or server must be provided');
@@ -108,7 +130,7 @@ export class AgentToolProtocolClient {
 		this.serviceProviders = new ServiceProviders(serviceProviders);
 
 		if (server) {
-			this.inProcessSession = new InProcessSession(server);
+			this.inProcessSession = new InProcessSession(server, tokenRefresh);
 			this.session = this.inProcessSession;
 			this.apiOps = new APIOperations(this.session, this.inProcessSession);
 			this.execOps = new ExecutionOperations(
@@ -117,7 +139,7 @@ export class AgentToolProtocolClient {
 				this.inProcessSession
 			);
 		} else {
-			this.session = new ClientSession(baseUrl!, headers, hooks);
+			this.session = new ClientSession(baseUrl!, headers, hooks, tokenRefresh);
 			this.apiOps = new APIOperations(this.session);
 			this.execOps = new ExecutionOperations(this.session, this.serviceProviders);
 		}
@@ -148,6 +170,14 @@ export class AgentToolProtocolClient {
 	 */
 	getClientId(): string {
 		return this.session.getClientId();
+	}
+
+	/**
+	 * Configures automatic token refresh behavior.
+	 * Call this to enable/disable auto-refresh or adjust timing.
+	 */
+	setTokenRefreshConfig(config: Partial<TokenRefreshConfig>): void {
+		this.session.setTokenRefreshConfig(config);
 	}
 
 	/**

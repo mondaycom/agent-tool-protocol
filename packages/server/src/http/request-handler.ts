@@ -60,8 +60,9 @@ export async function handleHTTPRequest(
 			try {
 				if (ctx.clientId && deps.sessionManager && ctx.path !== '/api/init') {
 					try {
+						const tokenSettings = deps.sessionManager.getTokenSettings();
 						const newToken = deps.sessionManager.generateToken(ctx.clientId);
-						const expiresAt = Date.now() + 60 * 60 * 1000;
+						const expiresAt = Date.now() + (tokenSettings.tokenTTL ??  60 * 60 * 1000);
 
 						headers.set('X-ATP-Token', newToken);
 						headers.set('X-ATP-Token-Expires', expiresAt.toString());
@@ -79,8 +80,9 @@ export async function handleHTTPRequest(
 			try {
 				if (ctx.clientId && deps.sessionManager && ctx.path !== '/api/init') {
 					try {
+						const tokenSettings = deps.sessionManager.getTokenSettings();
 						const newToken = deps.sessionManager.generateToken(ctx.clientId);
-						const expiresAt = Date.now() + 60 * 60 * 1000;
+						const expiresAt = Date.now() + tokenSettings.tokenTTL;
 
 						headers.set('X-ATP-Token', newToken);
 						headers.set('X-ATP-Token-Expires', expiresAt.toString());

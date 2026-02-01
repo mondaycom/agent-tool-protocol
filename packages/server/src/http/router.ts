@@ -24,6 +24,8 @@ export async function handleRoute(
 	} else if (ctx.path.startsWith('/api/resume/') && ctx.method === 'POST') {
 		const executionId = ctx.path.substring('/api/resume/'.length);
 		ctx.responseBody = await server.handleResume(ctx, executionId);
+	} else if (ctx.path === '/api/token/refresh' && ctx.method === 'POST') {
+		ctx.responseBody = await server.handleTokenRefresh(ctx);
 	} else {
 		ctx.status = 404;
 		ctx.responseBody = { error: 'Not found' };

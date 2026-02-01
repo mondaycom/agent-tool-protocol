@@ -1,5 +1,5 @@
 import type { ClientToolDefinition } from '@mondaydotcomorg/atp-protocol';
-import type { ISession } from './session.js';
+import type { ISession, TokenRefreshConfig } from './session.js';
 
 interface InProcessServer {
 	start(): Promise<void>;
@@ -11,6 +11,7 @@ interface InProcessServer {
 	handleExplore(ctx: InProcessRequestContext): Promise<unknown>;
 	handleExecute(ctx: InProcessRequestContext): Promise<unknown>;
 	handleResume(ctx: InProcessRequestContext, executionId: string): Promise<unknown>;
+	handleTokenRefresh(ctx: InProcessRequestContext): Promise<unknown>;
 }
 
 interface InProcessRequestContext {
@@ -40,11 +41,21 @@ export class InProcessSession implements ISession {
 	private server: InProcessServer;
 	private clientId?: string;
 	private clientToken?: string;
+	private tokenExpiresAt?: number;
+	private tokenRotateAt?: number;
 	private initialized: boolean = false;
 	private initPromise?: Promise<void>;
+	private refreshPromise?: Promise<void>;
+	private tokenRefreshConfig: TokenRefreshConfig = {
+		enabled: true,
+		bufferMs: 1000,
+	};
 
-	constructor(server: InProcessServer) {
+	constructor(server: InProcessServer, tokenRefreshConfig?: Partial<TokenRefreshConfig>) {
 		this.server = server;
+		if (tokenRefreshConfig) {
+			this.tokenRefreshConfig = { ...this.tokenRefreshConfig, ...tokenRefreshConfig };
+		}
 	}
 
 	async init(
@@ -62,15 +73,22 @@ export class InProcessSession implements ISession {
 			return {
 				clientId: this.clientId!,
 				token: this.clientToken!,
-				expiresAt: 0,
-				tokenRotateAt: 0,
+				expiresAt: this.tokenExpiresAt!,
+				tokenRotateAt: this.tokenRotateAt!,
 			};
 		}
+
+		let initResult: {
+			clientId: string;
+			token: string;
+			expiresAt: number;
+			tokenRotateAt: number;
+		};
 
 		this.initPromise = (async () => {
 			await this.server.start();
 
-			const ctx = this.createContext({
+			const ctx = await this.createContext({
 				method: 'POST',
 				path: '/api/init',
 				body: {
@@ -89,17 +107,15 @@ export class InProcessSession implements ISession {
 
 			this.clientId = result.clientId;
 			this.clientToken = result.token;
+			this.tokenExpiresAt = result.expiresAt;
+			this.tokenRotateAt = result.tokenRotateAt;
 			this.initialized = true;
+			initResult = result;
 		})();
 
 		await this.initPromise;
 
-		return {
-			clientId: this.clientId!,
-			token: this.clientToken!,
-			expiresAt: 0,
-			tokenRotateAt: 0,
-		};
+		return initResult!;
 	}
 
 	getClientId(): string {
@@ -136,14 +152,93 @@ export class InProcessSession implements ISession {
 	}
 
 	updateToken(_response: Response): void {
-		// No-op for in-process - tokens are managed directly
+		// No-op for in-process - tokens are managed via refreshTokenIfNeeded
+	}
+
+	/**
+	 * Configure automatic token refresh behavior
+	 */
+	setTokenRefreshConfig(config: Partial<TokenRefreshConfig>): void {
+		this.tokenRefreshConfig = { ...this.tokenRefreshConfig, ...config };
+	}
+
+	/**
+	 * Refresh token if needed (past rotateAt time or expired).
+	 * For in-process mode, this directly calls the server's handleTokenRefresh.
+	 *
+	 * Note: Even expired tokens can be refreshed as long as the server session
+	 * still exists. The server accepts expired JWTs for the refresh endpoint.
+	 */
+	async refreshTokenIfNeeded(): Promise<void> {
+		// Skip if auto-refresh is disabled
+		if (!this.tokenRefreshConfig.enabled) {
+			return;
+		}
+
+		// Skip if not initialized
+		if (!this.clientId || !this.clientToken) {
+			return;
+		}
+
+		// Check if we need to refresh:
+		// - Past rotateAt time (proactive refresh), OR
+		// - Token has expired (reactive refresh - still allowed by server)
+		const now = Date.now();
+		const needsRefresh =
+			(this.tokenRotateAt && now >= this.tokenRotateAt - this.tokenRefreshConfig.bufferMs) ||
+			(this.tokenExpiresAt && now >= this.tokenExpiresAt);
+
+		if (!needsRefresh) {
+			return; // Token is still fresh
+		}
+
+		// Prevent concurrent refresh requests
+		if (this.refreshPromise) {
+			await this.refreshPromise;
+			return;
+		}
+
+		this.refreshPromise = this.doRefreshToken();
+
+		try {
+			await this.refreshPromise;
+		} finally {
+			this.refreshPromise = undefined;
+		}
+	}
+
+	/**
+	 * Perform the actual token refresh via in-process server call
+	 */
+	private async doRefreshToken(): Promise<void> {
+		const ctx = await this.createContext({
+			method: 'POST',
+			path: '/api/token/refresh',
+			body: { clientId: this.clientId },
+		});
+
+		const result = (await this.server.handleTokenRefresh(ctx)) as {
+			clientId: string;
+			token: string;
+			expiresAt: number;
+			tokenRotateAt: number;
+		};
+
+		this.clientToken = result.token;
+		this.tokenExpiresAt = result.expiresAt;
+		this.tokenRotateAt = result.tokenRotateAt;
 	}
 
 	async prepareHeaders(
 		_method: string,
-		_url: string,
+		url: string,
 		_body?: unknown
 	): Promise<Record<string, string>> {
+		// Refresh token if needed BEFORE preparing headers
+		// Skip for token refresh and init endpoints
+		if (!url.includes('/api/token/refresh') && !url.includes('/api/init')) {
+			await this.refreshTokenIfNeeded();
+		}
 		return this.getHeaders();
 	}
 
@@ -154,7 +249,7 @@ export class InProcessSession implements ISession {
 	}> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'GET',
 			path: '/api/definitions',
 			query: options?.apiGroups ? { apiGroups: options.apiGroups.join(',') } : {},
@@ -170,7 +265,7 @@ export class InProcessSession implements ISession {
 	async getRuntimeDefinitions(options?: { apis?: string[] }): Promise<string> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'GET',
 			path: '/api/runtime',
 			query: options?.apis?.length ? { apis: options.apis.join(',') } : {},
@@ -193,7 +288,7 @@ export class InProcessSession implements ISession {
 	async search(query: string, options?: Record<string, unknown>): Promise<{ results: unknown[] }> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'POST',
 			path: '/api/search',
 			body: { query, ...options },
@@ -205,7 +300,7 @@ export class InProcessSession implements ISession {
 	async explore(path: string, options?: Record<string, unknown>): Promise<unknown> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'POST',
 			path: '/api/explore',
 			body: { path, ...options },
@@ -217,7 +312,7 @@ export class InProcessSession implements ISession {
 	async execute(code: string, config?: Record<string, unknown>): Promise<unknown> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'POST',
 			path: '/api/execute',
 			body: { code, config },
@@ -229,7 +324,7 @@ export class InProcessSession implements ISession {
 	async resume(executionId: string, callbackResult: unknown): Promise<unknown> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'POST',
 			path: `/api/resume/${executionId}`,
 			body: { result: callbackResult },
@@ -244,7 +339,7 @@ export class InProcessSession implements ISession {
 	): Promise<unknown> {
 		await this.ensureInitialized();
 
-		const ctx = this.createContext({
+		const ctx = await this.createContext({
 			method: 'POST',
 			path: `/api/resume/${executionId}`,
 			body: { results: batchResults },
@@ -253,12 +348,12 @@ export class InProcessSession implements ISession {
 		return await this.server.handleResume(ctx, executionId);
 	}
 
-	private createContext(options: {
+	private async createContext(options: {
 		method: string;
 		path: string;
 		query?: Record<string, string>;
 		body?: unknown;
-	}): InProcessRequestContext {
+	}): Promise<InProcessRequestContext> {
 		const noopLogger = {
 			debug: () => {},
 			info: () => {},
@@ -270,7 +365,7 @@ export class InProcessSession implements ISession {
 			method: options.method,
 			path: options.path,
 			query: options.query || {},
-			headers: this.getHeaders(),
+			headers: await this.prepareHeaders(options.method, options.path, options.body),
 			body: options.body,
 			clientId: this.clientId,
 			clientToken: this.clientToken,

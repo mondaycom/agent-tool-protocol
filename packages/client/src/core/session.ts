@@ -1,6 +1,16 @@
 import type { ClientHooks } from './types.js';
 import type { ClientToolDefinition } from '@mondaydotcomorg/atp-protocol';
 
+/**
+ * Configuration for automatic token refresh behavior
+ */
+export interface TokenRefreshConfig {
+	/** Enable automatic token refresh (default: true) */
+	enabled: boolean;
+	/** Buffer time in ms before rotateAt to trigger refresh (default: 1000ms) */
+	bufferMs: number;
+}
+
 export interface ISession {
 	init(
 		clientInfo?: { name?: string; version?: string; [key: string]: unknown },
@@ -18,6 +28,10 @@ export interface ISession {
 	getBaseUrl(): string;
 	updateToken(response: Response): void;
 	prepareHeaders(method: string, url: string, body?: unknown): Promise<Record<string, string>>;
+	/** Refresh token if needed (past rotateAt time) */
+	refreshTokenIfNeeded(): Promise<void>;
+	/** Configure automatic token refresh behavior */
+	setTokenRefreshConfig(config: Partial<TokenRefreshConfig>): void;
 }
 
 export class ClientSession implements ISession {
@@ -25,13 +39,28 @@ export class ClientSession implements ISession {
 	private customHeaders: Record<string, string>;
 	private clientId?: string;
 	private clientToken?: string;
+	private tokenExpiresAt?: number;
+	private tokenRotateAt?: number;
 	private initPromise?: Promise<void>;
+	private refreshPromise?: Promise<void>;
 	private hooks?: ClientHooks;
+	private tokenRefreshConfig: TokenRefreshConfig = {
+		enabled: true,
+		bufferMs: 1000,
+	};
 
-	constructor(baseUrl: string, headers?: Record<string, string>, hooks?: ClientHooks) {
+	constructor(
+		baseUrl: string,
+		headers?: Record<string, string>,
+		hooks?: ClientHooks,
+		tokenRefreshConfig?: Partial<TokenRefreshConfig>
+	) {
 		this.baseUrl = baseUrl;
 		this.customHeaders = headers || {};
 		this.hooks = hooks;
+		if (tokenRefreshConfig) {
+			this.tokenRefreshConfig = { ...this.tokenRefreshConfig, ...tokenRefreshConfig };
+		}
 	}
 
 	/**
@@ -57,10 +86,17 @@ export class ClientSession implements ISession {
 			return {
 				clientId: this.clientId!,
 				token: this.clientToken!,
-				expiresAt: 0,
-				tokenRotateAt: 0,
+				expiresAt: this.tokenExpiresAt!,
+				tokenRotateAt: this.tokenRotateAt!,
 			};
 		}
+
+		let initResult: {
+			clientId: string;
+			token: string;
+			expiresAt: number;
+			tokenRotateAt: number;
+		};
 
 		this.initPromise = (async () => {
 			const url = `${this.baseUrl}/api/init`;
@@ -69,6 +105,7 @@ export class ClientSession implements ISession {
 				tools: tools || [],
 				services,
 			});
+
 			const headers = await this.prepareHeaders('POST', url, body);
 
 			const response = await fetch(url, {
@@ -90,16 +127,14 @@ export class ClientSession implements ISession {
 
 			this.clientId = data.clientId;
 			this.clientToken = data.token;
+			this.tokenExpiresAt = data.expiresAt;
+			this.tokenRotateAt = data.tokenRotateAt;
+			initResult = data;
 		})();
 
 		await this.initPromise;
 
-		return {
-			clientId: this.clientId!,
-			token: this.clientToken!,
-			expiresAt: 0,
-			tokenRotateAt: 0,
-		};
+		return initResult!;
 	}
 
 	/**
@@ -150,19 +185,125 @@ export class ClientSession implements ISession {
 	 */
 	updateToken(response: Response): void {
 		const newToken = response.headers.get('X-ATP-Token');
+		const newExpiresAt = response.headers.get('X-ATP-Token-Expires');
+
 		if (newToken) {
 			this.clientToken = newToken;
+		}
+		if (newExpiresAt) {
+			this.tokenExpiresAt = parseInt(newExpiresAt, 10);
+			// Estimate tokenRotateAt as halfway between now and expiry
+			const now = Date.now();
+			const ttl = this.tokenExpiresAt - now;
+			this.tokenRotateAt = now + ttl / 2;
 		}
 	}
 
 	/**
-	 * Prepares headers for a request, calling preRequest hook if configured
+	 * Configure automatic token refresh behavior
+	 */
+	setTokenRefreshConfig(config: Partial<TokenRefreshConfig>): void {
+		this.tokenRefreshConfig = { ...this.tokenRefreshConfig, ...config };
+	}
+
+	/**
+	 * Refresh token if needed (past rotateAt time or expired).
+	 * This is called automatically before requests when autoRefresh is enabled.
+	 * Uses a shared promise to prevent concurrent refresh requests.
+	 *
+	 * Note: Even expired tokens can be refreshed as long as the server session
+	 * still exists. The server accepts expired JWTs for the refresh endpoint.
+	 */
+	async refreshTokenIfNeeded(): Promise<void> {
+		// Skip if auto-refresh is disabled
+		if (!this.tokenRefreshConfig.enabled) {
+			return;
+		}
+
+		// Skip if not initialized
+		if (!this.clientId || !this.clientToken) {
+			return;
+		}
+
+		// Check if we need to refresh:
+		// - Past rotateAt time (proactive refresh), OR
+		// - Token has expired (reactive refresh - still allowed by server)
+		const now = Date.now();
+		const needsRefresh =
+			(this.tokenRotateAt && now >= this.tokenRotateAt - this.tokenRefreshConfig.bufferMs) ||
+			(this.tokenExpiresAt && now >= this.tokenExpiresAt);
+
+		if (!needsRefresh) {
+			return; // Token is still fresh
+		}
+
+		// Prevent concurrent refresh requests
+		if (this.refreshPromise) {
+			await this.refreshPromise;
+			return;
+		}
+
+		this.refreshPromise = this.doRefreshToken();
+
+		try {
+			await this.refreshPromise;
+		} finally {
+			this.refreshPromise = undefined;
+		}
+	}
+
+	/**
+	 * Perform the actual token refresh
+	 */
+	private async doRefreshToken(): Promise<void> {
+		const url = `${this.baseUrl}/api/token/refresh`;
+		const body = JSON.stringify({ clientId: this.clientId });
+
+		// Use current token for auth, but don't recursively try to refresh
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			...this.customHeaders,
+			'X-Client-ID': this.clientId!,
+			Authorization: `Bearer ${this.clientToken}`,
+		};
+
+		const response = await fetch(url, {
+			method: 'POST',
+			headers,
+			body,
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			throw new Error(`Token refresh failed: ${response.status} ${response.statusText} - ${errorText}`);
+		}
+
+		const data = (await response.json()) as {
+			clientId: string;
+			token: string;
+			expiresAt: number;
+			tokenRotateAt: number;
+		};
+
+		this.clientToken = data.token;
+		this.tokenExpiresAt = data.expiresAt;
+		this.tokenRotateAt = data.tokenRotateAt;
+	}
+
+	/**
+	 * Prepares headers for a request, refreshing token if needed and calling preRequest hook if configured
 	 */
 	async prepareHeaders(
 		method: string,
 		url: string,
 		body?: unknown
 	): Promise<Record<string, string>> {
+		// Refresh token if needed BEFORE preparing headers
+		// Skip for token refresh endpoint to avoid infinite recursion
+		if (!url.includes('/api/token/refresh') && !url.includes('/api/init')) {
+			await this.refreshTokenIfNeeded();
+		}
+
 		let headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 			...this.customHeaders,
