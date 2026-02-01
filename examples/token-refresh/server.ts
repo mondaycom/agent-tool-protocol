@@ -6,7 +6,8 @@
  * eliminating the need for manual token management in most cases.
  *
  * Run this with the test-server example (which has short token TTL):
- *   1. In one terminal: cd examples/test-server && npx tsx server.ts
+ *   1. In one terminal: cd examples/test-server && npx tsx server.ts with these following config:
+ *   `clientInit: { tokenTTL: 5000, tokenRotation: 2500 }`
  *   2. In another terminal: cd examples/token-refresh && npx tsx server.ts
  */
 
@@ -48,11 +49,6 @@ async function main() {
 	console.log('\n=== Connecting to Server ===');
 	await client.connect();
 
-	console.log(await client.getTypeDefinitions());
-	console.log(await client.exploreAPI('/custom'));
-	console.log(await client.searchAPI('add'));
-	console.log(await client.searchAPI('echo'));
-
 	// First execution - should use original token
 	console.log('\n=== First Execution (using original token) ===');
 	const result1 = await client.execute(`
@@ -66,7 +62,7 @@ async function main() {
 	console.log('Result:', JSON.stringify(result1.result, null, 2));
 
 	// Wait past the rotation time (test-server uses 2.5s rotation for 5s TTL)
-	const waitTime = Math.max(rotateIn + 500, 10000);
+	const waitTime = Math.max(rotateIn + 500, 30000);
 	console.log(`\n=== Waiting ${waitTime / 1000}s to trigger token rotation ===`);
 	await wait(waitTime);
 

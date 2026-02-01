@@ -17,18 +17,13 @@ if (!process.env.ATP_JWT_SECRET) {
 	);
 }
 
-import { AgentToolProtocolServer, loadOpenAPI } from '@mondaydotcomorg/atp-server';
+import { AgentToolProtocolServer } from '@mondaydotcomorg/atp-server';
 
 async function main() {
 	// Create ATP server with SHORT token TTL for testing auto-refresh
 	// In production, use longer TTLs (e.g., 1 hour default)
 	const server = new AgentToolProtocolServer({
 		execution: { timeout: 30000 },
-		clientInit: {
-			// Short TTL for testing auto-refresh behavior
-			tokenTTL: 5000,        // 5 seconds until token expires
-			tokenRotation: 2500,    // Rotate at 2.5 seconds (halfway)
-		}
 	});
 
 	// Register tools

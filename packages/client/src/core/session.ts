@@ -52,11 +52,7 @@ export class ClientSession extends BaseSession {
 				services,
 			});
 
-			// Don't call prepareHeaders here to avoid token refresh before init
-			const headers: Record<string, string> = {
-				'Content-Type': 'application/json',
-				...this.customHeaders,
-			};
+			const headers = await this.prepareHeaders('POST', url, body);
 
 			const response = await fetch(url, {
 				method: 'POST',
