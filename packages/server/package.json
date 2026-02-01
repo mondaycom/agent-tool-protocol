@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-server",
-	"version": "0.23.0",
+	"version": "0.23.1",
 	"description": "Server implementation for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.cjs",
