@@ -74,10 +74,9 @@ export class ClientSessionManager {
 		}
 	}
 
-	private ensureClientJWT(token: string, clientId: string, ignoreExpiration = false) {
+	private ensureClientJWT(token: string, clientId: string) {
 		const decoded = jwt.verify(token, this.jwtSecret, {
 			algorithms: ['HS256'],
-			ignoreExpiration,
 		}) as { clientId: string; type: string };
 
 		if (decoded.clientId !== clientId || decoded.type !== 'client') {
@@ -137,27 +136,6 @@ export class ClientSessionManager {
 	}
 
 	/**
-	 * Verify client token for refresh purposes - allows expired JWT tokens.
-	 * This is used during token refresh when the JWT may have expired but
-	 * the session still exists in cache.
-	 */
-	async verifyClientForRefresh(clientId: string, token: string): Promise<boolean> {
-		try {
-			// Verify token structure but ignore expiration - token refresh should work
-			// even if the JWT has expired, as long as the session still exists in cache
-			if (!this.ensureClientJWT(token, clientId, true)) {
-				return false;
-			}
-
-			// Check if session exists in cache - don't check session.expiresAt
-			const session = await this.cache.get<ClientSession>(`session:${clientId}`);
-			return session !== null;
-		} catch {
-			return false;
-		}
-	}
-
-	/**
 	 * Get client session
 	 */
 	async getSession(clientId: string): Promise<ClientSession | null> {
@@ -205,47 +183,6 @@ export class ClientSessionManager {
 				expiresIn: Math.ceil(this.tokenTTL / 1000),
 			}
 		);
-	}
-
-	/**
-	 * Refresh token for an existing client session.
-	 * Returns new token credentials if session exists in cache.
-	 * This works even if the session's expiresAt has passed - the refresh
-	 * will update expiresAt to extend the session.
-	 */
-	async refreshToken(clientId: string): Promise<ClientInitResponse | null> {
-		// Get session directly from cache without expiry check
-		const session = await this.cache.get<ClientSession>(`session:${clientId}`);
-		if (!session) {
-			// Throw happens in handler
-			return null;
-		}
-
-		// Remove old client session entry.
-		await this.cache.delete(`session:${clientId}`);;
-
-		const newClientId = this.generateClientId();
-		const now = Date.now();
-		const newExpiresAt = now + this.tokenTTL;
-		const newTokenRotateAt = now + this.tokenRotation;
-
-		// Update session with both new clientId and new expiresAt
-		const updatedSession: ClientSession = {
-			...session,
-			clientId,
-			expiresAt: newExpiresAt,
-		};
-
-		await this.cache.set(`session:${newClientId}`, updatedSession);
-
-		const newToken = this.generateToken(newClientId);
-
-		return {
-			clientId: newClientId,
-			token: newToken,
-			expiresAt: newExpiresAt,
-			tokenRotateAt: newTokenRotateAt,
-		};
 	}
 
 	/**

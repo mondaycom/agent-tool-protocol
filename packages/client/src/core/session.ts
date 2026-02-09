@@ -32,6 +32,9 @@ export class ClientSession extends BaseSession {
 		tools?: ClientToolDefinition[],
 		services?: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean }
 	): Promise<TokenCredentials> {
+		// Store init params so doRefreshToken() can re-init with the same data
+		this.storedInitParams = { clientInfo, tools, services };
+
 		if (this.initPromise) {
 			await this.initPromise;
 			return {
@@ -105,36 +108,6 @@ export class ClientSession extends BaseSession {
 
 	getBaseUrl(): string {
 		return this.baseUrl;
-	}
-
-	/**
-	 * Perform the actual token refresh via HTTP
-	 */
-	protected async doRefreshToken(): Promise<void> {
-		const url = `${this.baseUrl}/api/token/refresh`;
-		const body = JSON.stringify({ clientId: this.clientId });
-
-		// Use current token for auth, but don't recursively try to refresh
-		const headers: Record<string, string> = {
-			'Content-Type': 'application/json',
-			...this.customHeaders,
-			'X-Client-ID': this.clientId!,
-			Authorization: `Bearer ${this.clientToken}`,
-		};
-
-		const response = await fetch(url, {
-			method: 'POST',
-			headers,
-			body,
-		});
-
-		if (!response.ok) {
-			const errorText = await response.text();
-			throw new Error(`Token refresh failed: ${response.status} ${response.statusText} - ${errorText}`);
-		}
-
-		const data = (await response.json()) as TokenCredentials;
-		this.updateTokenState(data);
 	}
 
 	/**

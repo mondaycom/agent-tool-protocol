@@ -39,7 +39,6 @@ import { handleSearch, handleSearchQuery } from './handlers/search.handler.js';
 import { handleExplore } from './handlers/explorer.handler.js';
 import { handleExecute } from './handlers/execute.handler.js';
 import { handleResume } from './handlers/resume.handler.js';
-import { handleTokenRefresh } from './handlers/token.handler.js';
 import { getDefinitions } from './handlers/definitions.handler.js';
 import { shutdownAudit } from './middleware/audit.js';
 import {
@@ -159,7 +158,7 @@ export class AgentToolProtocolServer {
 		}
 
 		if (!this.cacheProvider) {
-			this.cacheProvider = new MemoryCache({ maxKeys: 1000, defaultTTL: 3600 });
+			this.cacheProvider = new MemoryCache({ maxKeys: 1000, defaultTTL: 24 * 3600 });
 			log.info('Cache provider configured (default)', { provider: 'memory' });
 		}
 
@@ -610,11 +609,6 @@ export class AgentToolProtocolServer {
 			this.config,
 			this.sessionManager
 		);
-	}
-
-	async handleTokenRefresh(ctx: RequestContext): Promise<unknown> {
-		if (!this.sessionManager) ctx.throw(503, 'Session manager not initialized');
-		return await handleTokenRefresh(ctx, this.sessionManager);
 	}
 
 	/**

@@ -15,7 +15,6 @@ export interface InProcessServer {
 	handleExplore(ctx: InProcessRequestContext): Promise<unknown>;
 	handleExecute(ctx: InProcessRequestContext): Promise<unknown>;
 	handleResume(ctx: InProcessRequestContext, executionId: string): Promise<unknown>;
-	handleTokenRefresh(ctx: InProcessRequestContext): Promise<unknown>;
 }
 
 /**
@@ -65,6 +64,9 @@ export class InProcessSession extends BaseSession {
 		tools?: ClientToolDefinition[],
 		services?: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean }
 	): Promise<TokenCredentials> {
+		// Store init params so doRefreshToken() can re-init with the same data
+		this.storedInitParams = { clientInfo, tools, services };
+
 		if (this.initPromise) {
 			await this.initPromise;
 			return {
@@ -131,20 +133,6 @@ export class InProcessSession extends BaseSession {
 
 	getBaseUrl(): string {
 		return '';
-	}
-
-	/**
-	 * Perform the actual token refresh via in-process server call
-	 */
-	protected async doRefreshToken(): Promise<void> {
-		const ctx = await this.createContext({
-			method: 'POST',
-			path: '/api/token/refresh',
-			body: { clientId: this.clientId },
-		});
-
-		const result = (await this.server.handleTokenRefresh(ctx)) as TokenCredentials;
-		this.updateTokenState(result);
 	}
 
 	/**

@@ -43,7 +43,6 @@ interface InProcessServer {
 	handleExplore(ctx: unknown): Promise<unknown>;
 	handleExecute(ctx: unknown): Promise<unknown>;
 	handleResume(ctx: unknown, executionId: string): Promise<unknown>;
-	handleTokenRefresh(ctx: unknown): Promise<unknown>;
 }
 
 /**

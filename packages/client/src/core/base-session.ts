@@ -30,6 +30,15 @@ export interface ISession {
 }
 
 /**
+ * Stored init parameters for re-initialization during token refresh.
+ */
+export interface StoredInitParams {
+	clientInfo?: { name?: string; version?: string; [key: string]: unknown };
+	tools?: ClientToolDefinition[];
+	services?: { hasLLM: boolean; hasApproval: boolean; hasEmbedding: boolean; hasTools: boolean };
+}
+
+/**
  * Base session class with shared token management logic.
  * Subclasses implement the transport-specific operations (HTTP vs in-process).
  */
@@ -40,12 +49,13 @@ export abstract class BaseSession implements ISession {
 	protected tokenRotateAt?: number;
 	protected initPromise?: Promise<void>;
 	protected refreshPromise?: Promise<void>;
+	protected storedInitParams?: StoredInitParams;
 	protected tokenRefreshConfig: TokenRefreshConfig = {
 		enabled: true,
 		bufferMs: 1000,
 	};
 
-	constructor(tokenRefreshConfig?: Partial<TokenRefreshConfig>) {
+	protected constructor(tokenRefreshConfig?: Partial<TokenRefreshConfig>) {
 		if (tokenRefreshConfig) {
 			this.tokenRefreshConfig = { ...this.tokenRefreshConfig, ...tokenRefreshConfig };
 		}
@@ -81,9 +91,25 @@ export abstract class BaseSession implements ISession {
 	abstract prepareHeaders(method: string, url: string, body?: unknown): Promise<Record<string, string>>;
 
 	/**
-	 * Perform the actual token refresh - must be implemented by subclass
+	 * Perform token refresh by re-initializing the session.
+	 * Resets the init guard and calls init() again with the stored params,
+	 * effectively creating a fresh session without depending on the old
+	 * session still existing in the server's cache.
 	 */
-	protected abstract doRefreshToken(): Promise<void>;
+	protected async doRefreshToken(): Promise<void> {
+		if (!this.storedInitParams) {
+			throw new Error('Cannot refresh token: init params not stored. Was init() called?');
+		}
+
+		// Reset the init guard so init() runs a fresh handshake
+		this.initPromise = undefined;
+
+		await this.init(
+			this.storedInitParams.clientInfo,
+			this.storedInitParams.tools,
+			this.storedInitParams.services,
+		);
+	}
 
 	/**
 	 * Gets the unique client ID.
@@ -118,8 +144,8 @@ export abstract class BaseSession implements ISession {
 	 * This is called automatically before requests when autoRefresh is enabled.
 	 * Uses a shared promise to prevent concurrent refresh requests.
 	 *
-	 * Note: Even expired tokens can be refreshed as long as the server session
-	 * still exists. The server accepts expired JWTs for the refresh endpoint.
+	 * Refresh works by re-initializing the session (calling init() again),
+	 * so it does not depend on the old session still existing in the server's cache.
 	 */
 	async refreshTokenIfNeeded(): Promise<void> {
 		// Skip if auto-refresh is disabled
@@ -163,9 +189,10 @@ export abstract class BaseSession implements ISession {
 	}
 
 	/**
-	 * Check if URL should skip token refresh (to avoid infinite recursion)
+	 * Check if URL should skip token refresh (to avoid infinite recursion).
+	 * Since refresh now calls init(), we only need to guard the init path.
 	 */
 	protected shouldSkipRefreshForUrl(url: string): boolean {
-		return url.includes('/api/token/refresh') || url.includes('/api/init');
+		return url.includes('/api/init');
 	}
 }
