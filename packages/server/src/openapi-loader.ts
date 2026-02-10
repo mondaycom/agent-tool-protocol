@@ -210,6 +210,35 @@ export interface LoadOpenAPIOptions {
 				headers?: Record<string, string>;
 				body?: string | undefined;
 		  };
+
+	/**
+	 * Custom fetch function for full control over the HTTP transport layer.
+	 * Use this when the target API requires custom TLS certificates (mTLS, custom CA),
+	 * a proxy, or any other transport-level configuration that headers alone cannot provide.
+	 *
+	 * The function receives the URL and standard RequestInit on every request,
+	 * making it inherently dynamic — you can route to different agents based on the URL.
+	 *
+	 * Applied to both spec loading and runtime API calls.
+	 *
+	 * @example
+	 * ```typescript
+	 * import { Agent } from 'undici';
+	 *
+	 * const mtlsAgent = new Agent({
+	 *   connect: {
+	 *     ca: fs.readFileSync('/certs/ca.pem'),
+	 *     cert: fs.readFileSync('/certs/client.pem'),
+	 *     key: fs.readFileSync('/certs/client-key.pem'),
+	 *   },
+	 * });
+	 *
+	 * await server.loadOpenAPI('https://partner-api.example.com/spec.json', {
+	 *   fetcher: (url, init) => fetch(url, { ...init, dispatcher: mtlsAgent }),
+	 * });
+	 * ```
+	 */
+	fetcher?: (url: string, init: RequestInit) => Promise<Response>;
 }
 
 /**
@@ -233,7 +262,7 @@ export async function loadOpenAPI(
 	source: string,
 	options: LoadOpenAPIOptions = {}
 ): Promise<APIGroupConfig> {
-	const spec = await loadSpec(source);
+	const spec = await loadSpec(source, options.fetcher);
 
 	const name = options.name || spec.info.title.toLowerCase().replace(/\s+/g, '-');
 
@@ -297,12 +326,16 @@ export async function loadOpenAPI(
 /**
  * Load OpenAPI spec from file or URL
  */
-async function loadSpec(source: string): Promise<APISpec> {
+async function loadSpec(
+	source: string,
+	fetcher?: (url: string, init: RequestInit) => Promise<Response>
+): Promise<APISpec> {
 	let content: string;
 	let isYaml = false;
 
 	if (source.startsWith('http://') || source.startsWith('https://')) {
-		const response = await fetch(source);
+		const fetchFn = fetcher || fetch;
+		const response = await fetchFn(source, { method: 'GET' });
 		if (!response.ok) {
 			throw new Error(`Failed to load OpenAPI spec from ${source}: ${response.statusText}`);
 		}
@@ -625,7 +658,8 @@ function convertOperation(
 				if (transformed.body !== undefined) finalBody = transformed.body;
 			}
 
-			const response = await fetch(finalUrl, {
+			const fetchFn = options.fetcher || fetch;
+			const response = await fetchFn(finalUrl, {
 				method: finalMethod,
 				headers: finalHeaders,
 				body: finalBody,

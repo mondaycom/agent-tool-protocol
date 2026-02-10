@@ -204,6 +204,28 @@ export interface LoadGraphQLOptions {
 	auth?: AuthConfig;
 	depthLimit?: number;
 	queryDepthLimit?: number;
+
+	/**
+	 * Custom fetch function for full control over the HTTP transport layer.
+	 * Use this when the target API requires custom TLS certificates (mTLS, custom CA),
+	 * a proxy, or any other transport-level configuration that headers alone cannot provide.
+	 *
+	 * Applied to both schema loading and runtime GraphQL requests.
+	 *
+	 * @example
+	 * ```typescript
+	 * import { Agent } from 'undici';
+	 *
+	 * const mtlsAgent = new Agent({
+	 *   connect: { ca: fs.readFileSync('/certs/ca.pem') },
+	 * });
+	 *
+	 * await server.loadGraphQL('https://api.example.com/graphql', {
+	 *   fetcher: (url, init) => fetch(url, { ...init, dispatcher: mtlsAgent }),
+	 * });
+	 * ```
+	 */
+	fetcher?: (url: string, init: RequestInit) => Promise<Response>;
 }
 
 /**
@@ -244,10 +266,11 @@ export async function loadGraphQL(
 async function loadSchema(source: string, options: LoadGraphQLOptions): Promise<GraphQLSchema> {
 	// Check if source is a URL
 	if (source.startsWith('http://') || source.startsWith('https://')) {
+		const fetchFn = options.fetcher || fetch;
 		// Resolve headers for schema loading
 		const headers = await resolveHeaders(options);
 
-		const response = await fetch(source, {
+		const response = await fetchFn(source, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -258,7 +281,8 @@ async function loadSchema(source: string, options: LoadGraphQLOptions): Promise<
 
 		if (!response.ok) {
 			// If POST with introspection fails, try GET assuming it might return SDL or JSON
-			const getResponse = await fetch(source, {
+			const getResponse = await fetchFn(source, {
+				method: 'GET',
 				headers,
 			});
 			if (getResponse.ok) {
@@ -352,7 +376,8 @@ function convertFieldToFunction(
 			// Pass execution context (including requestContext) to resolveHeaders
 			const headers = await resolveHeaders(options, paramsObj, context);
 
-			const response = await fetch(url, {
+			const fetchFn = options.fetcher || fetch;
+			const response = await fetchFn(url, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
