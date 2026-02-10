@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-langchain",
-	"version": "0.25.0",
+	"version": "0.25.1",
 	"description": "LangChain integration for Agent Tool Protocol",
 	"type": "module",
 	"main": "./dist/index.cjs",
@@ -44,7 +44,7 @@
 	"license": "MIT",
 	"dependencies": {
 		"@langchain/core": "^1.1.5",
-		"@mondaydotcomorg/atp-client": "0.23.0",
+		"@mondaydotcomorg/atp-client": "0.23.1",
 		"@mondaydotcomorg/atp-protocol": "0.22.0",
 		"@mondaydotcomorg/atp-runtime": "0.22.0",
 		"json-schema-to-zod": "^2.6.1",
