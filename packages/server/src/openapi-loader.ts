@@ -166,21 +166,18 @@ export interface LoadOpenAPIOptions {
 
 	/**
 	 * Dynamic header provider for per-request authentication (e.g., per-user OAuth).
-	 * Similar to GraphQL's headerProvider. Called before each API request.
+	 * Called before each API request with the request parameters and the execution's requestContext.
 	 * @param params - The request parameters
-	 * @param context - Optional context from contextProvider
+	 * @param requestContext - Optional request context from the execution environment (e.g., user info, auth tokens)
 	 * @returns Headers to add to the request
 	 */
 	headerProvider?: (
 		params: Record<string, unknown> | undefined,
-		context?: Record<string, unknown>
+		requestContext?: Record<string, unknown>
 	) => Promise<Record<string, string>> | Record<string, string>;
 
 	/**
-	 * Context provider to extract context from execution environment.
-	 * Similar to GraphQL's contextProvider. Called once per request.
-	 * @param executionContext - The execution context from ATP
-	 * @returns Context object passed to headerProvider
+	 * @deprecated Use headerProvider instead, which now receives requestContext directly as its second parameter.
 	 */
 	contextProvider?: (
 		executionContext?: Record<string, unknown>
@@ -515,13 +512,12 @@ function convertOperation(
 			'Content-Type': 'application/json',
 		};
 
-		let context: Record<string, unknown> | undefined;
-		if (options.contextProvider) {
-			context = await options.contextProvider(handlerContext?.requestContext);
-		}
-
 		if (options.headerProvider) {
-			const dynamicHeaders = await options.headerProvider(input, context);
+			let requestContext = handlerContext?.requestContext;
+			if (options.contextProvider) {
+				requestContext = await options.contextProvider(requestContext);
+			}
+			const dynamicHeaders = await options.headerProvider(input, requestContext);
 			Object.assign(headers, dynamicHeaders);
 			log.debug('Added headers from headerProvider', { keys: Object.keys(dynamicHeaders) });
 		}

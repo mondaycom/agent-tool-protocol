@@ -31,11 +31,11 @@ import fs from 'node:fs/promises';
  * Dynamic header provider for GraphQL requests.
  *
  * @param params - The GraphQL query parameters
- * @param context - Optional context from contextProvider (e.g., auth tokens)
+ * @param requestContext - Optional request context from the execution environment (e.g., user info, auth tokens)
  */
 export type GraphQLAuthProvider = (
 	params?: Record<string, any>,
-	context?: Record<string, any>
+	requestContext?: Record<string, any>
 ) => Promise<Record<string, string>> | Record<string, string>;
 
 /**
@@ -43,12 +43,12 @@ export type GraphQLAuthProvider = (
  * Priority: headerProvider > authProvider + auth > static headers
  * @param options - Load options including auth config
  * @param params - Optional request params passed to headerProvider for dynamic resolution
- * @param executionContext - Optional execution context passed from handler (contains requestContext)
+ * @param requestContext - Optional request context from the execution environment (e.g., user info, auth tokens)
  */
 async function resolveHeaders(
 	options: LoadGraphQLOptions,
 	params?: Record<string, any>,
-	executionContext?: Record<string, any>
+	requestContext?: Record<string, any>
 ): Promise<Record<string, string>> {
 	const headers: Record<string, string> = {};
 
@@ -65,10 +65,11 @@ async function resolveHeaders(
 	}
 
 	if (options.headerProvider) {
-		const context = options.contextProvider
-			? await options.contextProvider(executionContext)
-			: undefined;
-		const dynamicHeaders = await options.headerProvider(params, context);
+		let ctx = requestContext;
+		if (options.contextProvider) {
+			ctx = await options.contextProvider(requestContext);
+		}
+		const dynamicHeaders = await options.headerProvider(params, ctx);
 		Object.assign(headers, dynamicHeaders);
 	}
 
@@ -193,10 +194,11 @@ export interface LoadGraphQLOptions {
 	headers?: Record<string, string>;
 	/** Auth provider for dynamic credential resolution */
 	authProvider?: AuthProvider;
-	/** Dynamic header provider function - called before each request */
+	/** Dynamic header provider function - called before each request with params and requestContext */
 	headerProvider?: GraphQLAuthProvider;
-	/** Context provider - called before each request to get current context (e.g., auth tokens).
-	 * Receives execution context which may contain requestContext from execute() call. */
+	/**
+	 * @deprecated Use headerProvider instead, which now receives requestContext directly as its second parameter.
+	 */
 	contextProvider?: (
 		executionContext?: Record<string, any>
 	) => Record<string, any> | Promise<Record<string, any>>;
@@ -342,7 +344,7 @@ function convertFieldToFunction(
 		description,
 		inputSchema,
 		outputSchema,
-		handler: async (params: unknown, context?: { metadata?: Record<string, any> }) => {
+		handler: async (params: unknown, context?: { metadata?: Record<string, any>; requestContext?: Record<string, unknown> }) => {
 			const paramsObj = (params as Record<string, any>) || {};
 			const customFields = paramsObj._fields;
 
@@ -373,8 +375,7 @@ function convertFieldToFunction(
 				context.metadata.graphql_variables = variables;
 			}
 
-			// Pass execution context (including requestContext) to resolveHeaders
-			const headers = await resolveHeaders(options, paramsObj, context);
+			const headers = await resolveHeaders(options, paramsObj, context?.requestContext);
 
 			const fetchFn = options.fetcher || fetch;
 			const response = await fetchFn(url, {

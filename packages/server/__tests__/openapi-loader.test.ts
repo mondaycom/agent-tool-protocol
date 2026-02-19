@@ -1394,7 +1394,7 @@ paths:
 		});
 	});
 
-	describe('headerProvider and contextProvider', () => {
+	describe('headerProvider', () => {
 		it('should accept headerProvider option', async () => {
 			const spec = {
 				openapi: '3.0.0',
@@ -1416,10 +1416,48 @@ paths:
 			const apiGroup = await loadOpenAPI(path, { headerProvider });
 
 			expect(apiGroup.functions).toHaveLength(1);
-			// headerProvider is used at runtime, not at load time
 		});
 
-		it('should accept contextProvider option', async () => {
+		it('should pass requestContext directly to headerProvider', async () => {
+			const spec = {
+				openapi: '3.0.0',
+				info: { title: 'Test', version: '1.0.0' },
+				servers: [{ url: 'https://api.example.com' }],
+				paths: {
+					'/test': {
+						get: {
+							operationId: 'test',
+							responses: { '200': { description: 'OK' } },
+						},
+					},
+				},
+			};
+
+			const path = await writeSpec('header-provider-context.json', spec);
+			const headerProvider = vi.fn().mockResolvedValue({ Authorization: 'Bearer tok_123' });
+
+			const apiGroup = await loadOpenAPI(path, {
+				headerProvider,
+				baseURL: 'https://api.example.com',
+			});
+
+			const handler = apiGroup.functions![0].handler!;
+			const requestContext = { userId: 'user-1', headers: { 'x-tenant': 'acme' } };
+
+			try {
+				await handler({}, { requestContext, emit: () => {} });
+			} catch {
+				// fetch will fail, we only care about what headerProvider received
+			}
+
+			expect(headerProvider).toHaveBeenCalledTimes(1);
+			expect(headerProvider).toHaveBeenCalledWith(
+				{},
+				requestContext
+			);
+		});
+
+		it('should still accept deprecated contextProvider for backward compatibility', async () => {
 			const spec = {
 				openapi: '3.0.0',
 				info: { title: 'Test', version: '1.0.0' },
