@@ -82,6 +82,33 @@ describe('Explore API Tool', () => {
 			expect(parsed[0].group).toBe('github');
 		});
 
+		test('should include documentation from the server response', async () => {
+			mockClient.exploreAPI.mockResolvedValue({
+				type: 'directory',
+				path: '/custom/myapi',
+				items: [
+					{ name: 'listItems', type: 'function' },
+					{ name: 'createItem', type: 'function' },
+				],
+				documentation: {
+					description: 'API for managing items',
+					examples: ['listItems()', 'createItem({ name: "test" })'],
+					tips: ['Use listItems before creating duplicates'],
+				},
+			});
+
+			const tool = createExploreApiTool(mockClient as any);
+			const result = await tool.func({ paths: '/custom/myapi' });
+			const parsed = JSON.parse(result);
+
+			expect(parsed).toHaveLength(1);
+			expect(parsed[0].success).toBe(true);
+			expect(parsed[0].documentation).toBeDefined();
+			expect(parsed[0].documentation.description).toBe('API for managing items');
+			expect(parsed[0].documentation.examples).toHaveLength(2);
+			expect(parsed[0].documentation.tips).toEqual(['Use listItems before creating duplicates']);
+		});
+
 		test('should handle errors gracefully', async () => {
 			mockClient.exploreAPI.mockRejectedValue(new Error('Path not found'));
 
