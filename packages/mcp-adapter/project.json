@@ -9,7 +9,7 @@
 			"executor": "nx:run-commands",
 			"outputs": ["{projectRoot}/dist"],
 			"options": {
-				"command": "tsc --build packages/mcp-adapter/tsconfig.json"
+				"command": "cd packages/mcp-adapter && npm run build"
 			}
 		},
 		"test": {
