@@ -70,7 +70,7 @@
 		"@types/jsonwebtoken": "^9.0.5",
 		"acorn": "^8.11.0",
 		"acorn-walk": "^8.3.0",
-		"isolated-vm": "5.0.4",
+		"isolated-vm": "6.1.2",
 		"js-yaml": "^4.1.0",
 		"jsonwebtoken": "^9.0.2",
 		"rate-limiter-flexible": "*"
