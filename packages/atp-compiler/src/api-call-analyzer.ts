@@ -70,6 +70,51 @@ export function analyzeApiCalls(code: string): AnalysisResult {
 		return { apiCalls: [], dynamicCallsDetected: true };
 	}
 
+	// Helper records a static api.<group>.<op>(...) call, or flips
+	// dynamicCallsDetected when the call expression escapes static resolution.
+	const tryRecordCall = (calleeNode: t.Node) => {
+		let callee: t.Node = calleeNode;
+
+		// Unwrap one `.call` / `.apply` / `.bind` redirection:
+		//   api.calendar.events_list.call(null, {...})
+		// has callee = MemberExpression { object: api.calendar.events_list, property: 'call' }
+		if (
+			(t.isMemberExpression(callee) || t.isOptionalMemberExpression(callee)) &&
+			!callee.computed &&
+			t.isIdentifier(callee.property) &&
+			(callee.property.name === 'call' ||
+				callee.property.name === 'apply' ||
+				callee.property.name === 'bind')
+		) {
+			callee = callee.object;
+		}
+
+		if (!t.isMemberExpression(callee) && !t.isOptionalMemberExpression(callee)) return;
+
+		const groupExpr = callee.object;
+		if (!t.isMemberExpression(groupExpr) && !t.isOptionalMemberExpression(groupExpr)) return;
+		if (!t.isIdentifier(groupExpr.object, { name: 'api' })) return;
+
+		// api[groupVar].op(...) or api.group[fnVar](...) → dynamic
+		if (groupExpr.computed || callee.computed) {
+			dynamicCallsDetected = true;
+			return;
+		}
+
+		const groupNode = groupExpr.property;
+		const opNode = callee.property;
+		if (!t.isIdentifier(groupNode) || !t.isIdentifier(opNode)) {
+			dynamicCallsDetected = true;
+			return;
+		}
+
+		const key = `${groupNode.name}.${opNode.name}`;
+		if (!seen.has(key)) {
+			seen.add(key);
+			calls.push({ apiGroup: groupNode.name, operationId: opNode.name });
+		}
+	};
+
 	try {
 		traverse(ast, {
 			// Assignments / destructures that alias `api` or `api.<group>` — any of
@@ -98,33 +143,84 @@ export function analyzeApiCalls(code: string): AnalysisResult {
 				}
 			},
 
-			// Direct `api.<group>.<op>(...)` member-expression calls.
+			// Any other mention of `api` that hands it off to an opaque consumer:
+			//   fn(api)                      — alias escape via function argument
+			//   Object.values(api) / keys(…) — enumeration
+			//   { ...api } / [ ...api ]      — spread
+			//   return api                   — caller gets the alias
+			//   api = x (reassignment)       — later reads hit a different object
+			//
+			// The api.<group>.<op>(...) pattern is recognised by the CallExpression
+			// visitor below; skip it here via parent-shape whitelisting.
+			Identifier(path) {
+				if (path.node.name !== 'api') return;
+
+				// Skip the PROPERTY position of a member expression — e.g.
+				// `this.api`, `window.api`, `someObj.api`. That's not the
+				// global `api` binding we care about.
+				if (
+					(t.isMemberExpression(path.parent) || t.isOptionalMemberExpression(path.parent)) &&
+					path.parent.property === path.node &&
+					!path.parent.computed
+				) {
+					return;
+				}
+				// `api.<group>` (non-computed member) — safe, handled by CallExpression.
+				if (
+					(t.isMemberExpression(path.parent) || t.isOptionalMemberExpression(path.parent)) &&
+					path.parent.object === path.node &&
+					!path.parent.computed
+				) {
+					return;
+				}
+				// Left-hand side of `const x = api` / `const { calendar } = api`
+				// — handled by VariableDeclarator above (dynamic flag set there).
+				if (t.isVariableDeclarator(path.parent) && path.parent.init === path.node) {
+					return;
+				}
+				// Skip declaration positions where `api` is a local binding name,
+				// not a reference:
+				//   { api: value }           — object property key
+				//   function f(api) { ... }  — param name
+				//   class { api() {...} }    — method name
+				//   function api() {}        — function name
+				//   class api {}             — class name
+				if (
+					(t.isObjectProperty(path.parent) || t.isObjectMethod(path.parent)) &&
+					path.parent.key === path.node &&
+					!path.parent.computed
+				) {
+					return;
+				}
+				if (t.isClassMethod(path.parent) && path.parent.key === path.node && !path.parent.computed) {
+					return;
+				}
+				if (
+					(t.isFunctionDeclaration(path.parent) ||
+						t.isFunctionExpression(path.parent) ||
+						t.isClassDeclaration(path.parent) ||
+						t.isClassExpression(path.parent)) &&
+					path.parent.id === path.node
+				) {
+					return;
+				}
+				if (path.parentPath?.isFunction() && path.listKey === 'params') {
+					return;
+				}
+				if (t.isImportSpecifier(path.parent) || t.isImportDefaultSpecifier(path.parent) || t.isImportNamespaceSpecifier(path.parent)) {
+					return;
+				}
+
+				// Anything else (`Object.values(api)`, `fn(api)`, `{ ...api }`,
+				// `return api`, `api = ...`) escapes static resolution.
+				dynamicCallsDetected = true;
+			},
+
 			CallExpression(path) {
-				const callee = path.node.callee;
-				if (!t.isMemberExpression(callee)) return;
-
-				const groupExpr = callee.object;
-				if (!t.isMemberExpression(groupExpr)) return;
-				if (!t.isIdentifier(groupExpr.object, { name: 'api' })) return;
-
-				// api[groupVar].op(...) or api.group[fnVar](...) → dynamic
-				if (groupExpr.computed || callee.computed) {
-					dynamicCallsDetected = true;
-					return;
-				}
-
-				const groupNode = groupExpr.property;
-				const opNode = callee.property;
-				if (!t.isIdentifier(groupNode) || !t.isIdentifier(opNode)) {
-					dynamicCallsDetected = true;
-					return;
-				}
-
-				const key = `${groupNode.name}.${opNode.name}`;
-				if (!seen.has(key)) {
-					seen.add(key);
-					calls.push({ apiGroup: groupNode.name, operationId: opNode.name });
-				}
+				tryRecordCall(path.node.callee);
+			},
+			OptionalCallExpression(path) {
+				tryRecordCall(path.node.callee);
 			},
 		});
 	} catch {
