@@ -12,6 +12,10 @@ export * from './plugin-system/index.js';
 // Checkpoint exports
 export * from './checkpoint/index.js';
 
+// Pre-dispatch static analysis of agent code (api.<group>.<op>(...) extraction).
+export { analyzeApiCalls } from './api-call-analyzer.js';
+export type { DetectedApiCall, AnalysisResult } from './api-call-analyzer.js';
+
 // Main exports
 export { ATPCompiler } from './transformer/index.js';
 export { initializeRuntime, cleanupRuntime } from './runtime/index.js';

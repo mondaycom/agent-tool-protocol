@@ -580,7 +580,7 @@ export class AgentToolProtocolServer {
 
 	async handleExplore(ctx: RequestContext): Promise<unknown> {
 		if (!this.explorerService) ctx.throw(503, 'Explorer not initialized');
-		return await handleExplore(ctx, this.explorerService);
+		return await handleExplore(ctx, this.explorerService, this.toolRulesProvider);
 	}
 
 	async handleExecute(ctx: RequestContext): Promise<unknown> {
@@ -593,7 +593,8 @@ export class AgentToolProtocolServer {
 			this.stateManager,
 			this.config,
 			this.auditSink,
-			this.sessionManager
+			this.sessionManager,
+			this.toolRulesProvider
 		);
 	}
 
