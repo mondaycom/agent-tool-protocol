@@ -212,10 +212,19 @@ export class InProcessSession extends BaseSession {
 	async explore(path: string, options?: Record<string, unknown>): Promise<unknown> {
 		await this.ensureInitialized();
 
+		// Per-call `headers` pulled out of options so it can merge into ctx.headers
+		// (where the server's toolRulesProvider reads from). Stripped from the body
+		// to avoid duplicating it alongside `path` + `toolRules`.
+		const { headers: callerHeaders, ...body } = (options ?? {}) as {
+			headers?: Record<string, string>;
+			[k: string]: unknown;
+		};
+
 		const ctx = await this.createContext({
 			method: 'POST',
 			path: '/api/explore',
-			body: { path, ...options },
+			body: { path, ...body },
+			headers: callerHeaders,
 		});
 
 		return await this.server.handleExplore(ctx);
@@ -224,10 +233,17 @@ export class InProcessSession extends BaseSession {
 	async execute(code: string, config?: Record<string, unknown>): Promise<unknown> {
 		await this.ensureInitialized();
 
+		// `requestContext.headers` is the documented entry point for per-call
+		// header forwarding (consumed by openapi-loader headerProvider). Also
+		// merge those into ctx.headers so the server-level toolRulesProvider
+		// sees the same values.
+		const rc = (config?.requestContext ?? {}) as { headers?: Record<string, string> };
+
 		const ctx = await this.createContext({
 			method: 'POST',
 			path: '/api/execute',
 			body: { code, config },
+			headers: rc.headers,
 		});
 
 		return await this.server.handleExecute(ctx);
@@ -268,6 +284,7 @@ export class InProcessSession extends BaseSession {
 		path: string;
 		query?: Record<string, string>;
 		body?: unknown;
+		headers?: Record<string, string>;
 	}): Promise<InProcessRequestContext> {
 		const noopLogger = {
 			debug: () => {},
@@ -276,11 +293,21 @@ export class InProcessSession extends BaseSession {
 			error: () => {},
 		};
 
+		// Merge per-call headers (if any) on top of session-level headers.
+		// Session auth keys (`x-client-id`, `authorization`) still survive
+		// because `prepareHeaders` produces them first and the caller would
+		// rarely override them; when they do, the caller's choice wins here —
+		// match that with the RequestContext.headers convention.
+		const sessionHeaders = await this.prepareHeaders(options.method, options.path, options.body);
+		const mergedHeaders = options.headers
+			? { ...sessionHeaders, ...options.headers }
+			: sessionHeaders;
+
 		return {
 			method: options.method,
 			path: options.path,
 			query: options.query || {},
-			headers: await this.prepareHeaders(options.method, options.path, options.body),
+			headers: mergedHeaders,
 			body: options.body,
 			clientId: this.clientId,
 			clientToken: this.clientToken,

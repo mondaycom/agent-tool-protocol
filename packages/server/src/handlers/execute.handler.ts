@@ -1,4 +1,4 @@
-import type { RequestContext, ResolvedServerConfig } from '../core/config.js';
+import type { RequestContext, ResolvedServerConfig, ToolRulesProvider } from '../core/config.js';
 import type { SandboxExecutor } from '../executor/index.js';
 import type { ExecutionStateManager } from '../execution-state/index.js';
 import type { ClientSessionManager } from '../client-sessions.js';
@@ -45,7 +45,8 @@ export async function handleExecute(
 	stateManager: ExecutionStateManager,
 	config: ResolvedServerConfig,
 	auditSink?: AuditSink,
-	sessionManager?: ClientSessionManager
+	sessionManager?: ClientSessionManager,
+	toolRulesProvider?: ToolRulesProvider
 ): Promise<unknown> {
 	const request = ctx.body as any;
 	const code = request.code || '';
@@ -134,7 +135,10 @@ export async function handleExecute(
 		},
 		onToolCall,
 		eventCallback: requestConfig.eventCallback,
-		toolRules: requestConfig.toolRules,
+		// Rule source precedence: explicit requestConfig.toolRules first, then
+		// server-level provider (e.g. reads a header). Lets in-process callers
+		// and HTTP callers converge on the same provider mechanism.
+		toolRules: requestConfig.toolRules ?? toolRulesProvider?.(ctx),
 	};
 
 	// Verify provenance hints if provided
