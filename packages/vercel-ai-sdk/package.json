@@ -1,6 +1,6 @@
 {
 	"name": "@mondaydotcomorg/atp-vercel-sdk",
-	"version": "0.24.3",
+	"version": "0.24.4",
 	"description": "Vercel AI SDK integration for Agent Tool Protocol.",
 	"type": "module",
 	"main": "./dist/index.cjs",
