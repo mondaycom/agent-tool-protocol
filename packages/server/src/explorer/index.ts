@@ -81,8 +81,10 @@ export class ExplorerService {
 			context.allowedGroups.add(group.name);
 		}
 
-		for (const group of this.apiGroups) {
-			if (!context.allowedGroups.has(group.name)) continue;
+		// Iterate already-filtered `allowedGroups` so per-tool rules
+		// filter operations WITHIN an allowed group (matches the pattern
+		// in `SearchEngine.search`).
+		for (const group of allowedGroups) {
 			if (group.functions) {
 				for (const func of group.functions) {
 					context.allowedTools.add(`${group.name}:${func.name}`);

@@ -122,7 +122,13 @@ export async function handleExecute(
 		provenanceHints: requestConfig.provenanceHints,
 		requestContext: {
 			...requestConfig.requestContext,
-			headers: ctx.headers,
+			// Merge caller-supplied headers with ctx.headers; ctx wins on
+			// conflicts so session auth takes precedence over app-layer keys.
+			headers: {
+				...(requestConfig.requestContext as { headers?: Record<string, string> } | undefined)
+					?.headers,
+				...ctx.headers,
+			},
 			path: ctx.path,
 			method: ctx.method,
 		},
