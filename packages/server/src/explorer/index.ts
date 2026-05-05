@@ -81,18 +81,9 @@ export class ExplorerService {
 			context.allowedGroups.add(group.name);
 		}
 
-		// Iterate the already-filtered `allowedGroups` (not the raw
-		// `this.apiGroups`) so per-tool rules — `allowOnlyTools`,
-		// `blockTools`, `blockOperationTypes`, `blockSensitivityLevels` —
-		// actually filter operations WITHIN an allowed group.
-		//
-		// `filterApiGroups(this.apiGroups)` already applies `isToolAllowed`
-		// per function and drops disallowed ones from the returned groups.
-		// Previously this loop then re-iterated `this.apiGroups` and
-		// re-added every function in any allowed group — silently
-		// defeating operation-level filtering. `SearchEngine.search`
-		// already iterates `allowedGroups` for the same reason
-		// (`packages/server/src/search/index.ts`).
+		// Iterate already-filtered `allowedGroups` so per-tool rules
+		// filter operations WITHIN an allowed group (matches the pattern
+		// in `SearchEngine.search`).
 		for (const group of allowedGroups) {
 			if (group.functions) {
 				for (const func of group.functions) {

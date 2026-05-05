@@ -122,19 +122,11 @@ export async function handleExecute(
 		provenanceHints: requestConfig.provenanceHints,
 		requestContext: {
 			...requestConfig.requestContext,
-			// Merge caller-supplied headers with the transport ctx headers
-			// instead of letting ctx.headers overwrite them. Non-conflicting
-			// caller headers (e.g. a governance layer's per-request auth
-			// tokens like `X-ATP-<apiGroup>-token`) survive; for overlapping
-			// keys, ctx.headers still wins so the transport layer's session
-			// auth takes precedence over anything app-layer code tried to
-			// set. Previously, any `requestConfig.requestContext.headers`
-			// that the caller passed were silently dropped.
+			// Merge caller-supplied headers with ctx.headers; ctx wins on
+			// conflicts so session auth takes precedence over app-layer keys.
 			headers: {
-				...(
-					(requestConfig.requestContext as { headers?: Record<string, string> } | undefined)
-						?.headers
-				),
+				...(requestConfig.requestContext as { headers?: Record<string, string> } | undefined)
+					?.headers,
 				...ctx.headers,
 			},
 			path: ctx.path,
