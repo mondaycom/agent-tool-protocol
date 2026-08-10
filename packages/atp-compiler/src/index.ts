@@ -16,6 +16,14 @@ export * from './checkpoint/index.js';
 export { analyzeApiCalls } from './api-call-analyzer.js';
 export type { DetectedApiCall, AnalysisResult } from './api-call-analyzer.js';
 
+// Post-fetch static analysis of an explore_api result (discovery-side counterpart to analyzeApiCalls).
+export {
+	collectExploreOperations,
+	collectExploreOperationsFromValue,
+	filterExploreResult,
+	filterExploreResultValue,
+} from './explore-result-analyzer.js';
+
 // Main exports
 export { ATPCompiler } from './transformer/index.js';
 export { initializeRuntime, cleanupRuntime } from './runtime/index.js';
