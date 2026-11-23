@@ -5,10 +5,12 @@
 export type { RuntimeAPIParam, RuntimeAPIMethod, RuntimeAPIMetadata } from './types.js';
 export { RuntimeAPI, RuntimeMethod } from './decorators.js';
 export type { RuntimeAPIName } from './generated.js';
+export { toCommentSafe, toCommentSafeLines } from './comment-safe.js';
 
 import type { RuntimeAPIMetadata } from './types.js';
 import type { RuntimeAPIName } from './generated.js';
 import { TYPE_REGISTRY } from './generated.js';
+import { toCommentSafe, toCommentSafeLines } from './comment-safe.js';
 
 interface ClientServices {
 	hasLLM: boolean;
@@ -71,7 +73,7 @@ export function generateRuntimeTypes(
 
 	for (const api of filteredApis) {
 		typescript += `  /**\n`;
-		for (const line of api.description.split('\n')) {
+		for (const line of toCommentSafeLines(api.description)) {
 			typescript += `   * ${line}\n`;
 		}
 		typescript += `   */\n`;
@@ -80,11 +82,11 @@ export function generateRuntimeTypes(
 
 		for (const method of api.methods) {
 			typescript += `    /**\n`;
-			typescript += `     * ${method.description}\n`;
+			typescript += `     * ${toCommentSafe(method.description)}\n`;
 
 			for (const param of method.params) {
 				if (param.description) {
-					typescript += `     * @param ${param.name} - ${param.description}\n`;
+					typescript += `     * @param ${param.name} - ${toCommentSafe(param.description)}\n`;
 				}
 			}
 
