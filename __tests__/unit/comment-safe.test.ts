@@ -1,10 +1,10 @@
 /**
- * Unit tests for toCommentSafe — the sanitizer used whenever APIAggregator embeds
- * user-supplied descriptions in generated TypeScript comments.
+ * Unit tests for toCommentSafe / toCommentSafeLines — the sanitizers used whenever
+ * APIAggregator or generateRuntimeTypes embed descriptions in generated TypeScript comments.
  * See https://github.com/mondaycom/agent-tool-protocol/issues/72
  */
 import { describe, it, expect } from '@jest/globals';
-import { toCommentSafe } from '../../packages/server/src/aggregator/comment-safe';
+import { toCommentSafe, toCommentSafeLines } from '@mondaydotcomorg/atp-runtime';
 
 describe('toCommentSafe', () => {
 	it('leaves plain text untouched', () => {
@@ -55,5 +55,39 @@ describe('toCommentSafe', () => {
 	it('is idempotent', () => {
 		const input = 'src/**/*.ts\r\nnext line */';
 		expect(toCommentSafe(toCommentSafe(input))).toBe(toCommentSafe(input));
+	});
+});
+
+describe('toCommentSafeLines', () => {
+	it('returns a single line for text without line terminators', () => {
+		expect(toCommentSafeLines('just one line')).toEqual(['just one line']);
+	});
+
+	it('splits on every line terminator TypeScript recognizes', () => {
+		expect(toCommentSafeLines('a\nb\rc\r\nd\u2028e\u2029f')).toEqual([
+			'a',
+			'b',
+			'c',
+			'd',
+			'e',
+			'f',
+		]);
+	});
+
+	it('treats CRLF as a single break (no empty line in between)', () => {
+		expect(toCommentSafeLines('a\r\nb')).toEqual(['a', 'b']);
+	});
+
+	it('keeps intentional blank lines', () => {
+		expect(toCommentSafeLines('a\n\nb')).toEqual(['a', '', 'b']);
+	});
+
+	it('escapes "*/" in every line', () => {
+		expect(toCommentSafeLines('x */ y\nsrc/**/*.ts')).toEqual(['x *\\/ y', 'src/**\\/*.ts']);
+	});
+
+	it('agrees with toCommentSafe when joined with a space', () => {
+		const input = 'one */\r\ntwo\u2028three';
+		expect(toCommentSafeLines(input).join(' ')).toBe(toCommentSafe(input));
 	});
 });

@@ -1,7 +1,10 @@
 import type { APIGroupConfig, CustomFunctionDef } from '@mondaydotcomorg/atp-protocol';
-import { GENERATED_METADATA, generateRuntimeTypes } from '@mondaydotcomorg/atp-runtime';
+import {
+	GENERATED_METADATA,
+	generateRuntimeTypes,
+	toCommentSafe,
+} from '@mondaydotcomorg/atp-runtime';
 import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
-import { toCommentSafe } from './comment-safe.js';
 
 /**
  * APIAggregator generates TypeScript type definitions from API configurations.
