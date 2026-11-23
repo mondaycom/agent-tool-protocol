@@ -1,6 +1,7 @@
 import type { APIGroupConfig, CustomFunctionDef } from '@mondaydotcomorg/atp-protocol';
 import { GENERATED_METADATA, generateRuntimeTypes } from '@mondaydotcomorg/atp-runtime';
 import type { RuntimeAPIName } from '@mondaydotcomorg/atp-runtime';
+import { toCommentSafe } from './comment-safe.js';
 
 /**
  * APIAggregator generates TypeScript type definitions from API configurations.
@@ -78,7 +79,7 @@ export class APIAggregator {
 			for (const [key, value] of Object.entries(func.inputSchema.properties)) {
 				const prop = value as { type?: string; description?: string };
 				const tsType = this.jsonSchemaTypeToTS(prop.type ?? 'any');
-				const comment = prop.description ? ` // ${prop.description}` : '';
+				const comment = prop.description ? ` // ${toCommentSafe(prop.description)}` : '';
 				const optional = required.includes(key) ? '' : '?';
 				typescript += `  ${key}${optional}: ${tsType};${comment}\n`;
 			}
@@ -282,7 +283,7 @@ export class APIAggregator {
 					const funcName = this.formatPropertyName(func.name);
 					const description =
 						func.description && typeof func.description === 'string'
-							? func.description.replace(/\n/g, ' ').substring(0, 200)
+							? toCommentSafe(func.description.substring(0, 200))
 							: '';
 					ts += `${indent}  /**\n${indent}   * ${description}\n${indent}   */\n`;
 					ts += `${indent}  ${funcName}(params: ${func.name}_Input): Promise<${func.name}_Output>;\n`;
@@ -353,7 +354,7 @@ export class APIAggregator {
 			const optional = isRequired ? '' : '?';
 
 			if (prop.description) {
-				const desc = prop.description.replace(/\n/g, ' ').substring(0, 100);
+				const desc = toCommentSafe(prop.description.substring(0, 100));
 				props.push(`/* ${desc} */ ${key}${optional}: ${tsType}`);
 			} else {
 				props.push(`${key}${optional}: ${tsType}`);
@@ -383,7 +384,7 @@ export class APIAggregator {
 			const tsType = this.jsonSchemaTypeToTS(prop.type ?? 'unknown');
 
 			if (prop.description) {
-				const desc = prop.description.replace(/\n/g, ' ').substring(0, 80);
+				const desc = toCommentSafe(prop.description.substring(0, 80));
 				return `/* ${desc} */ ${key}: ${tsType}`;
 			}
 			return `${key}: ${tsType}`;
